@@ -1,0 +1,178 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  /* Paleta Principal Dark Mode */
+  --bg-main: #0b0e11;
+  --bg-deep: #050508;
+  --bg-glass: rgba(11, 14, 17, 0.75);
+  
+  /* Cromatismo Funcional Neon */
+  --neon-cyan: #00c8ff; /* Azul Piscina - Interativo */
+  --neon-emerald: #00FF80; /* Verde Esmeralda - Lucro/Sucesso */
+  --neon-purple: #8a2be2; /* Roxo Vibrante - VIP2/Épico */
+  --neon-red: #FF4D4D; /* Vermelho LED - Erro/Alerta */
+  --neon-gold: #D4AF37; /* Dourado - Itens Raros/Escritor */
+  
+  /* Efeitos de Vidro (Glassmorphism) */
+  --blur-standard: blur(20px);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  --neon-border-cyan: 1px solid rgba(0, 200, 255, 0.3);
+  
+  /* Tipografia e Performance */
+  --font-main: 'Inter', sans-serif;
+  --transition-fast: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Base custom styles to enforce high contrast */
+body {
+  background-color: var(--bg-deep) !important;
+  color: #E0E0E0 !important;
+  font-family: var(--font-main) !important;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  user-select: none !important;
+  -webkit-user-select: none;
+}
+
+/* Custom Scrollbar prevention for pristine layout */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* Glassmorphism custom standard */
+.glass-container {
+  background: rgba(11, 14, 17, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 200, 255, 0.15);
+  border-radius: 24px;
+}
+
+/* GPU Hardware Acceleration */
+.gpu-accelerated {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Custom animations corresponding to PDF specifications */
+@keyframes waveMove {
+  from { transform: translate(-5%, -5%) rotate(0deg); }
+  to { transform: translate(5%, 5%) rotate(3deg); }
+}
+
+@keyframes pulseVignette {
+  from { opacity: 0.6; }
+  to { opacity: 0.95; }
+}
+
+@keyframes glowPulse {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 5px var(--neon-emerald)); }
+  50% { filter: brightness(1.8) drop-shadow(0 0 20px var(--neon-emerald)); }
+}
+
+@keyframes rotateCW {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes rotateCCW {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes rayPulse {
+  from { opacity: 0.1; }
+  to { opacity: 0.5; stroke-width: 2; }
+}
+
+@keyframes corePulse {
+  from { r: 15; opacity: 0.6; }
+  to { r: 18; opacity: 1; filter: brightness(1.5); }
+}
+
+@keyframes shine {
+  from { left: -150%; }
+  to { left: 150%; }
+}
+
+@keyframes shineSweep {
+  0% { transform: translateX(-150%) skewX(-25deg); opacity: 0; }
+  10% { opacity: 1; }
+  20% { transform: translateX(250%) skewX(-25deg); opacity: 0; }
+  100% { transform: translateX(250%) skewX(-25deg); opacity: 0; }
+}
+
+.icon-shine-effect {
+  position: relative;
+  overflow: hidden;
+}
+.icon-shine-effect::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: shineSweep 4s infinite linear;
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@keyframes neon-throb {
+  0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--glow-color); }
+  50% { opacity: 0.6; box-shadow: 0 0 20px var(--glow-color); }
+}
+
+/* Pulsing text hint effect */
+.blink-pulse {
+  animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Matrix scanning line grid background */
+.matrix-line-overlay {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(rgba(0, 200, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 200, 255, 0.05) 1px, transparent 1px);
+}
+
+/* Glowing circuit trace ray animations */
+.circuit-pulse-fast {
+  stroke-dashoffset: 200;
+  animation: pulseFlow 3s linear infinite;
+}
+.circuit-pulse-medium {
+  stroke-dashoffset: 250;
+  animation: pulseFlow 5s linear infinite;
+}
+.circuit-pulse-slow {
+  stroke-dashoffset: 180;
+  animation: pulseFlow 8s linear infinite;
+}
+
+@keyframes pulseFlow {
+  to {
+    stroke-dashoffset: -200;
+  }
+}
+

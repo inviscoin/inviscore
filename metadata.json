@@ -1,0 +1,8 @@
+{
+  "name": "INVIS Ecosystem 1",
+  "description": "Um ecossistema digital multitarefas moderno baseado em criptografia de ponta a ponta e compliance LGPD.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

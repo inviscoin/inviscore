@@ -1,0 +1,585 @@
+import express from "express";
+import path from "path";
+import { createServer as createViteServer } from "vite";
+import { GoogleGenAI, Type } from "@google/genai";
+import dotenv from "dotenv";
+import { createClient } from "@supabase/supabase-js";
+
+dotenv.config();
+
+// Create Supabase backend client
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.warn("⚠️ Supabase URL or Anon Key is missing in environment variables. Auth middleware will bypass or fail.");
+}
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+
+// Auth Middleware to protect sensitive endpoints
+const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (!supabase) {
+    return res.status(500).json({ error: "Supabase client not configured on server" });
+  }
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+  }
+
+  const token = authHeader.split(" ")[1];
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+
+  if (error || !user) {
+    return res.status(401).json({ error: "Unauthorized: Invalid session token" });
+  }
+
+  (req as any).user = user;
+  next();
+};
+
+// Lazy-loaded Gemini Client
+let aiClient: GoogleGenAI | null = null;
+function getGeminiClient(): GoogleGenAI {
+  if (!aiClient) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY environment variable is not defined in settings/secrets.");
+    }
+    aiClient = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          "User-Agent": "aistudio-build",
+        },
+      },
+    });
+  }
+  return aiClient;
+}
+
+// Global Static Application Context to supply as reference
+const APP_CONTEXT = {
+  books: [
+    {
+      id: "b1",
+      title: "Dom Casmurro",
+      author: "Machado de Assis",
+      tags: ["Clássico", "Realismo"],
+      minTier: "FREE",
+      description: "Obra clássica da literatura brasileira escrita por Machado de Assis que explora a melancolia, traição e o famoso mistério dos olhos de ressaca de Capitu.",
+      locationHint: "Biblioteca Principal"
+    },
+    {
+      id: "b2",
+      title: "A Divina Comédia",
+      author: "Dante Alighieri",
+      tags: ["Clássico", "Épico", "Premium"],
+      minTier: "VIP1",
+      description: "A lendária jornada teológica e poética de Dante Alighieri através do Inferno, Purgatório e Paraíso terrestre.",
+      locationHint: "Biblioteca Principal - Seção VIP"
+    },
+    {
+      id: "b3",
+      title: "O Astronauta Perdido",
+      author: "IA Ghostwriter",
+      tags: ["Ficção Científica", "Exclusivo IA"],
+      minTier: "FREE",
+      description: "Uma imersiva história futurista sobre uma nave à deriva nos confins do silêncio espacial de Marte.",
+      locationHint: "Biblioteca Principal - Seção Geração Neural"
+    }
+  ],
+  movies: [
+    {
+      id: "m1",
+      title: "Cosmic Journey - Sci-Fi Trailer",
+      year: 2026,
+      overview: "Uma odisseia épica pelos confins de galáxias inexploradas, expandindo nossa compreensão de física de fendas no tempo.",
+      locationHint: "Módulo de Mídia (Filmes e Séries)"
+    },
+    {
+      id: "m2",
+      title: "The Silent Sea - Ocean Documental",
+      year: 2025,
+      overview: "Exploração visual requintada e cinematográfica dos canais submarinos intocados sob a perspectiva ecológica.",
+      locationHint: "Módulo de Mídia (Documentários)"
+    },
+    {
+      id: "m3",
+      title: "Cyberpunk Neon Matrix Series",
+      year: 2026,
+      overview: "Nas sombras da metrópole futurista controlada por algoritmos de gateways, hackers lutam ciberneticamente para desbloquear a autonomia humana.",
+      locationHint: "Módulo de Mídia (Séries de Ação)"
+    }
+  ],
+  shopItems: [
+    { id: "001", name: "Sala de Leitura Neural", category: "Multiplex — Leitura Neural", priceIC: 4500, description: "Abre uma sala de leitura sincronizada com narração profissionalizada por Inteligência Artificial." },
+    { id: "002", name: "Sala de Leitura Neural Duo", category: "Multiplex — Leitura Neural", priceIC: 5250, description: "Abre sala de leitura sincronizada para múltiplos leitores simultâneos com narração de ponta." },
+    { id: "019", name: "Sala de Jogos INVIS Play", category: "Multiplex — Jogos", priceIC: 9000, description: "Abre sala com chat de voz WebRTC integrado sobre jogos casuais HTML5." },
+    { id: "025", name: "Sala de Filmes Multiplex", category: "Multiplex — Filmes / Vídeos", priceIC: 18000, description: "Assista a conteúdos compartilhados em sincronia perfeita de tempo com amigos." },
+    { id: "040", name: "Moldura de Páscoa", category: "Premium — Moldura de Perfil", priceIC: 12500, description: "Personalização estética de perfil com neon rosa pastel e ovos cintilantes de cristal." },
+    { id: "041", name: "Moldura de Natal", category: "Premium — Moldura de Perfil", priceIC: 12500, description: "Glow neon vermelho e verde rubi sobre a foto de perfil do usuário." },
+    { id: "043", name: "Moldura de Leitor", category: "Premium — Moldura de Perfil", priceIC: 15000, description: "Design de livro esculpido em filigranas douradas para destacar amantes da literatura." },
+    { id: "051", name: "Moldura de Diamante (Lendária)", category: "Premium — Moldura de Perfil", priceIC: 30000, description: "A caneta de diamante máxima. Design cristalino lendário com refração prismática." },
+    { id: "136", name: "Coroa Imperial", category: "Presentes — Status Social", priceIC: 24750, description: "Item de status social mais caro disponível, conferindo uma coroa dourada holográfica tridimensional por 10 dias." },
+    { id: "159", name: "Cadeira do Líder", category: "Presentes — Status Social", priceIC: 300, description: "Simboliza o prestígio e conforto do usuário na comunidade." }
+  ],
+  systemFeatures: [
+    { id: "sys1", title: "Cadeado Matemático", description: "Mecanismo gráfico realista de destravamento com equações criptográficas e física visual e de haptics." },
+    { id: "sys2", title: "Configurações de Idiomas Babel", description: "Suporte completo de tradução instantânea em 12 idiomas mundiais diferentes no sistema." },
+    { id: "sys3", title: "Carteira Digital", description: "Gestão de fundos virtuais em IC$ Golden (Mineráveis) e IC$ Silver (Compráveis), com conversores e pedidos de saques para usuários." },
+    { id: "sys4", title: "Babel Web Crawler", description: "Robô automatizado integrado para raspar, estruturar e vetorizar de forma inteligente conteúdos de URLs públicas para estantes virtuais." }
+  ]
+};
+
+async function startServer() {
+  const app = express();
+  const PORT = 3000;
+
+  app.use(express.json());
+
+  // API Route - Search (Protected)
+  app.post("/api/search", requireAuth, async (req, res) => {
+    const { query } = req.body;
+
+    if (!query || typeof query !== "string" || !query.trim()) {
+      return res.status(400).json({ error: "O termo de pesquisa é obrigatório." });
+    }
+
+    const getLexicalFallback = (searchQuery: string, warningMsg?: string) => {
+      const qUpper = searchQuery.toUpperCase();
+      const matches: any[] = [];
+      
+      // Books search
+      APP_CONTEXT.books.forEach(b => {
+        if (b.title.toUpperCase().includes(qUpper) || b.author.toUpperCase().includes(qUpper) || b.description.toUpperCase().includes(qUpper)) {
+          matches.push({ id: b.id, title: b.title, type: "book", description: b.description, actionHint: `Acesse a estante técnica e leia o clássico '${b.title}'.` });
+        }
+      });
+
+      // Movies search
+      APP_CONTEXT.movies.forEach(m => {
+        if (m.title.toUpperCase().includes(qUpper) || m.overview.toUpperCase().includes(qUpper)) {
+          matches.push({ id: m.id, title: m.title, type: "movie", description: m.overview, actionHint: "Assista a este título no painel central de Mídia." });
+        }
+      });
+
+      // Shop items search
+      APP_CONTEXT.shopItems.forEach(s => {
+        if (s.name.toUpperCase().includes(qUpper) || s.description.toUpperCase().includes(qUpper)) {
+          matches.push({ id: s.id, title: s.name, type: "shop", description: `${s.category} - ${s.priceIC} IC$`, actionHint: `Adquira este item estético diretamente na Loja Oficial (INVIShop).` });
+        }
+      });
+
+      // System features
+      APP_CONTEXT.systemFeatures.forEach(sys => {
+        if (sys.title.toUpperCase().includes(qUpper) || sys.description.toUpperCase().includes(qUpper)) {
+          matches.push({ id: sys.id, title: sys.title, type: "system", description: sys.description, actionHint: "Disponível na interface do ecossistema principal." });
+        }
+      });
+
+      const summary = warningMsg
+        ? `[MODO RESILIENTE] ${warningMsg} Localizamos ${matches.length} resultados relacionados ao termo "${searchQuery}".`
+        : `[BUSCA LÉXICA] Localizamos ${matches.length} resultados relacionados a "${searchQuery}" diretamente na nossa base de dados.`;
+
+      return {
+        summary,
+        results: matches,
+        fallback: true
+      };
+    };
+
+    try {
+      // 1. Try to get Gemini client. If it fails, we fall back to a rich offline lexical search
+      let ai;
+      try {
+        ai = getGeminiClient();
+      } catch (e: any) {
+        console.warn("Gemini Client initialization skipped/failed. Performing fallback lexical matching.", e.message);
+        return res.json(getLexicalFallback(query));
+      }
+
+      // Generate structured search results using Gemini 3.5 Flash
+      const systemInstruction = `
+        Você é o motor de Busca Inteligente do Ecossistema INVIS.
+        Sua tarefa é analisar o termo de pesquisa do usuário com base no CONTEXTO DO APLICATIVO fornecido abaixo.
+        A partir disso, você deve retornar um objeto JSON estruturado contendo:
+        1. "summary": Um parágrafo explicativo em português, fluido, elegante e informativo sobre os matches correspondentes à pesquisa ou como navegar neles.
+        2. "results": Um array de objetos que batem com a pesquisa. Cada objeto no array deve conter:
+           - "id": String com o id correspondente do item.
+           - "title": Nome ou título literário correspondente.
+           - "type": Classificação explícita do item matching: "book", "shop", "movie", "system".
+           - "description": Breve descrição do match ou o porquê foi encontrado.
+           - "actionHint": Um conselho amigável e focado de como/onde acessar isso na aplicação.
+
+        Massa de dados do aplicativo para referência do contexto:
+        ${JSON.stringify(APP_CONTEXT, null, 2)}
+      `;
+
+      try {
+        const response = await ai.models.generateContent({
+          model: "gemini-3.5-flash",
+          contents: `Encontre e mapeie as conexões semânticas para a pesquisa do usuário: "${query}"`,
+          config: {
+            systemInstruction,
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                summary: {
+                  type: Type.STRING,
+                  description: "Breve síntese narrativa em português ligando a pesquisa ao ecossistema.",
+                },
+                results: {
+                  type: Type.ARRAY,
+                  description: "Componentes ou registros mapeados da busca.",
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      id: { type: Type.STRING },
+                      title: { type: Type.STRING },
+                      type: { type: Type.STRING, description: "Identifica se é 'book', 'shop', 'movie' ou 'system'." },
+                      description: { type: Type.STRING },
+                      actionHint: { type: Type.STRING }
+                    },
+                    required: ["title", "type", "description", "actionHint"]
+                  }
+                }
+              },
+              required: ["summary", "results"]
+            }
+          }
+        });
+
+        // Parse and send the clean JSON response directly
+        const textResponse = response.text || "{}";
+        const parsed = JSON.parse(textResponse.trim());
+        return res.json(parsed);
+
+      } catch (geminiError: any) {
+        console.error("Erro na busca inteligente do Gemini (acionando Fallback):", geminiError);
+        const warningMsg = "O serviço inteligente do Gemini está com demanda extremamente alta (Código 503) ou temporariamente indisponível. Ativamos nossa indexação de segurança offline.";
+        return res.json(getLexicalFallback(query, warningMsg));
+      }
+
+    } catch (error: any) {
+      console.error("Erro inesperado na busca:", error);
+      return res.status(500).json({ error: "Erro de servidor interno ao processar a busca.", details: error.message });
+    }
+  });
+
+  // Helper to safely fetch and parse JSON with granular error handling
+  const safeFetchJson = async (url: string) => {
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        console.error(`[TMDB API Error] Response status not OK: ${resp.status} for URL: ${url}`);
+        return null;
+      }
+      let text = await resp.text();
+      text = text.trim();
+      
+      // Handle potential JSONP wrapper that some proxy or CDN edge caches might accidentally return
+      const jsonpMatch = text.match(/^[a-zA-Z0-9_]+\s*\((.*)\);?$/s);
+      if (jsonpMatch && jsonpMatch[1]) {
+        text = jsonpMatch[1];
+      }
+      
+      try {
+        return JSON.parse(text);
+      } catch (err: any) {
+        console.error(`[TMDB API Error] Failed to parse JSON from URL: ${url}. Error: ${err.message}. Text starts with: "${text.slice(0, 150)}"`);
+        return null;
+      }
+    } catch (e: any) {
+      console.error(`[TMDB API Error] Network or fetch error for URL: ${url}. Error: ${e.message}`);
+      return null;
+    }
+  };
+
+  // API Route - TMDB Trending (fetches pages 1 & 2 to ensure up to 30 unique movies/tv shows)
+  app.get("/api/tmdb/trending", async (req, res) => {
+    const apiKey = process.env.TMDB_API_KEY || "9a91802d06a7e6310a47dd35367746f6";
+    try {
+      const fetchPage = async (page: number) => {
+        const url = `https://api.themoviedb.org/3/trending/all/day?api_key=${apiKey}&language=pt-BR&page=${page}`;
+        const data = await safeFetchJson(url);
+        return data?.results || [];
+      };
+
+      const results1 = await fetchPage(1);
+      const results2 = await fetchPage(2);
+      
+      const seenIds = new Set<string>();
+      const combined: any[] = [];
+      for (const m of [...results1, ...results2]) {
+        if (m && m.id) {
+          const idStr = String(m.id);
+          if (!seenIds.has(idStr)) {
+            seenIds.add(idStr);
+            combined.push(m);
+          }
+        }
+      }
+
+      const mapped = combined.slice(0, 30).map((m: any, index: number) => {
+        const isMovie = m.media_type === "movie" || m.title !== undefined;
+        const title = m.title || m.name || m.original_title || m.original_name;
+        const releaseDate = m.release_date || m.first_air_date || "";
+        const year = releaseDate ? new Date(releaseDate).getFullYear() : 2024;
+        const type = isMovie ? "filme" : "serie";
+
+        // Distribute items uniformly across platforms to nicely fill all shelves up to 30
+        const platforms: ("netflix" | "disney" | "hbo" | "prime" | "globoplay")[] = ["netflix", "disney", "hbo", "prime", "globoplay"];
+        const platform = platforms[index % platforms.length];
+
+        const genreId = m.genre_ids && m.genre_ids[0];
+        const genreMap: any = {
+          28: "Ação", 12: "Aventura", 16: "Animes", 35: "Comédia", 80: "Policial",
+          99: "Documentários", 18: "Drama", 10751: "Família", 14: "Fantasia",
+          36: "História", 27: "Terror", 10402: "Música", 9648: "Suspense",
+          10749: "Romance", 878: "Sci-Fi", 10770: "Cinema TV", 53: "Suspense",
+          10752: "Guerra", 37: "Faroeste", 10759: "Ação & Aventura", 10762: "Kids",
+          10765: "Sci-Fi & Fantasy"
+        };
+        const category = genreMap[genreId] || (isMovie ? "Cinema" : "Série");
+
+        // Make every 4th item favorited and every 3rd with some continue progress for demo
+        const isFavorite = index % 4 === 0;
+        const continueProgress = index % 3 === 0 ? (20 + (index * 7) % 70) : undefined;
+
+        return {
+          id: `tmdb-${m.id}`,
+          title,
+          year,
+          posterUrl: m.poster_path 
+            ? `https://image.tmdb.org/t/p/w500${m.poster_path}` 
+            : "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=500&auto=format&fit=crop&q=80",
+          backdropUrl: m.backdrop_path
+            ? `https://image.tmdb.org/t/p/w500${m.backdrop_path}`
+            : m.poster_path
+              ? `https://image.tmdb.org/t/p/w500${m.poster_path}`
+              : "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=500&auto=format&fit=crop&q=80",
+          overview: m.overview || "Sem visão geral disponível.",
+          videoUrl: "", // will lazyload or resolve on play
+          type,
+          status: true,
+          platform,
+          category,
+          rating: m.vote_average || 7.5,
+          isFavorite,
+          continueProgress,
+          totalDuration: isMovie ? "120m" : "1 Temporada",
+          likes: m.vote_count || Math.floor(Math.random() * 500) + 150,
+          trendDays: 5
+        };
+      });
+
+      res.json(mapped);
+    } catch (e: any) {
+      console.error("Error in TMDB trending server proxy:", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // API Route - TMDB Search
+  app.get("/api/tmdb/search", async (req, res) => {
+    const { query } = req.query;
+    const apiKey = process.env.TMDB_API_KEY || "9a91802d06a7e6310a47dd35367746f6";
+
+    if (!query) {
+      return res.status(400).json({ error: "Termo de busca é obrigatório." });
+    }
+
+    try {
+      const url = `https://api.themoviedb.org/3/search/multi?api_key=${apiKey}&query=${encodeURIComponent(query as string)}&language=pt-BR`;
+      const data = await safeFetchJson(url);
+      const results = data?.results || [];
+
+      const seenIds = new Set<string>();
+      const uniqueResults: any[] = [];
+      for (const m of results) {
+        if (m && m.id && (m.media_type === "movie" || m.media_type === "tv")) {
+          const idStr = String(m.id);
+          if (!seenIds.has(idStr)) {
+            seenIds.add(idStr);
+            uniqueResults.push(m);
+          }
+        }
+      }
+
+      const mapped = uniqueResults.map((m: any, index: number) => {
+        const isMovie = m.media_type === "movie" || m.title !== undefined;
+        const title = m.title || m.name || m.original_title || m.original_name;
+        const releaseDate = m.release_date || m.first_air_date || "";
+        const year = releaseDate ? new Date(releaseDate).getFullYear() : 2024;
+        const type = isMovie ? "filme" : "serie";
+
+        const platforms: ("netflix" | "disney" | "hbo" | "prime" | "globoplay")[] = ["netflix", "disney", "hbo", "prime", "globoplay"];
+        const platform = platforms[index % platforms.length];
+
+        const genreId = m.genre_ids && m.genre_ids[0];
+        const genreMap: any = {
+          28: "Ação", 12: "Aventura", 16: "Animes", 35: "Comédia", 80: "Policial",
+          99: "Documentários", 18: "Drama", 10751: "Família", 14: "Fantasia",
+          36: "História", 27: "Terror", 10402: "Música", 9648: "Suspense",
+          10749: "Romance", 878: "Sci-Fi", 10770: "Cinema TV", 53: "Suspense",
+          10752: "Guerra", 37: "Faroeste", 10759: "Ação & Aventura", 10762: "Kids",
+          10765: "Sci-Fi & Fantasy"
+        };
+        const category = genreMap[genreId] || (isMovie ? "Cinema" : "Série");
+
+        return {
+          id: `tmdb-${m.id}`,
+          title,
+          year,
+          posterUrl: m.poster_path 
+            ? `https://image.tmdb.org/t/p/w500${m.poster_path}` 
+            : "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=500&auto=format&fit=crop&q=80",
+          backdropUrl: m.backdrop_path
+            ? `https://image.tmdb.org/t/p/w500${m.backdrop_path}`
+            : m.poster_path
+              ? `https://image.tmdb.org/t/p/w500${m.poster_path}`
+              : "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=500&auto=format&fit=crop&q=80",
+          overview: m.overview || "Sem visão geral disponível.",
+          videoUrl: "",
+          type,
+          status: true,
+          platform,
+          category,
+          rating: m.vote_average || 7.2,
+          isFavorite: false,
+          totalDuration: isMovie ? "110m" : "1 Temporada",
+          likes: m.vote_count || Math.floor(Math.random() * 200) + 100,
+          trendDays: 5
+        };
+      });
+
+      res.json(mapped);
+    } catch (e: any) {
+      console.error("Error in TMDB search server proxy:", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // API Route - TMDB Details (Actors, production, trailers, duration & streams)
+  app.get("/api/tmdb/details", async (req, res) => {
+    const { id, type } = req.query;
+    const apiKey = process.env.TMDB_API_KEY || "9a91802d06a7e6310a47dd35367746f6";
+
+    if (!id) {
+      return res.status(400).json({ error: "id é obrigatório." });
+    }
+
+    const numericId = (id as string).replace("tmdb-", "");
+    const apiType = type === "serie" ? "tv" : "movie";
+
+    try {
+      // 1. Details
+      let duration = apiType === "movie" ? "120m" : "1 Temporada";
+      let production = "Não Informada";
+      const detailsUrl = `https://api.themoviedb.org/3/${apiType}/${numericId}?api_key=${apiKey}&language=pt-BR`;
+      const details = await safeFetchJson(detailsUrl);
+      if (details) {
+        if (apiType === "movie" && details.runtime) {
+          duration = `${details.runtime}m`;
+        } else if (apiType === "tv") {
+          duration = details.episode_run_time && details.episode_run_time.length > 0
+            ? `${details.episode_run_time[0]}m`
+            : `${details.number_of_seasons || 1} Temp`;
+        }
+
+        const comps = details.production_companies || [];
+        if (comps.length > 0) {
+          production = comps.map((c: any) => c.name).slice(0, 3).join(", ");
+        }
+      }
+
+      // 2. Credits (Actors)
+      let actors: string[] = ["Informação não disponível"];
+      const creditsUrl = `https://api.themoviedb.org/3/${apiType}/${numericId}/credits?api_key=${apiKey}&language=pt-BR`;
+      const credits = await safeFetchJson(creditsUrl);
+      if (credits) {
+        const cast = credits.cast || [];
+        if (cast.length > 0) {
+          actors = cast.map((c: any) => c.name).slice(0, 5);
+        }
+      }
+
+      // 3. Videos
+      let videoUrl = "";
+      const videosUrl = `https://api.themoviedb.org/3/${apiType}/${numericId}/videos?api_key=${apiKey}&language=pt-BR`;
+      const vData = await safeFetchJson(videosUrl);
+      if (vData) {
+        const vList = vData.results || [];
+        const trailer = vList.find((v: any) => v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser")) || vList.find((v: any) => v.site === "YouTube");
+        if (trailer) {
+          videoUrl = `https://www.youtube.com/embed/${trailer.key}`;
+        }
+      }
+
+      // Fallback videos to en-US if pt-BR is empty
+      if (!videoUrl) {
+        const videosUrlEn = `https://api.themoviedb.org/3/${apiType}/${numericId}/videos?api_key=${apiKey}&language=en-US`;
+        const vDataEn = await safeFetchJson(videosUrlEn);
+        if (vDataEn) {
+          const vListEn = vDataEn.results || [];
+          const trailerEn = vListEn.find((v: any) => v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser")) || vListEn.find((v: any) => v.site === "YouTube");
+          if (trailerEn) {
+            videoUrl = `https://www.youtube.com/embed/${trailerEn.key}`;
+          }
+        }
+      }
+
+      // Embed stream movie template
+      const streamUrl = apiType === "movie"
+        ? `https://vidsrc.to/embed/movie/${numericId}`
+        : `https://vidsrc.to/embed/tv/${numericId}`;
+
+      res.json({
+        duration,
+        production,
+        actors,
+        videoUrl: videoUrl || "https://www.youtube.com/embed/dQw4w9WgXcQ", // fallback to rickroll if absolutely no trailer
+        streamUrl
+      });
+    } catch (e: any) {
+      console.error("Error in TMDB details proxy:", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Serve static UI assets and handle hot reload / routing fallback
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  }
+
+  return app;
+}
+
+let cachedApp: express.Express | null = null;
+export default async function (req: any, res: any) {
+  if (!cachedApp) {
+    cachedApp = await startServer();
+  }
+  return cachedApp(req, res);
+}
+
+if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
+  startServer().then(app => {
+    const PORT = 3000;
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  });
+}
