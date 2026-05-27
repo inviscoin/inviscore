@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { InvisProvider, useInvis, DICTIONARY } from './context/InvisContext';
+import { LiveKitProvider } from './context/LiveKitContext';
 import { LockScreen } from './components/LockScreen';
 import { LoginScreen } from './components/LoginScreen';
 import { RegisterScreen } from './components/RegisterScreen';
@@ -460,7 +461,9 @@ function AppContent() {
 export default function App() {
   return (
     <InvisProvider>
-      <AppContent />
+      <LiveKitProvider>
+        <AppContent />
+      </LiveKitProvider>
     </InvisProvider>
   );
 }

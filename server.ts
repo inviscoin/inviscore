@@ -4,6 +4,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
+import { AccessToken } from "livekit-server-sdk";
 
 dotenv.config();
 
@@ -545,6 +546,38 @@ async function startServer() {
       });
     } catch (e: any) {
       console.error("Error in TMDB details proxy:", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // API Route - LiveKit Token
+  app.get("/api/livekit/token", requireAuth, async (req, res) => {
+    try {
+      const roomName = req.query.room;
+      if (!roomName || typeof roomName !== "string") {
+        return res.status(400).json({ error: "Room name is required" });
+      }
+
+      const participantName = (req as any).user?.email?.split('@')[0] || "INVIS_User";
+      
+      const apiKey = process.env.LIVEKIT_API_KEY;
+      const apiSecret = process.env.LIVEKIT_API_SECRET;
+
+      if (!apiKey || !apiSecret) {
+        return res.status(500).json({ error: "LiveKit credentials not configured on server" });
+      }
+
+      const at = new AccessToken(apiKey, apiSecret, {
+        identity: participantName,
+        name: participantName,
+      });
+
+      at.addGrant({ roomJoin: true, room: roomName, canPublish: true, canSubscribe: true });
+      const token = await at.toJwt();
+
+      res.json({ token, wsUrl: process.env.LIVEKIT_URL });
+    } catch (e: any) {
+      console.error("Error generating LiveKit token:", e);
       res.status(500).json({ error: e.message });
     }
   });

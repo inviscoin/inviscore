@@ -3,7 +3,7 @@ import { useInvis, DICTIONARY } from '../context/InvisContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { motion } from 'motion/react';
 import { ShieldCheck, CalendarRange, Scale, AlertOctagon, UserCheck, Trash2 } from 'lucide-react';
-import { SupabaseService, isSupabaseConfigured } from '../lib/supabase';
+import { SupabaseService, isSupabaseConfigured, supabase } from '../lib/supabase';
 
 export const OnboardingFlow: React.FC = () => {
   const { 
@@ -125,24 +125,17 @@ export const OnboardingFlow: React.FC = () => {
     };
 
     if (isSupabaseConfigured()) {
-      const email = currentUser.email;
-      const pass = (currentUser as any).tempPassword || 'InvisP@ssw0rd!';
-      const profileData = {
-        fullName: currentUser.fullName,
-        nickname: currentUser.nickname,
-        phone: currentUser.phone,
-        birthDate: currentUser.birthDate,
-        age: currentUser.age
-      };
-
-      const { data, error } = await SupabaseService.signUp(email, pass, profileData);
-      if (error) {
-        alert('Falha ao registrar dados no Supabase: ' + error.message);
-        return;
-      }
-      if (data?.user) {
-        finalUser.id = data.user.id;
-      }
+      try {
+        const { error } = await supabase
+            .from('profiles')
+            .upsert({
+              id: currentUser.id,
+              age: currentUser.age,
+              age_group: currentUser.ageGroup,
+              tier: currentUser.tier
+            });
+        if (error) console.error("Could not update profile age/tier", error);
+      } catch (err) {}
     }
 
     // Clean tempPassword reference

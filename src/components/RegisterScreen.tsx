@@ -45,11 +45,13 @@ export const RegisterScreen: React.FC = () => {
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [ddi, setDdi] = useState('+55');
+  const [ddd, setDdd] = useState('');
   const [phone, setPhone] = useState('');
   const [isDdiOpen, setIsDdiOpen] = useState(false);
   const [modalObj, setModalObj] = useState<{ title: string; message: string; type: 'error' | 'success' | 'info' } | null>(null);
   const [emailError, setEmailError] = useState('');
   const [phoneError, setPhoneError] = useState('');
+  const [dddError, setDddError] = useState('');
 
   // Birth Date and Age setup
   const [birthDate, setBirthDate] = useState(''); // dd/mm/aa
@@ -225,6 +227,16 @@ export const RegisterScreen: React.FC = () => {
 
     const rule = getDdiPhoneRule(ddi);
     const cleanPhone = phone.replace(/\D/g, '');
+    const cleanDdd = ddd.replace(/\D/g, '');
+
+    if (!cleanDdd || cleanDdd.length < 2) {
+      setModalObj({ title: (currentTexts as any).declined || "CADASTRO DECLINADO", message: "DDD inválido.", type: 'error' });
+      setDddError("DDD inválido");
+      return;
+    } else {
+      setDddError("");
+    }
+
     if (!cleanPhone || cleanPhone.length < rule.minLocal || cleanPhone.length > rule.maxLocal) {
       setModalObj({ title: (currentTexts as any).declined || "CADASTRO DECLINADO", message: `Telefone inválido para ${selectedDdiObj.name}. Esperado de ${rule.minLocal} a ${rule.maxLocal} dígitos.`, type: 'error' });
       setPhoneError(`Esperado de ${rule.minLocal} a ${rule.maxLocal} dígitos.`);
@@ -250,7 +262,7 @@ export const RegisterScreen: React.FC = () => {
       const { data, error } = await SupabaseService.signUp(email, password, {
         fullName,
         nickname,
-        phone: `${ddi} ${phone}`,
+        phone: `${ddi} ${ddd} ${phone}`,
         ddi,
         birthDate
       });
@@ -266,7 +278,7 @@ export const RegisterScreen: React.FC = () => {
         fullName,
         nickname,
         email,
-        phone: `${ddi} ${phone}`,
+        phone: `${ddi} ${ddd} ${phone}`,
         ddi,
         birthDate,
         age: calculatedAge,
@@ -379,11 +391,32 @@ export const RegisterScreen: React.FC = () => {
                     className="w-20 px-2 flex items-center justify-center gap-[2px] rounded-xl border border-cyan-500/20 bg-black/25 text-center text-sm cursor-pointer outline-none focus:outline-none"
                     style={{ WebkitTapHighlightColor: 'transparent' }}
                   >
-                    <span className="font-mono text-xs font-semibold tracking-tighter text-neutral-300">{selectedDdiObj.code}</span>
+                    <span className="font-mono text-xs font-semibold tracking-tighter text-neutral-300 flex items-center gap-1">
+                      <span>{selectedDdiObj.flag}</span>
+                      <span>{selectedDdiObj.code}</span>
+                    </span>
                     <ChevronDown className="w-3.5 h-3.5 opacity-50" />
                   </button>
 
                   <div className="relative flex-1">
+                    <span className="absolute left-4 top-1/2 -translate-y-[55%] text-sm select-none text-neutral-400 font-bold font-mono border-r border-white/5 pr-2">DDD</span>
+                    <input
+                      type="text"
+                      placeholder="Ex: 11"
+                      value={ddd}
+                      maxLength={3}
+                      onKeyDown={handleNoSpacesInput}
+                      onChange={(e) => setDdd(e.target.value.replace(/\D/g, ''))}
+                      className={`w-full pl-14 pr-2 py-3.5 rounded-xl border bg-black/25 text-left text-sm outline-none transition-all ${
+                        dddError 
+                          ? 'border-red-500/50 focus:border-red-400 text-red-200' 
+                          : 'border-cyan-500/20 focus:border-[#00FF80]'
+                      }`}
+                      style={{ WebkitTapHighlightColor: 'transparent' }}
+                    />
+                  </div>
+
+                  <div className="relative flex-[2]">
                     <span className="absolute left-4 top-1/2 -translate-y-[55%] text-sm select-none">{selectedDdiObj.flag}</span>
                     <input
                       type="text"
