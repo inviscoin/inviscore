@@ -75,13 +75,25 @@ export const LoginScreen: React.FC = () => {
           throw new Error("Popup bloqueado pelo navegador.");
         }
 
+        const handleMessage = (event: MessageEvent) => {
+          if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
+            window.removeEventListener('message', handleMessage);
+            window.clearInterval(pollTimer);
+            supabase.auth.getSession().then(({ data: { session } }) => {
+              if (!session) {
+                setShowScanner(false);
+              }
+              // InvisContext's onAuthStateChange handles the rest if session exists
+            });
+          }
+        };
+
+        window.addEventListener('message', handleMessage);
+
         const pollTimer = window.setInterval(() => {
           if (popup.closed !== false) {
              window.clearInterval(pollTimer);
-             // Scanner might be stuck if they closed it without authenticating.
-             // But if they authenticated, InvisContext onAuthStateChange will unmount this screen 
-             // and take them to dashboard or register.
-             // We can check local session as a fallback.
+             window.removeEventListener('message', handleMessage);
              supabase.auth.getSession().then(({ data: { session } }) => {
                if (!session) {
                  setShowScanner(false);

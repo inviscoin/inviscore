@@ -1114,8 +1114,17 @@ export const InvisProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
          if (event === 'SIGNED_IN' && session?.user) {
-            if (window.opener && window.opener !== window) {
+            if (window.name && window.name.startsWith('Oauth_')) {
+               if (window.opener && window.opener !== window) {
+                   window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
+               }
                window.close();
+               return; // Do not fetch and set user in the popup
+            }
+            if (window.opener && window.opener !== window) {
+               window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
+               window.close();
+               return;
             }
             fetchAndSetUser(session.user);
          } else if (event === 'SIGNED_OUT') {
