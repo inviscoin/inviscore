@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useInvis, DICTIONARY } from '../context/InvisContext';
+import { useTranslation } from '../hooks/useTranslation';
 import { motion, AnimatePresence } from 'motion/react';
 import { AuthHandshake } from './AuthHandshake';
 import { AuthWrapper } from './AuthWrapper';
@@ -13,17 +14,24 @@ export const LoginScreen: React.FC = () => {
     setCurrentUser, setSystemStatus, setSelectedSupportPage
   } = useInvis();
 
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [authStatusText, setAuthStatusText] = useState('Autenticando...');
   const [showScanner, setShowScanner] = useState(false);
   const [modalObj, setModalObj] = useState<{ title: string; message: string; type: 'error' | 'success' | 'info' } | null>(null);
 
-  const currentTexts = DICTIONARY[language];
-  const [authedSupabaseUser, setAuthedSupabaseUser] = useState<any>(null);
+  const { currentTexts } = useTranslation();
 
-  const triggerSocialAuth = async (provider: 'google' | 'facebook' | 'instagram') => {
+  React.useEffect(() => {
+    if (localStorage.getItem('invis_oauth_error') === 'not_found') {
+      localStorage.removeItem('invis_oauth_error');
+      setModalObj({
+        title: (currentTexts as any).oauth_err_title || "Acesso Negado",
+        message: (currentTexts as any).oauth_err_msg || "Conta INVIS não localizada. Por favor, registre-se no sistema antes de utilizar a autenticação social.",
+        type: "error"
+      });
+    }
+  }, []);
+
+  const triggerSocialAuth = async (provider: 'google' | 'facebook') => {
     setAuthStatusText(`Conectando ao provedor ${provider.toUpperCase()}...`);
     setShowScanner(true);
     
@@ -40,75 +48,9 @@ export const LoginScreen: React.FC = () => {
     }
   };
 
-  const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!identifier.trim()) {
-      setModalObj({ title: "DADOS INVÁLIDOS", message: currentTexts.login_err_empty || 'Insira seu usuário, e-mail ou telefone.', type: 'error' });
-      return;
-    }
-    if (!password || password.length < 6) {
-      setModalObj({ title: "DADOS INVÁLIDOS", message: currentTexts.reg_req_min || 'Sua senha deve conter no mínimo 6 caracteres.', type: 'error' });
-      return;
-    }
-
-    setAuthStatusText(currentTexts.login_auth || 'Validando credenciais na Matriz...');
-
-    if (isSupabaseConfigured()) {
-      const { data, error } = await SupabaseService.signIn(identifier, password);
-      if (error) {
-        setModalObj({ title: "FALHA NO LOGIN", message: error.message || 'Erro de autenticação no Supabase.', type: 'error' });
-        return;
-      }
-      if (data?.user) {
-        const profile = await SupabaseService.getProfile(data.user.id);
-        setAuthedSupabaseUser({
-          id: data.user.id,
-          fullName: profile?.full_name || 'Fundador INVIS Cérebro',
-          nickname: profile?.nickname || identifier.split('@')[0],
-          email: data.user.email || identifier,
-          phone: profile?.phone || '+5511999999999',
-          ddi: profile?.ddi || '+55',
-          birthDate: profile?.birth_date || '1995-10-31',
-          age: profile?.age || 30,
-          tier: profile?.tier || 'FREE',
-          ageGroup: (profile?.age || 30) < 18 ? 'Kids' : 'Adult',
-          isActive: true,
-          termsAccepted: true,
-          biometricsActive: false
-        });
-      }
-    } else {
-      setAuthedSupabaseUser(null);
-    }
-
-    setShowScanner(true);
-  };
-
   const finalizeSessionAura = () => {
     setShowScanner(false);
-    if (authedSupabaseUser) {
-      setCurrentUser(authedSupabaseUser);
-    } else {
-      setCurrentUser({
-        id: 'usr_' + Math.random().toString(36).substr(2, 9),
-        fullName: 'Usuário INVIS',
-        nickname: identifier.includes('@') ? identifier.split('@')[0].substring(0, 10) : identifier.substring(0, 10),
-        email: identifier.includes('@') ? identifier : 'user@inviscore.com',
-        phone: '+5511999999999',
-        ddi: '+55',
-        birthDate: '1995-10-31',
-        age: 30,
-        tier: 'FREE', 
-        ageGroup: 'Adult',
-        isActive: true,
-        termsAccepted: true,
-        biometricsActive: false
-      });
-    }
-    // Transition to Onboarding Age logic instead of immediately dashboard, as requested
-    // "não dá pra acessar o dashboard sem confirmação de idade"
-    // Though for returning logic maybe skip, but strictly go to onboarding_age
-    setStage('onboarding_age');
+    // When using Supabase OAuth, the redirect happens and inviscontext handles session fetching.
   };
 
   return (
@@ -142,78 +84,9 @@ export const LoginScreen: React.FC = () => {
               </p>
             </div>
 
-            <motion.form 
-              key="login-form"
-              onSubmit={handleLoginSubmit}
-              className="w-full flex flex-col space-y-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <div className="relative w-full">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400/60" />
-                <input
-                  type="text"
-                  placeholder={currentTexts.user_placeholder || "Usuário, E-mail ou Telefone"}
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  className="w-full pl-11 pr-4 py-4 rounded-xl border border-cyan-500/20 bg-black/20 text-left font-sans focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all text-sm outline-none text-white placeholder-neutral-500"
-                  style={{ WebkitTapHighlightColor: 'transparent' }}
-                />
-              </div>
-
-              <div className="relative w-full">
-                <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400/60" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder={currentTexts.password_placeholder || "Senha"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-12 py-4 rounded-xl border border-cyan-500/20 bg-black/20 text-left font-sans focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all text-sm outline-none text-white placeholder-neutral-500"
-                  style={{ WebkitTapHighlightColor: 'transparent' }}
-                />
-                
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-cyan-400/60 hover:text-cyan-400 transition-all cursor-pointer outline-none focus:outline-none focus:ring-0 active:scale-95"
-                  style={{ WebkitTapHighlightColor: 'transparent' }}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-4 mt-2 rounded-xl bg-[#00FF80] text-black font-black hover:scale-[1.02] active:scale-[0.98] transition-all text-sm uppercase shadow-[0_0_15px_rgba(0,255,128,0.3)] cursor-pointer outline-none"
-                style={{ WebkitTapHighlightColor: 'transparent' }}
-              >
-                {currentTexts.login_btn || "Entrar"}
-              </button>
-
-              <div className="flex flex-col items-center space-y-3 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setStage('support_password')}
-                  className="text-xs text-neutral-400 hover:text-white transition-all cursor-pointer font-sans outline-none"
-                  style={{ WebkitTapHighlightColor: 'transparent' }}
-                >
-                   {currentTexts.forgot_password || "Esqueci a senha"}
-                </button>
-
-                <hr className="w-full border-white/5" />
-
-                <div className="text-center font-sans">
-                  <p className="text-[#00c8ff] text-xs font-semibold cursor-pointer select-none hover:underline outline-none" onClick={() => setStage('register')} style={{ WebkitTapHighlightColor: 'transparent' }}>
-                    {currentTexts.no_account || "Não possui cadastro? Clique Aqui"}
-                  </p>
-                </div>
-              </div>
-            </motion.form>
-
             <div className="w-full mt-6 flex flex-col items-center">
               <p className="text-xs text-neutral-500 tracking-wider uppercase mb-3 text-center select-none font-sans">
-                {currentTexts.or_connect || "Ou conecte com"}
+                {currentTexts.or_connect || "Acesse sua conta"}
               </p>
 
               <div className="grid grid-cols-2 gap-4 w-full">
@@ -241,6 +114,15 @@ export const LoginScreen: React.FC = () => {
                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                   </svg>
                 </button>
+              </div>
+
+              <div className="flex flex-col items-center space-y-3 pt-6 w-full">
+                <hr className="w-full border-white/5" />
+                <div className="text-center font-sans">
+                  <p className="text-[#00c8ff] text-xs font-semibold cursor-pointer select-none hover:underline outline-none" onClick={() => setStage('register')} style={{ WebkitTapHighlightColor: 'transparent' }}>
+                    {currentTexts.no_account || "Não possui cadastro? Clique Aqui"}
+                  </p>
+                </div>
               </div>
             </div>
           </div>

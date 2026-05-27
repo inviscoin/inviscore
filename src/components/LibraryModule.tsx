@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useInvis, MOCK_BOOKS, DICTIONARY } from '../context/InvisContext';
+import { useTranslation } from '../hooks/useTranslation';
 import { Book } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { BookOpen, Sparkles, Sliders, Volume2, Search, ArrowLeft, ChevronLeft, ChevronRight, PenTool, CheckCircle, Clock, Globe, Terminal, Cpu } from 'lucide-react';
@@ -250,7 +251,7 @@ export const LibraryModule: React.FC = () => {
     }, 700);
   };
 
-  const currentTexts = DICTIONARY[language];
+  const { currentTexts } = useTranslation();
 
   const filteredBooks = booksList.filter(book => 
     book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||

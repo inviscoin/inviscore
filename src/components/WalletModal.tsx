@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useInvis, DICTIONARY } from '../context/InvisContext';
+import { useTranslation } from '../hooks/useTranslation';
 import { motion, AnimatePresence } from 'motion/react';
 import { CreditCard, Landmark, ArrowRight, History, X, Copy, Check, ShieldAlert, ArrowLeftRight, HeartHandshake } from 'lucide-react';
 
@@ -22,7 +23,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onOpe
 
   if (!isOpen) return null;
 
-  const currentTexts = DICTIONARY[language];
+  const { currentTexts } = useTranslation();
 
   // Dual-Wallet values
   const conversionRate = 2500; // 2500ic = R$ 1.00

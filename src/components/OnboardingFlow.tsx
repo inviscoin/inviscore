@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useInvis, DICTIONARY } from '../context/InvisContext';
+import { useTranslation } from '../hooks/useTranslation';
 import { motion } from 'motion/react';
 import { ShieldCheck, CalendarRange, Scale, AlertOctagon, UserCheck, Trash2 } from 'lucide-react';
 import { SupabaseService, isSupabaseConfigured } from '../lib/supabase';
@@ -19,7 +20,7 @@ export const OnboardingFlow: React.FC = () => {
   const [userIP, setUserIP] = useState('Detectando...');
   const textContainerRef = useRef<HTMLDivElement>(null);
 
-  const currentTexts = DICTIONARY[language];
+  const { currentTexts } = useTranslation();
 
   // Fetch real IP or mock fallback
   useEffect(() => {
@@ -181,15 +182,15 @@ export const OnboardingFlow: React.FC = () => {
           </div>
 
           <h2 className="text-sm font-mono tracking-[0.25em] text-[#00c8ff] uppercase mb-4">
-            PERFIL SANCIONADO
+            {currentTexts.profile_sanctioned || "PERFIL SANCIONADO"}
           </h2>
 
           <div className="w-full mb-6 text-center">
              <div className="text-[#00FF80] font-mono text-xl font-bold tracking-widest mt-4 bg-[#00FF80]/10 py-2 rounded-xl border border-[#00FF80]/20">
-               {currentUser?.age} ANOS
+               {currentUser?.age} {currentTexts.years_old || "ANOS"}
              </div>
              <p className="text-xs text-neutral-400 mt-3 font-semibold uppercase font-mono">
-                Acesso Liberado para o perfil: <span className="text-cyan-400">{currentUser?.ageGroup}</span>
+                {currentTexts.access_cleared || "Acesso Liberado para o perfil:"} <span className="text-cyan-400">{currentUser?.ageGroup}</span>
              </p>
           </div>
 
@@ -204,7 +205,7 @@ export const OnboardingFlow: React.FC = () => {
               onClick={handleAgeConfirm}
               className="flex-1 py-3.5 bg-[#00FF80] text-black rounded-xl text-xs font-black uppercase transition-all tracking-wider shadow-[0_0_15px_rgba(0,255,128,0.25)] cursor-pointer hover:scale-105"
             >
-              Confirmar
+              {currentTexts.confirm || "CONFIRMAR"}
             </button>
           </div>
 
@@ -223,8 +224,8 @@ export const OnboardingFlow: React.FC = () => {
           <div className="flex items-center gap-3 border-b border-white/5 pb-4 mb-4">
             <Scale className="w-5 h-5 text-cyan-400" />
             <div className="text-left">
-              <h3 className="text-xs font-mono tracking-widest text-[#00c8ff] uppercase font-black">Conformidade Jurídica LGPD</h3>
-              <p className="text-[10px] text-neutral-500">IP DE ACESSO: <span className="font-mono text-white">{userIP}</span></p>
+              <h3 className="text-xs font-mono tracking-widest text-[#00c8ff] uppercase font-black">{currentTexts.lgpd_compliance || "Conformidade Jurídica LGPD"}</h3>
+              <p className="text-[10px] text-neutral-500">{currentTexts.ip_access || "IP DE ACESSO:"} <span className="font-mono text-white">{userIP}</span></p>
             </div>
           </div>
 
@@ -235,25 +236,25 @@ export const OnboardingFlow: React.FC = () => {
             className="h-64 overflow-y-auto bg-black/40 border border-white/5 rounded-xl p-4 text-[11px] text-neutral-400 leading-relaxed space-y-4 no-scrollbar scroll-smooth"
           >
             <p className="font-bold text-white text-xs align-center text-center uppercase tracking-wider">
-              --- ESTREITA OBSERVÂNCIA À LEI Nº 13.709/2018 ---
+              {currentTexts.lgpd_title || "--- ESTREITA OBSERVÂNCIA À LEI Nº 13.709/2018 ---"}
             </p>
             <p>
-              <strong>Cláusula 1 (Privacidade e Segurança):</strong> Este documento formaliza o compromisso de segurança de dados e zelo pelos registros, evitando vazamentos e acessos indevidos no ecossistema INVIS. Os dados estão em compliance integral com a LGPD e GDPR internacional.
+              <strong>{currentTexts.lgpd_1 || "Cláusula 1 (Privacidade e Segurança): Este documento formaliza o compromisso de segurança de dados e zelo pelos registros, evitando vazamentos e acessos indevidos no ecossistema INVIS. Os dados estão em compliance integral com a LGPD e GDPR internacional."}</strong>
             </p>
             <p>
-              <strong>Cláusula 2 (Ecossistema Restrito):</strong> O ecossistema INVIS opera como uma Single Page Application unificada com sandboxes de redirecionamento. Págamentos são processados em APIs do lado do servidor (Bouncer API Gateway).
+              {currentTexts.lgpd_2 || "Cláusula 2 (Ecossistema Restrito): O ecossistema INVIS opera como uma Single Page Application unificada com sandboxes de redirecionamento. Págamentos são processados em APIs do lado do servidor (Bouncer API Gateway)."}
             </p>
             <p>
-              <strong>Cláusula 3 (Remoção de Metadados):</strong> Toda imagem enviada ao sistema (Galeria, Fórum, Fotos) passa por um processo local e imediato de <strong>EXIF Stripping</strong> (descarte de geolocalização e modelo do aparelho) para garantir sua segurança e anonimato absoluto contra stalking.
+              {currentTexts.lgpd_3 || "Cláusula 3 (Remoção de Metadados): Toda imagem enviada ao sistema (Galeria, Fórum, Fotos) passa por um processo local e imediato de EXIF Stripping (descarte de geolocalização e modelo do aparelho) para garantir sua segurança e anonimato absoluto contra stalking."}
             </p>
             <p>
-              <strong>Cláusula 4 (Antifraude e Regras da Economia):</strong> A mineração de moedas INVIS (ic) está atrelada à retenção de tela ativa e visualizações genuínas. A utilização de bots, simuladores de clicks, ou macros acarretará em Shadow-Ban permanente aplicado por nossos <strong>Circuit Breakers</strong>.
+              {currentTexts.lgpd_4 || "Cláusula 4 (Antifraude e Regras da Economia): A mineração de moedas INVIS (ic) está atrelada à retenção de tela ativa e visualizações genuínas. A utilização de bots, simuladores de clicks, ou macros acarretará em Shadow-Ban permanente aplicado por nossos Circuit Breakers."}
             </p>
             <p>
-              <strong>Cláusula 5 (Dual Wallet e Moeda de Prata):</strong> Itens adquiridos com Moedas de Prata (acumuladas por bônus ou aportes) herdam permanentemente a tag <code>is_stamped=true</code>, impossibilitando sua revenda.
+              {currentTexts.lgpd_5 || "Cláusula 5 (Dual Wallet e Moeda de Prata): Itens adquiridos com Moedas de Prata (acumuladas por bônus ou aportes) herdam permanentemente a tag is_stamped=true, impossibilitando sua revenda."}
             </p>
             <p className="font-mono text-center text-neutral-500 text-[10px] py-2 border-t border-white/5">
-              Role até o fim para liberar a assinatura digital corporativa de termos.
+              {currentTexts.scroll_terms || "Role até o fim para liberar a assinatura digital corporativa de termos."}
             </p>
           </div>
 
@@ -265,7 +266,7 @@ export const OnboardingFlow: React.FC = () => {
               className="w-full py-4 bg-[#00FF80] disabled:bg-neutral-800 disabled:text-neutral-500 text-black font-black uppercase text-xs tracking-widest rounded-xl transition-all shadow-[0_0_15px_rgba(0,255,128,0.25)] flex items-center justify-center gap-2 cursor-pointer"
             >
               <ShieldCheck className="w-4 h-4" />
-              <span>{hasScrollToBottom ? 'ACEITO E ASSINO' : 'ROLE ATÉ O FIM'}</span>
+              <span>{hasScrollToBottom ? (currentTexts.accept_btn || 'ACEITO E ASSINO') : (currentTexts.read_scroll || 'ROLE ATÉ O FIM')}</span>
             </button>
 
             <button
@@ -273,7 +274,7 @@ export const OnboardingFlow: React.FC = () => {
               className="w-full py-3 border border-red-500/40 text-red-500 rounded-xl text-xs font-bold uppercase transition-all tracking-wider hover:bg-red-500/10 flex items-center justify-center gap-2 cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Discordo (Expurgar dados)</span>
+              <span>{currentTexts.disagree || "Discordo (Expurgar dados)"}</span>
             </button>
           </div>
         </motion.div>

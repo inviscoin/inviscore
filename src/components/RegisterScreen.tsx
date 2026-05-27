@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useInvis, DICTIONARY } from '../context/InvisContext';
+import { useTranslation } from '../hooks/useTranslation';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Mail, Tag, Lock, ChevronDown, Check, ArrowLeft, X, Calendar } from 'lucide-react';
 import { SupabaseService } from '../lib/supabase';
@@ -55,7 +56,7 @@ export const RegisterScreen: React.FC = () => {
   const [calculatedAge, setCalculatedAge] = useState<number | null>(null);
   const [birthDateError, setBirthDateError] = useState('');
 
-  const currentTexts = DICTIONARY[language];
+  const { currentTexts } = useTranslation();
 
   // Block Spaces physically on key down / change
   const handleNoSpacesInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -70,7 +71,7 @@ export const RegisterScreen: React.FC = () => {
     if (!cleanEmail) {
       setEmailError('');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-      setEmailError('Formato de e-mail inválido (exemplo@dominio.com).');
+      setEmailError((currentTexts as any).reg_err_email || 'Formato de e-mail inválido (exemplo@dominio.com).');
     } else {
       setEmailError('');
     }
@@ -197,40 +198,40 @@ export const RegisterScreen: React.FC = () => {
     e.preventDefault();
 
     if (fullName.trim().length < 15) {
-      setModalObj({ title: "CADASTRO DECLINADO", message: (currentTexts as any).reg_err_name || 'O Nome Completo deve possuir no mínimo 15 caracteres.', type: 'error' });
+      setModalObj({ title: (currentTexts as any).declined || "CADASTRO DECLINADO", message: (currentTexts as any).reg_err_name || 'O Nome Completo deve possuir no mínimo 15 caracteres.', type: 'error' });
       return;
     }
     const isValidFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!isValidFormat) {
-      setModalObj({ title: "CADASTRO DECLINADO", message: (currentTexts as any).reg_err_email || 'E-mail formatado incorretamente.', type: 'error' });
-      setEmailError('Formato de e-mail inválido (exemplo@dominio.com).');
+      setModalObj({ title: (currentTexts as any).declined || "CADASTRO DECLINADO", message: (currentTexts as any).reg_err_email || 'E-mail formatado incorretamente.', type: 'error' });
+      setEmailError((currentTexts as any).reg_err_email || 'Formato de e-mail inválido (exemplo@dominio.com).');
       return;
     }
     if (nickname.trim().length < 5 || nickname.trim().length > 10) {
-      setModalObj({ title: "CADASTRO DECLINADO", message: (currentTexts as any).reg_err_nick || 'O Nickname deve conter de 5 a 10 caracteres.', type: 'error' });
+      setModalObj({ title: (currentTexts as any).declined || "CADASTRO DECLINADO", message: (currentTexts as any).reg_err_nick || 'O Nickname deve conter de 5 a 10 caracteres.', type: 'error' });
       return;
     }
 
     const rule = getDdiPhoneRule(ddi);
     const cleanPhone = phone.replace(/\D/g, '');
     if (!cleanPhone || cleanPhone.length < rule.minLocal || cleanPhone.length > rule.maxLocal) {
-      setModalObj({ title: "CADASTRO DECLINADO", message: `Telefone inválido para ${selectedDdiObj.name}. Esperado de ${rule.minLocal} a ${rule.maxLocal} dígitos.`, type: 'error' });
+      setModalObj({ title: (currentTexts as any).declined || "CADASTRO DECLINADO", message: `Telefone inválido para ${selectedDdiObj.name}. Esperado de ${rule.minLocal} a ${rule.maxLocal} dígitos.`, type: 'error' });
       setPhoneError(`Esperado de ${rule.minLocal} a ${rule.maxLocal} dígitos.`);
       return;
     }
 
     if (!birthDate) {
-      setModalObj({ title: "CADASTRO DECLINADO", message: (currentTexts as any).reg_err_birth || 'A Data de Nascimento é obrigatória.', type: 'error' });
-      setBirthDateError('Campo obrigatório.');
+      setModalObj({ title: (currentTexts as any).declined || "CADASTRO DECLINADO", message: (currentTexts as any).reg_err_birth || 'A Data de Nascimento é obrigatória.', type: 'error' });
+      setBirthDateError((currentTexts as any).required_field || 'Campo obrigatório.');
       return;
     }
     if (birthDateError || calculatedAge === null) {
-      setModalObj({ title: "CADASTRO DECLINADO", message: (currentTexts as any).reg_err_birth || 'Forneça uma Data de Nascimento válida.', type: 'error' });
+      setModalObj({ title: (currentTexts as any).declined || "CADASTRO DECLINADO", message: (currentTexts as any).reg_err_birth || 'Forneça uma Data de Nascimento válida.', type: 'error' });
       return;
     }
 
     if (!passRegex.test(password)) {
-      setModalObj({ title: "CADASTRO DECLINADO", message: (currentTexts as any).reg_err_pass || 'Sua senha não atende aos critérios do padrão INVIS.', type: 'error' });
+      setModalObj({ title: (currentTexts as any).declined || "CADASTRO DECLINADO", message: (currentTexts as any).reg_err_pass || 'Sua senha não atende aos critérios do padrão INVIS.', type: 'error' });
       return;
     }
 
@@ -294,16 +295,16 @@ export const RegisterScreen: React.FC = () => {
                 style={{ WebkitTapHighlightColor: 'transparent' }}
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Voltar ao Login</span>
+                <span>{currentTexts.back_login || "Voltar ao Login"}</span>
               </button>
             </div>
 
             <div className="text-center mb-6">
               <h2 className="font-sans font-black text-2xl tracking-wider text-emerald-400 uppercase mb-1">
-                {currentTexts.reg_title}
+                {currentTexts.reg_title || "NOVA CONTA INVIS"}
               </h2>
               <p className="text-neutral-500 text-[10px] uppercase font-mono tracking-widest leading-none">
-                Cadastro Blindado Padrão INVIS
+                {currentTexts.reg_subtitle || "Cadastro Blindado Padrão INVIS"}
               </p>
             </div>
 
@@ -326,7 +327,7 @@ export const RegisterScreen: React.FC = () => {
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400/60" />
                   <input
                     type="email"
-                    placeholder={currentTexts.email_label || "E-MAIL SOVEREIGN"}
+                    placeholder={(currentTexts as any).email_sov || "E-MAIL SOVEREIGN"}
                     value={email}
                     onKeyDown={handleNoSpacesInput}
                     onChange={(e) => handleEmailChange(e.target.value)}
@@ -486,7 +487,7 @@ export const RegisterScreen: React.FC = () => {
                   ) : (
                     <X className="w-3.5 h-3.5 text-red-500/50 shrink-0" />
                   )}
-                  <span className={/[A-Z]/.test(password) ? 'text-emerald-400 font-bold' : 'text-neutral-500'}>Letra Maiúscula</span>
+                  <span className={/[A-Z]/.test(password) ? 'text-emerald-400 font-bold' : 'text-neutral-500'}>{currentTexts.reg_req_upper || "Letra Maiúscula"}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {/[a-z]/.test(password) ? (
@@ -494,7 +495,7 @@ export const RegisterScreen: React.FC = () => {
                   ) : (
                     <X className="w-3.5 h-3.5 text-red-500/50 shrink-0" />
                   )}
-                  <span className={/[a-z]/.test(password) ? 'text-emerald-400 font-bold' : 'text-neutral-500'}>Letra Minúscula</span>
+                  <span className={/[a-z]/.test(password) ? 'text-emerald-400 font-bold' : 'text-neutral-500'}>{currentTexts.reg_req_lower || "Letra Minúscula"}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {/\d/.test(password) ? (
@@ -502,7 +503,7 @@ export const RegisterScreen: React.FC = () => {
                   ) : (
                     <X className="w-3.5 h-3.5 text-red-500/50 shrink-0" />
                   )}
-                  <span className={/\d/.test(password) ? 'text-emerald-400 font-bold' : 'text-neutral-500'}>Um dígito</span>
+                  <span className={/\d/.test(password) ? 'text-emerald-400 font-bold' : 'text-neutral-500'}>{currentTexts.reg_req_num || "Um dígito"}</span>
                 </div>
                 <div className="flex items-center gap-2 col-span-2">
                   {/[@$!%*?&]/.test(password) ? (
@@ -510,7 +511,7 @@ export const RegisterScreen: React.FC = () => {
                   ) : (
                     <X className="w-3.5 h-3.5 text-red-500/50 shrink-0" />
                   )}
-                  <span className={/[@$!%*?&]/.test(password) ? 'text-emerald-400 font-bold' : 'text-neutral-500'}>Especial (@$!%*?&)</span>
+                  <span className={/[@$!%*?&]/.test(password) ? 'text-emerald-400 font-bold' : 'text-neutral-500'}>{currentTexts.reg_req_spec || "Especial (@$!%*?&)"}</span>
                 </div>
               </div>
 
@@ -525,7 +526,7 @@ export const RegisterScreen: React.FC = () => {
             </form>
 
             <p className="mt-4 text-[9px] text-neutral-500 font-sans tracking-wide text-center">
-              Ao prosseguir, você concorda com nossos termos da LGPD e processamentos criptográficos de metadados.
+              {(currentTexts as any).reg_terms_note || "Ao prosseguir, você concorda com nossos termos da LGPD e processamentos criptográficos de metadados."}
             </p>
           </div>
         </div>

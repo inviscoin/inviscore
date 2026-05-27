@@ -1150,6 +1150,13 @@ export const InvisProvider: React.FC<{ children: React.ReactNode }> = ({ childre
              setWallet(prev => ({ ...prev, icGold: profile.wallet_ic_gold, icSilver: profile.wallet_ic_silver }));
           }
           setStage('dashboard');
+      } else {
+          // System Y Logic: User logged in via OAuth but does NOT exist in invis DB (profiles).
+          SupabaseService.signOut().then(() => {
+             setCurrentUser(null);
+             localStorage.setItem('invis_oauth_error', 'not_found');
+             setStage('login');
+          });
       }
   };
 

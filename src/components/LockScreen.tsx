@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useInvis, DICTIONARY } from '../context/InvisContext';
+import { useTranslation } from '../hooks/useTranslation';
 import { motion, AnimatePresence } from 'motion/react';
 import { Globe, Fingerprint, Lock, Shield, Settings, Languages } from 'lucide-react';
 
@@ -84,7 +85,7 @@ export const LockScreen: React.FC = () => {
     setStage('login');
   };
 
-  const currentTexts = DICTIONARY[language];
+  const { currentTexts } = useTranslation();
 
   return (
     <div className="relative w-full h-screen overflow-hidden flex flex-col items-center justify-center bg-radial from-[#1a1a40] to-[#0b0e11] text-white">

@@ -834,15 +834,15 @@ export const MediaModule: React.FC = () => {
   const [expandedSessionGrid, setExpandedSessionGrid] = useState<'favorites' | 'continue' | 'suggestions' | 'netflix' | 'disney' | 'hbo' | 'prime' | 'globoplay' | null>(null);
 
   // Progressive limits for horizontal/vertical lazy loading - initialized to 30 for complete pre-loading
-  const [visiblePostersCount, setVisiblePostersCount] = useState(30);
-  const [favoritesLimit, setFavoritesLimit] = useState(30);
-  const [continueWatchingLimit, setContinueWatchingLimit] = useState(30);
-  const [suggestionsLimit, setSuggestionsLimit] = useState(30);
-  const [netflixLimit, setNetflixLimit] = useState(30);
-  const [disneyLimit, setDisneyLimit] = useState(30);
-  const [hboLimit, setHboLimit] = useState(30);
-  const [primeLimit, setPrimeLimit] = useState(30);
-  const [globoplayLimit, setGloboplayLimit] = useState(30);
+  const [visiblePostersCount, setVisiblePostersCount] = useState(60);
+  const [favoritesLimit, setFavoritesLimit] = useState(60);
+  const [continueWatchingLimit, setContinueWatchingLimit] = useState(60);
+  const [suggestionsLimit, setSuggestionsLimit] = useState(60);
+  const [netflixLimit, setNetflixLimit] = useState(60);
+  const [disneyLimit, setDisneyLimit] = useState(60);
+  const [hboLimit, setHboLimit] = useState(60);
+  const [primeLimit, setPrimeLimit] = useState(60);
+  const [globoplayLimit, setGloboplayLimit] = useState(60);
 
   // Pre-load top 30 trending movies/series from TMDb on startup
   useEffect(() => {
@@ -1013,39 +1013,44 @@ export const MediaModule: React.FC = () => {
   };
 
   // Infinite Scroll Trigger for Vertical Catalog Grid
+  const scrollCountRef = useRef(0);
   const handleContainerScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
     if (scrollTop + clientHeight > scrollHeight - 220) {
-      // Preload more into horizontal limits dynamically (+15 titles!)
-      setFavoritesLimit(prev => prev + 15);
-      setContinueWatchingLimit(prev => prev + 15);
-      setSuggestionsLimit(prev => prev + 15);
-      setNetflixLimit(prev => prev + 15);
-      setDisneyLimit(prev => prev + 15);
-      setHboLimit(prev => prev + 15);
-      setPrimeLimit(prev => prev + 15);
-      setGloboplayLimit(prev => prev + 15);
+      scrollCountRef.current += 1;
+      
+      // Preload more into horizontal limits dynamically (+60 titles!)
+      setFavoritesLimit(prev => prev + 60);
+      setContinueWatchingLimit(prev => prev + 60);
+      setSuggestionsLimit(prev => prev + 60);
+      setNetflixLimit(prev => prev + 60);
+      setDisneyLimit(prev => prev + 60);
+      setHboLimit(prev => prev + 60);
+      setPrimeLimit(prev => prev + 60);
+      setGloboplayLimit(prev => prev + 60);
 
       // Increase main catalog search grid limits
       const totalMatch = memoizedCategories.filtered.length;
 
       if (visiblePostersCount < totalMatch) {
-         setVisiblePostersCount(prev => Math.min(totalMatch, prev + 15));
+         setVisiblePostersCount(prev => Math.min(totalMatch, prev + 60));
       } else {
-        // Expand the main catalog by fabricating 30 new titles dynamically!
-        const newItems: Movie[] = [];
-        const currentCount = moviesList.length;
-        for (let i = 0; i < 30; i++) {
-          const baseItem = CINEMA_ROSTER[i % CINEMA_ROSTER.length];
-          newItems.push({
-            ...baseItem,
-            id: `gen-${Date.now()}-${currentCount + i}`,
-            title: `${baseItem.title} - Expansão ${currentCount + i}`,
-            year: baseItem.year + Math.floor(Math.random() * 5),
-          });
+        if (scrollCountRef.current % 3 === 0) {
+          // Expand the main catalog by fabricating 60 new titles dynamically!
+          const newItems: Movie[] = [];
+          const currentCount = moviesList.length;
+          for (let i = 0; i < 60; i++) {
+            const baseItem = CINEMA_ROSTER[i % CINEMA_ROSTER.length];
+            newItems.push({
+              ...baseItem,
+              id: `gen-${Date.now()}-${currentCount + i}`,
+              title: `${baseItem.title} - Expansão ${currentCount + i}`,
+              year: baseItem.year + Math.floor(Math.random() * 5),
+            });
+          }
+          setMoviesList(prev => [...prev, ...newItems]);
+          setVisiblePostersCount(prev => prev + 60);
         }
-        setMoviesList(prev => [...prev, ...newItems]);
-        setVisiblePostersCount(prev => prev + 15);
       }
       triggerHaptic(10);
     }
@@ -1055,36 +1060,36 @@ export const MediaModule: React.FC = () => {
   const handleHorizontalScroll = (e: React.UIEvent<HTMLDivElement>, category: string) => {
     const { scrollLeft, scrollWidth, clientWidth } = e.currentTarget;
     if (scrollLeft + clientWidth > scrollWidth * 0.6) {
-      if (category === 'favorites' && favoritesLimit < 30) {
-        setFavoritesLimit(prev => Math.min(30, prev + 15));
+      if (category === 'favorites' && favoritesLimit < 120) {
+        setFavoritesLimit(prev => Math.min(180, prev + 60));
         triggerHaptic(10);
       }
-      if (category === 'continue' && continueWatchingLimit < 30) {
-        setContinueWatchingLimit(prev => Math.min(30, prev + 15));
+      if (category === 'continue' && continueWatchingLimit < 120) {
+        setContinueWatchingLimit(prev => Math.min(180, prev + 60));
         triggerHaptic(10);
       }
-      if (category === 'suggestions' && suggestionsLimit < 30) {
-        setSuggestionsLimit(prev => Math.min(30, prev + 15));
+      if (category === 'suggestions' && suggestionsLimit < 120) {
+        setSuggestionsLimit(prev => Math.min(180, prev + 60));
         triggerHaptic(10);
       }
-      if (category === 'netflix' && netflixLimit < 30) {
-        setNetflixLimit(prev => Math.min(30, prev + 15));
+      if (category === 'netflix' && netflixLimit < 120) {
+        setNetflixLimit(prev => Math.min(180, prev + 60));
         triggerHaptic(10);
       }
-      if (category === 'disney' && disneyLimit < 30) {
-        setDisneyLimit(prev => Math.min(30, prev + 15));
+      if (category === 'disney' && disneyLimit < 120) {
+        setDisneyLimit(prev => Math.min(180, prev + 60));
         triggerHaptic(10);
       }
-      if (category === 'hbo' && hboLimit < 30) {
-        setHboLimit(prev => Math.min(30, prev + 15));
+      if (category === 'hbo' && hboLimit < 120) {
+        setHboLimit(prev => Math.min(180, prev + 60));
         triggerHaptic(10);
       }
-      if (category === 'prime' && primeLimit < 30) {
-        setPrimeLimit(prev => Math.min(30, prev + 15));
+      if (category === 'prime' && primeLimit < 120) {
+        setPrimeLimit(prev => Math.min(180, prev + 60));
         triggerHaptic(10);
       }
-      if (category === 'globoplay' && globoplayLimit < 30) {
-        setGloboplayLimit(prev => Math.min(30, prev + 15));
+      if (category === 'globoplay' && globoplayLimit < 120) {
+        setGloboplayLimit(prev => Math.min(180, prev + 60));
         triggerHaptic(10);
       }
     }
@@ -3337,36 +3342,46 @@ export const MediaModule: React.FC = () => {
                     /* MOVIE PLAYBACK GRAPHIC VIEW WITH ACTIVE STREAM SOURCE */
                     <div className="space-y-4 text-left w-full flex flex-col h-fit pb-1">
                       
-                      {/* Real Video playback container using HTML5 video stream player */}
+                      {/* Real Video playback container using HTML5 video/iframe player */}
                       <div 
                         onClick={() => {
-                          if (movieIsPlaying) {
+                          if (movieIsPlaying && (!selectedMovie?.streamUrl)) {
                             triggerHaptic(25);
                             setMovieIsPlaying(false);
                           }
                         }}
-                        className="transition-all duration-500 bg-black overflow-hidden group flex items-center justify-center w-full aspect-video rounded-3xl border border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.22)] relative"
+                        className={`transition-all duration-500 bg-black overflow-hidden group flex items-center justify-center w-full aspect-video rounded-3xl border border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.22)] relative ${selectedMovie?.streamUrl ? 'pointer-events-auto' : ''}`}
                       >
-                        <video
-                          ref={movieVideoRef}
-                          src={getMovieVideoSrc(selectedMovie)}
-                          className="w-full h-full object-contain pointer-events-none"
-                          onTimeUpdate={handleMovieTimeUpdate}
-                          onLoadedMetadata={handleMovieLoadedMetadata}
-                          onEnded={handleMovieEnded}
-                          autoPlay
-                        />
+                        {selectedMovie?.streamUrl ? (
+                          <iframe
+                            src={selectedMovie.streamUrl}
+                            className="w-full h-full border-0"
+                            allowFullScreen
+                            allow="autoplay; encrypted-media"
+                            title="Player vidsrc"
+                          />
+                        ) : (
+                          <video
+                            ref={movieVideoRef}
+                            src={getMovieVideoSrc(selectedMovie)}
+                            className="w-full h-full object-contain pointer-events-none"
+                            onTimeUpdate={handleMovieTimeUpdate}
+                            onLoadedMetadata={handleMovieLoadedMetadata}
+                            onEnded={handleMovieEnded}
+                            autoPlay
+                          />
+                        )}
 
                         {/* Loading spinner overlay */}
-                        {!duration && (
+                        {!selectedMovie?.streamUrl && !duration && (
                           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 space-y-2 z-15 select-none pointer-events-none">
                             <div className="w-10 h-10 border-2 border-cyan-500/30 border-t-cyan-400 animate-spin rounded-full" />
                             <span className="text-[10px] font-mono text-cyan-300 tracking-widest animate-pulse font-bold">CONECTANDO STREAMING...</span>
                           </div>
                         )}
 
-                        {/* Center Controls Options when PAUSED / NOT PLAYING */}
-                        {!movieIsPlaying && duration > 0 && (
+                        {/* Center Controls Options when PAUSED / NOT PLAYING (Only for local video) */}
+                        {!selectedMovie?.streamUrl && !movieIsPlaying && duration > 0 && (
                           <div 
                             onClick={(e) => e.stopPropagation()} 
                             className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-30 animate-fade-in"

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useInvis, DICTIONARY } from '../context/InvisContext';
+import { useTranslation } from '../hooks/useTranslation';
 import { BlockType, DashboardBlock } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { MediaModule } from './MediaModule';
@@ -513,7 +514,7 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
     }
   };
 
-  const currentTexts = DICTIONARY[language];
+  const { currentTexts } = useTranslation();
 
   return (
     <div className="w-full flex-1 relative flex flex-col overflow-hidden bg-radial from-[#050508] to-[#040406]">

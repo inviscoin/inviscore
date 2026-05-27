@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useInvis, DICTIONARY } from '../context/InvisContext';
+import { useTranslation } from '../hooks/useTranslation';
 import { LogOut, Globe, TrendingUp, Wallet, Menu, X, Shield, Cpu, RefreshCw, Zap, Award, Sparkles, Store, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SettingsModal } from './SettingsModal';
@@ -77,7 +78,7 @@ export const HeaderTop: React.FC<HeaderTopProps> = ({ onOpenWallet, onOpenShop, 
   };
 
   // Helper dictionary lookup
-  const currentTexts = DICTIONARY[language] || DICTIONARY['pt-BR'];
+  const { currentTexts } = useTranslation();
 
   const getThemeColorClass = () => {
     if (glowTheme === 'emerald') return 'text-[#00FF80]';
