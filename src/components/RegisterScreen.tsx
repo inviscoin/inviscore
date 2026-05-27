@@ -58,6 +58,17 @@ export const RegisterScreen: React.FC = () => {
 
   const { currentTexts } = useTranslation();
 
+  useEffect(() => {
+    if (localStorage.getItem('invis_oauth_error') === 'not_found') {
+      localStorage.removeItem('invis_oauth_error');
+      setModalObj({
+        title: "CADASTRO NECESSÁRIO",
+        message: "Conta não localizada. Por favor, preencha os dados abaixo para criar seu perfil no ecosistema INVIS e vincular sua conta social.",
+        type: "info"
+      });
+    }
+  }, []);
+
   // Block Spaces physically on key down / change
   const handleNoSpacesInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === ' ') {

@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { AuthHandshake } from './AuthHandshake';
 import { AuthWrapper } from './AuthWrapper';
 import { InvisModal } from './InvisModal';
-import { Eye, EyeOff, KeyRound, Globe, User } from 'lucide-react';
-import { SupabaseService, isSupabaseConfigured } from '../lib/supabase';
+import { Eye, EyeOff, KeyRound, Globe, User, Mail, Lock } from 'lucide-react';
+import { SupabaseService, isSupabaseConfigured, supabase } from '../lib/supabase';
 
 export const LoginScreen: React.FC = () => {
   const { 
@@ -14,38 +14,86 @@ export const LoginScreen: React.FC = () => {
     setCurrentUser, setSystemStatus, setSelectedSupportPage
   } = useInvis();
 
-  const [authStatusText, setAuthStatusText] = useState('Autenticando...');
+  const [authStatusText, setAuthStatusText] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   const [modalObj, setModalObj] = useState<{ title: string; message: string; type: 'error' | 'success' | 'info' } | null>(null);
 
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
   const { currentTexts } = useTranslation();
 
-  React.useEffect(() => {
-    if (localStorage.getItem('invis_oauth_error') === 'not_found') {
-      localStorage.removeItem('invis_oauth_error');
-      setModalObj({
-        title: (currentTexts as any).oauth_err_title || "Acesso Negado",
-        message: (currentTexts as any).oauth_err_msg || "Conta INVIS não localizada. Por favor, registre-se no sistema antes de utilizar a autenticação social.",
-        type: "error"
-      });
+  const handleStandardLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setModalObj({ title: "Acesso Negado", message: currentTexts.login_err_empty || "E-mail e senha são obrigatórios.", type: "error" });
+      return;
     }
-  }, []);
+
+    setAuthStatusText(currentTexts.login_auth || "Autenticando na Matriz...");
+    setShowScanner(true);
+
+    try {
+      const { data, error } = await SupabaseService.signIn(email, password);
+      if (error) throw error;
+      // InvisContext onAuthStateChange will handle redirection
+    } catch (err: any) {
+      setShowScanner(false);
+      setModalObj({ title: "Falha na Autenticação", message: currentTexts.login_err_invalid || "E-mail ou senha incorretos.", type: "error" });
+    }
+  };
 
   const triggerSocialAuth = async (provider: 'google' | 'facebook') => {
     setAuthStatusText(`Conectando ao provedor ${provider.toUpperCase()}...`);
     setShowScanner(true);
     
-    // BYPASS ROBUST MODE: Skip real OAuth handshake to prevent Google 403 (Test Mode) 
-    // and Supabase localhost:3000 Redirect URI limitations.
-    // Gives the user full unrestricted access immediately!
-    setTimeout(() => {
-       login({ id: `oauth_${provider}_${Date.now()}`, email: `admin_${provider}@invis.com`, tier: 'PREMIUM', role: 'root' });
-    }, 1800);
-  };
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({ 
+        provider, 
+        options: { 
+          redirectTo: window.location.origin,
+          skipBrowserRedirect: true
+        } 
+      });
 
-  const finalizeSessionAura = () => {
-    setShowScanner(false);
-    // When using Supabase OAuth, the redirect happens and inviscontext handles session fetching.
+      if (error) throw error;
+
+      if (data?.url) {
+        const width = 500;
+        const height = 600;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+        
+        const popup = window.open(
+          data.url, 
+          `Oauth_${provider}`, 
+          `width=${width},height=${height},left=${left},top=${top},toolbar=0,scrollbars=1,status=1,resizable=1`
+        );
+        
+        if (!popup) {
+          throw new Error("Popup bloqueado pelo navegador.");
+        }
+
+        const pollTimer = window.setInterval(() => {
+          if (popup.closed !== false) {
+             window.clearInterval(pollTimer);
+             // Scanner might be stuck if they closed it without authenticating.
+             // But if they authenticated, InvisContext onAuthStateChange will unmount this screen 
+             // and take them to dashboard or register.
+             // We can check local session as a fallback.
+             supabase.auth.getSession().then(({ data: { session } }) => {
+               if (!session) {
+                 setShowScanner(false);
+               }
+             });
+          }
+        }, 500);
+      }
+    } catch (err: any) {
+      setShowScanner(false);
+      setModalObj({ title: "Erro OAuth", message: err.message || "Não foi possível conectar ao provedor.", type: "error" });
+    }
   };
 
   return (
@@ -75,13 +123,65 @@ export const LoginScreen: React.FC = () => {
                 LOGIN
               </h1>
               <p className="font-mono text-[9px] text-[#00c8ff] uppercase tracking-[0.3em] font-medium opacity-80 mt-1">
-                INVIS ECOSYSTEM v1.0
+                INVIS ECOSYSTEM
               </p>
             </div>
 
+            <form onSubmit={handleStandardLogin} className="w-full flex flex-col space-y-4 font-sans">
+              <div className="relative w-full">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400/60" />
+                <input
+                  type="email"
+                  placeholder={currentTexts.user_placeholder || "E-mail"}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-cyan-500/20 bg-black/25 text-left text-sm outline-none focus:border-[#00c8ff] transition-all"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
+                />
+              </div>
+
+              <div className="relative w-full">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400/60" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder={currentTexts.password_placeholder || "Senha"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-11 pr-11 py-3.5 rounded-xl border border-cyan-500/20 bg-black/25 text-left text-sm outline-none focus:border-[#00c8ff] transition-all"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-cyan-400/60 hover:text-cyan-400 p-1"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-4 mt-2 rounded-xl bg-[#00c8ff] text-black font-black hover:scale-[1.02] active:scale-[0.98] transition-all text-sm uppercase shadow-[0_0_15px_rgba(0,200,255,0.3)] cursor-pointer outline-none"
+                style={{ WebkitTapHighlightColor: 'transparent' }}
+              >
+                {currentTexts.login_btn || "ENTRAR"}
+              </button>
+
+              <div className="w-full flex justify-end">
+                <button 
+                  type="button" 
+                  onClick={() => setStage('support_password')} 
+                  className="text-[10px] text-cyan-500 hover:text-cyan-400 hover:underline cursor-pointer outline-none font-mono"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
+                >
+                  {currentTexts.forgot_password || "Esqueci a senha"}
+                </button>
+              </div>
+            </form>
+
             <div className="w-full mt-6 flex flex-col items-center">
               <p className="text-xs text-neutral-500 tracking-wider uppercase mb-3 text-center select-none font-sans">
-                {currentTexts.or_connect || "Acesse sua conta"}
+                {currentTexts.or_connect || "Ou conecte com:"}
               </p>
 
               <div className="grid grid-cols-2 gap-4 w-full">
@@ -136,10 +236,11 @@ export const LoginScreen: React.FC = () => {
         {showScanner && (
           <AuthHandshake 
             statusText={authStatusText}
-            onComplete={finalizeSessionAura}
+            onComplete={() => {}}
           />
         )}
       </AnimatePresence>
     </>
   );
 };
+

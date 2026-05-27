@@ -1114,6 +1114,9 @@ export const InvisProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
          if (event === 'SIGNED_IN' && session?.user) {
+            if (window.opener && window.opener !== window) {
+               window.close();
+            }
             fetchAndSetUser(session.user);
          } else if (event === 'SIGNED_OUT') {
             setCurrentUser(null);
@@ -1155,7 +1158,7 @@ export const InvisProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           SupabaseService.signOut().then(() => {
              setCurrentUser(null);
              localStorage.setItem('invis_oauth_error', 'not_found');
-             setStage('login');
+             setStage('register');
           });
       }
   };

@@ -49,19 +49,11 @@ export const LockScreen: React.FC = () => {
         const next = prev + 20;
         if (next >= 100) {
           clearInterval(interval);
-          
-          if (hasVisitedOnce) {
-             // Second access: automatically skip after animation (5s total + 1s delay)
-             setTimeout(() => {
-                 setStage('login');
-             }, 500);
-          } else {
-             setStageMode('opening');
-             setTimeout(() => {
-               setStageMode('fingerprint');
-               setSystemStatus('Aguardando Biometria');
-             }, 1200);
-          }
+          setStageMode('opening');
+          setTimeout(() => {
+            setStageMode('fingerprint');
+            setSystemStatus('Aguardando Biometria');
+          }, 1200);
           return 100;
         }
         return next;
