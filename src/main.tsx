@@ -2,6 +2,9 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
+const GOOGLE_CLIENT_ID = '563039381952-ee2d8nbjas08j106c9em9up8lbh95tkn.apps.googleusercontent.com';
 
 // Ignorar erros benignos de WebSocket do Vite HMR causados pelo sandboxing do iframe/Cloud Run
 if (typeof window !== 'undefined') {
@@ -70,7 +73,9 @@ if (typeof window !== 'undefined') {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <App />
+    </GoogleOAuthProvider>
   </StrictMode>,
 );
 
