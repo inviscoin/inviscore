@@ -52,56 +52,13 @@ export const LoginScreen: React.FC = () => {
       const { data, error } = await supabase.auth.signInWithOAuth({ 
         provider, 
         options: { 
-          redirectTo: window.location.origin,
-          skipBrowserRedirect: true
+          redirectTo: window.location.origin
         } 
       });
 
       if (error) throw error;
-
-      if (data?.url) {
-        const width = 500;
-        const height = 600;
-        const left = window.screenX + (window.outerWidth - width) / 2;
-        const top = window.screenY + (window.outerHeight - height) / 2;
-        
-        const popup = window.open(
-          data.url, 
-          `Oauth_${provider}`, 
-          `width=${width},height=${height},left=${left},top=${top},toolbar=0,scrollbars=1,status=1,resizable=1`
-        );
-        
-        if (!popup) {
-          throw new Error("Popup bloqueado pelo navegador.");
-        }
-
-        const handleMessage = (event: MessageEvent) => {
-          if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
-            window.removeEventListener('message', handleMessage);
-            window.clearInterval(pollTimer);
-            supabase.auth.getSession().then(({ data: { session } }) => {
-              if (!session) {
-                setShowScanner(false);
-              }
-              // InvisContext's onAuthStateChange handles the rest if session exists
-            });
-          }
-        };
-
-        window.addEventListener('message', handleMessage);
-
-        const pollTimer = window.setInterval(() => {
-          if (popup.closed !== false) {
-             window.clearInterval(pollTimer);
-             window.removeEventListener('message', handleMessage);
-             supabase.auth.getSession().then(({ data: { session } }) => {
-               if (!session) {
-                 setShowScanner(false);
-               }
-             });
-          }
-        }, 500);
-      }
+      
+      // With standard redirect, it navigates away. So we just wait.
     } catch (err: any) {
       setShowScanner(false);
       setModalObj({ title: "Erro OAuth", message: err.message || "Não foi possível conectar ao provedor.", type: "error" });
