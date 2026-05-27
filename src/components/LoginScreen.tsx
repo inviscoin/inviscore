@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useInvis, DICTIONARY } from '../context/InvisContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { motion, AnimatePresence } from 'motion/react';
@@ -17,13 +17,30 @@ export const LoginScreen: React.FC = () => {
 
   const [authStatusText, setAuthStatusText] = useState('');
   const [showScanner, setShowScanner] = useState(false);
-  const [modalObj, setModalObj] = useState<{ title: string; message: string; type: 'error' | 'success' | 'info' } | null>(null);
+  const [modalObj, setModalObj] = useState<{ title: string; message: string; type: 'error' | 'success' | 'info', onClose?: () => void } | null>(null);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const { currentTexts } = useTranslation();
+
+  useEffect(() => {
+    const handleOauthNotFound = () => {
+      setShowScanner(false);
+      setModalObj({
+        title: "CADASTRO NECESSÁRIO",
+        message: "Conta INVIS não localizada. Por favor, registre-se para criar seu perfil no ecossistema e vincular sua conta social.",
+        type: "info",
+        onClose: () => {
+          setModalObj(null);
+          setStage('register');
+        }
+      });
+    };
+    window.addEventListener('invis_oauth_not_found', handleOauthNotFound);
+    return () => window.removeEventListener('invis_oauth_not_found', handleOauthNotFound);
+  }, [setStage]);
 
   const handleStandardLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,31 +80,16 @@ export const LoginScreen: React.FC = () => {
     }
   };
 
-  const triggerSocialAuth = async (provider: 'facebook' | 'instagram') => {
-    setAuthStatusText(`Conectando ao provedor ${provider.toUpperCase()}...`);
-    setShowScanner(true);
-    
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({ 
-        provider: provider as any, 
-        options: { 
-          redirectTo: window.location.origin
-        } 
-      });
-
-      if (error) throw error;
-      
-      // With standard redirect, it navigates away. So we just wait.
-    } catch (err: any) {
-      setShowScanner(false);
-      setModalObj({ title: "Erro OAuth", message: err.message || "Não foi possível conectar ao provedor.", type: "error" });
-    }
-  };
-
   return (
     <>
       <AnimatePresence>
-         {modalObj && <InvisModal title={modalObj.title} message={modalObj.message} type={modalObj.type} onClose={() => setModalObj(null)} />}
+         {modalObj && <InvisModal title={modalObj.title} message={modalObj.message} type={modalObj.type} onClose={() => {
+           if (modalObj.onClose) {
+             modalObj.onClose();
+           } else {
+             setModalObj(null);
+           }
+         }} />}
       </AnimatePresence>
 
       <AuthWrapper>
@@ -172,8 +174,8 @@ export const LoginScreen: React.FC = () => {
                 {currentTexts.or_connect || "Ou conecte com:"}
               </p>
 
-              <div className="grid grid-cols-3 gap-2 w-full">
-                <div className="relative w-full h-full flex items-center justify-center rounded-xl border border-white/5 bg-black/30 hover:bg-[#4285F4]/10 transition-all cursor-pointer overflow-hidden group">
+              <div className="grid grid-cols-1 gap-2 w-full">
+                <div className="relative w-full h-full flex items-center justify-center rounded-xl border border-white/5 bg-black/30 hover:bg-[#4285F4]/10 transition-all cursor-pointer overflow-hidden group py-3">
                   <div className="flex items-center justify-center p-3 pointer-events-none">
                     <svg viewBox="0 0 24 24" width="22" height="22">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -182,7 +184,7 @@ export const LoginScreen: React.FC = () => {
                       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                     </svg>
                   </div>
-                  <div className="absolute inset-0 z-10 opacity-0 cursor-pointer flex justify-center items-center scale-150">
+                  <div className="absolute inset-0 z-10 opacity-0 cursor-pointer flex justify-center items-center scale-x-[10] scale-y-[3]">
                     <GoogleLogin
                       onSuccess={handleGoogleSuccess}
                       onError={() => {
@@ -197,33 +199,6 @@ export const LoginScreen: React.FC = () => {
                     />
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => triggerSocialAuth('facebook')}
-                  className="relative flex items-center justify-center p-3 rounded-xl border border-white/5 bg-black/30 hover:bg-[#1877F2]/10 transition-all cursor-pointer outline-none focus:outline-none"
-                  style={{ WebkitTapHighlightColor: 'transparent' }}
-                >
-                  <svg viewBox="0 0 24 24" width="22" height="22" fill="#1877F2">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                  </svg>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => triggerSocialAuth('instagram')}
-                  className="relative flex items-center justify-center p-3 rounded-xl border border-white/5 bg-black/30 hover:bg-[#E1306C]/10 transition-all cursor-pointer outline-none focus:outline-none"
-                  style={{ WebkitTapHighlightColor: 'transparent' }}
-                >
-                  <svg viewBox="0 0 24 24" width="22" height="22">
-                    <defs>
-                      <radialGradient id="ig-grad-val" cx="0.5" cy="1" r="1">
-                        <stop offset="0%" stopColor="#fee411"/><stop offset="50%" stopColor="#a4309a"/><stop offset="100%" stopColor="#3b33af"/>
-                      </radialGradient>
-                    </defs>
-                    <path fill="url(#ig-grad-val)" d="M12 0C8.74 0 8.333.015 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.74 0 12s.014 3.667.072 4.947c.2 4.353 2.619 6.778 6.981 6.98 1.28.057 1.687.072 4.947.072s3.667-.015 4.947-.072c4.351-.2 6.777-2.62 6.98-6.98.059-1.28.073-1.687.073-4.947s-.015-3.667-.072-4.947c-.2-4.353-2.619-6.777-6.983-6.98C15.667.014 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 3.222.144 4.775 1.974 4.921 5.212.054 1.265.069 1.648.069 4.849s-.015 3.585-.069 4.849c-.149 3.228-1.709 5.057-4.921 5.212-1.265.054-1.648.069-4.849.069s-3.585-.015-4.849-.069c-3.224-.144-4.775-1.975-4.921-5.212-.054-1.265-.069-1.648-.069-4.849s.015-3.585.069-4.849c.149-3.224 1.709-5.056 4.921-5.212 1.265-.055 1.648-.069 4.849-.069zM12 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/>
-                  </svg>
-                </button>
               </div>
 
               <div className="flex flex-col items-center space-y-3 pt-6 w-full">

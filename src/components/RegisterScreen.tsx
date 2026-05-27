@@ -264,7 +264,9 @@ export const RegisterScreen: React.FC = () => {
         nickname,
         phone: `${ddi} ${ddd} ${phone}`,
         ddi,
-        birthDate
+        birthDate,
+        age: calculatedAge,
+        ageGroup: calculatedAge < 18 ? 'Kids' : 'Adult'
       });
       const user = data?.user;
 

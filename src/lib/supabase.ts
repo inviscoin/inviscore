@@ -84,6 +84,7 @@ export const SupabaseService = {
       // Create custom profile in the profiles table
       if (data.user) {
         try {
+          const cleanPhoneToSave = profileData.phone ? profileData.phone.replace(/\s+/g, '') : profileData.phone;
           const { error: profileError } = await supabase
             .from('profiles')
             .upsert({
@@ -91,7 +92,7 @@ export const SupabaseService = {
               email: email,
               full_name: profileData.fullName,
               nickname: profileData.nickname,
-              phone: profileData.phone,
+              phone: cleanPhoneToSave,
               birth_date: profileData.birthDate,
               tier: 'FREE',
               wallet_ic_gold: 5000.0,
@@ -124,15 +125,19 @@ export const SupabaseService = {
       let email = identifier;
       if (!identifier.includes('@')) {
         try {
+          const cleanPhone = identifier.trim().replace(/\D/g, '');
+          const orQuery = cleanPhone.length > 5 
+            ? `nickname.eq.${identifier},phone.ilike.%${cleanPhone}%` 
+            : `nickname.eq.${identifier}`;
+
           const { data: profile, error: lookupErr } = await supabase
             .from('profiles')
             .select('email')
-            .eq('nickname', identifier)
+            .or(orQuery)
+            .limit(1)
             .single();
           
-          if (lookupErr) {
-            this.handleError(lookupErr, 'buscar e-mail por nickname do perfil');
-          } else if (profile?.email) {
+          if (!lookupErr && profile?.email) {
             email = profile.email;
           }
         } catch (lookupEx) {

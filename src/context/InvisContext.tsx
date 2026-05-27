@@ -1155,7 +1155,7 @@ export const InvisProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           SupabaseService.signOut().then(() => {
              setCurrentUser(null);
              localStorage.setItem('invis_oauth_error', 'not_found');
-             setStage('register');
+             window.dispatchEvent(new Event('invis_oauth_not_found'));
           });
       }
   };
