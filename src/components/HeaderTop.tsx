@@ -38,37 +38,6 @@ export const HeaderTop: React.FC<HeaderTopProps> = ({ onOpenWallet, onOpenShop, 
     return () => clearInterval(t);
   }, []);
 
-  // OS Theme Sync
-  useEffect(() => {
-    const handleThemeSync = () => {
-      const storedTheme = localStorage.getItem('invis_theme');
-      if (storedTheme === 'light') {
-        document.documentElement.classList.add('light');
-      } else if (storedTheme === 'dark') {
-        document.documentElement.classList.remove('light');
-      } else {
-        // 'system' or not set
-        const isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-        if (isLight) {
-          document.documentElement.classList.add('light');
-        } else {
-          document.documentElement.classList.remove('light');
-        }
-      }
-    };
-    handleThemeSync();
-    
-    // Listen to OS changes if set to system
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
-    const onChange = () => {
-      if (!localStorage.getItem('invis_theme') || localStorage.getItem('invis_theme') === 'system') {
-        handleThemeSync();
-      }
-    };
-    mediaQuery.addEventListener('change', onChange);
-    return () => mediaQuery.removeEventListener('change', onChange);
-  }, []);
-
   const changeGlowTheme = (theme: 'cyan' | 'emerald' | 'gold' | 'fuchsia') => {
     setGlowTheme(theme);
     localStorage.setItem('invis_glow_theme', theme);

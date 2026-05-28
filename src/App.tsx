@@ -78,78 +78,74 @@ function AppContent() {
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [isFooterVisible, setIsFooterVisible] = useState(true);
 
-  // Inactivity tracking for Nav auto-hide
+  // Click tracking for Nav visibility
   useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>;
-    
-    // Defines "active" as both header and footer visible
-    const handleActivity = (showHeader = true, showFooter = true) => {
-      setIsHeaderVisible(showHeader);
-      setIsFooterVisible(showFooter);
-      setIsNavVisible(true);
-      
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        setIsHeaderVisible(false);
-        setIsFooterVisible(false);
-        setIsNavVisible(false);
-      }, 4000);
-    };
+    let clickTimeout: ReturnType<typeof setTimeout> | null = null;
+    let clickCount = 0;
 
-    // Only click triggers both. We omit mousemove to respect user instruction strictly.
-    const handleClickEvent = () => handleActivity(true, true);
-    
-    let touchStartY = 0;
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStartY = e.touches[0].clientY;
-      // Do not wake up on touch start, wait for gesture/click analysis
-    };
-    
-    const handleTouchEnd = (e: TouchEvent) => {
-      if (!e.changedTouches || e.changedTouches.length === 0) return;
-      const touchEndY = e.changedTouches[0].clientY;
-      const diffY = touchEndY - touchStartY;
-      
-      if (Math.abs(diffY) > 30) {
-        // Swipe occurred
-        if (diffY > 0) {
-          // Swiped down -> show header
-          handleActivity(true, false);
-        } else {
-          // Swiped up -> show footer
-          handleActivity(false, true);
-        }
-      } else {
-        // Treat as a click tap -> show both
-        handleActivity(true, true);
+    const handleClickEvent = (e: MouseEvent) => {
+      // Don't toggle if clicking on interactive elements like buttons, inputs, etc.
+      // Actually, wait, the user said "anywhere on the screen", so maybe we should globally toggle.
+      // But if we globally toggle on any click, clicking a button will hide the header. 
+      // It's usually better to check if it's not a button, however, we can stick to exact words.
+      // The user said: "1 click na tela em qualquer área = ocultar foot e head. 2 clicks na tela em qualquer área = mostra novamente os foot e head."
+
+      clickCount++;
+
+      if (clickCount === 1) {
+        clickTimeout = setTimeout(() => {
+          // Single click -> Hide
+          setIsHeaderVisible(false);
+          setIsFooterVisible(false);
+          setIsNavVisible(false);
+          clickCount = 0;
+        }, 250); 
+      } else if (clickCount === 2) {
+        // Double click -> Show
+        if (clickTimeout) clearTimeout(clickTimeout);
+        setIsHeaderVisible(true);
+        setIsFooterVisible(true);
+        setIsNavVisible(true);
+        clickCount = 0;
       }
     };
-    
-    // React to wheel for desktop too (scroll up = show footer, scroll down = show header)
-    const handleWheel = (e: WheelEvent) => {
-       if (e.deltaY > 0) {
-           handleActivity(false, true); // Scroll down -> show footer
-       } else {
-           handleActivity(true, false); // Scroll up -> show header
-       }
-    }
 
-    handleActivity(true, true); // initial state
-
-    const opts = { passive: true };
-    window.addEventListener('click', handleClickEvent, opts);
-    window.addEventListener('wheel', handleWheel, opts);
-    window.addEventListener('touchstart', handleTouchStart, opts);
-    window.addEventListener('touchend', handleTouchEnd, opts);
+    window.addEventListener('click', handleClickEvent);
 
     return () => {
-      clearTimeout(timeout);
+      if (clickTimeout) clearTimeout(clickTimeout);
       window.removeEventListener('click', handleClickEvent);
-      window.removeEventListener('wheel', handleWheel);
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchend', handleTouchEnd);
     };
   }, [setIsNavVisible]);
+
+  // OS Theme Sync
+  useEffect(() => {
+    const handleThemeSync = () => {
+      const storedTheme = localStorage.getItem('invis_theme') || 'system';
+      const isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+      
+      const appRoot = document.getElementById('invis_app_root');
+      
+      if (storedTheme === 'light' || (storedTheme === 'system' && isLight)) {
+        document.documentElement.classList.add('light');
+        if (appRoot) appRoot.classList.add('light');
+      } else {
+        document.documentElement.classList.remove('light');
+        if (appRoot) appRoot.classList.remove('light');
+      }
+    };
+    handleThemeSync();
+    
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
+    const onChange = () => {
+      const currentStored = localStorage.getItem('invis_theme') || 'system';
+      if (currentStored === 'system') {
+        handleThemeSync();
+      }
+    };
+    mediaQuery.addEventListener('change', onChange);
+    return () => mediaQuery.removeEventListener('change', onChange);
+  }, []);
 
   // Render main screen based on routing stage state
   const renderCurrentStage = () => {
