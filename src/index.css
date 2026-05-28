@@ -41,6 +41,17 @@ body {
   -webkit-user-select: none;
 }
 
+html.light {
+  filter: invert(1) hue-rotate(180deg) brightness(1.05) contrast(1.05);
+}
+
+html.light img, 
+html.light video, 
+html.light iframe,
+html.light .no-invert {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95);
+}
+
 /* Custom Scrollbar prevention for pristine layout */
 .no-scrollbar::-webkit-scrollbar {
   display: none !important;

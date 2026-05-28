@@ -161,6 +161,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             </button>
           </div>
 
+          {/* Theme selector toggle */}
+          <div className="p-3 rounded-xl bg-black/20 border border-white/5 flex flex-col gap-2">
+            <span className="text-[10.5px] font-bold text-white block">
+              {getLabel("Tema da Matriz", "Matrix Theme")}
+            </span>
+            <select
+              value={localStorage.getItem('invis_theme') || 'system'}
+              onChange={(e) => {
+                const theme = e.target.value;
+                localStorage.setItem('invis_theme', theme);
+                if (theme === 'light') {
+                  document.documentElement.classList.add('light');
+                } else {
+                  document.documentElement.classList.remove('light');
+                }
+                // force update
+                window.location.reload();
+              }}
+              className="w-full text-[10.5px] bg-[#050608] border border-white/5 p-2 rounded-lg text-neutral-300 outline-none cursor-pointer"
+            >
+              <option value="system">{getLabel("Sincronizar com o Sistema (OS)", "Sync with OS System")}</option>
+              <option value="dark">{getLabel("Modo Escuro (Padrão)", "Dark Mode (Default)")}</option>
+              <option value="light">{getLabel("Modo Claro", "Light Mode")}</option>
+            </select>
+          </div>
+
           {/* Timeout input select */}
           <div className="p-3 rounded-xl bg-black/20 border border-white/5 flex flex-col gap-2">
             <span className="text-[10.5px] font-bold text-white block">
