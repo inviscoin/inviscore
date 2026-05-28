@@ -1152,11 +1152,9 @@ export const InvisProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setStage('dashboard');
       } else {
           // System Y Logic: User logged in via OAuth but does NOT exist in invis DB (profiles).
-          SupabaseService.signOut().then(() => {
-             setCurrentUser(null);
-             localStorage.setItem('invis_oauth_error', 'not_found');
-             window.dispatchEvent(new Event('invis_oauth_not_found'));
-          });
+          setCurrentUser(null);
+          localStorage.setItem('invis_oauth_error', 'not_found');
+          window.dispatchEvent(new Event('invis_oauth_not_found'));
       }
   };
 

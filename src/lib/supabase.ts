@@ -64,6 +64,28 @@ export const SupabaseService = {
   },
 
   // 1. AUTHENTICATION & PROFILE PERSISTENCE
+  async checkProfileExists(email: string, phone: string) {
+    if (!isSupabaseConfigured()) return false;
+    
+    // Check if email or phone exists in profiles
+    const cleanPhone = phone ? phone.replace(/\s+/g, '') : phone;
+    const cleanEmail = email.toLowerCase().trim();
+    
+    // We check either email or phone
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .or(`email.eq.${cleanEmail},phone.eq.${cleanPhone}`)
+      .limit(1);
+      
+    if (error) {
+      console.warn("Erro ao checar perfil existente:", error);
+      return false; // Safely proceed to try anyway
+    }
+    
+    return data && data.length > 0;
+  },
+
   async signUp(email: string, pass: string, profileData: any) {
     if (!isSupabaseConfigured()) {
       console.warn('[INVIS Supabase Service] Using Local Authentication (Offline Mode). Configure VITE_SUPABASE_ANON_KEY for live Postgres Auth.');
@@ -71,24 +93,37 @@ export const SupabaseService = {
     }
     
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password: pass,
-        options: {
-          data: profileData
-        }
-      });
+      let finalUser = null;
 
-      if (error) return { data: null, error };
+      // Check if user is already authenticated via OAuth but just missing a profile
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session?.user && sessionData.session.user.email === email) {
+         finalUser = sessionData.session.user;
+         
+         // Try to update password if they want to set one, but it doesn't matter if it fails
+         if (pass) {
+            await supabase.auth.updateUser({ password: pass }).catch(() => {});
+         }
+      } else {
+         const { data, error } = await supabase.auth.signUp({
+           email,
+           password: pass,
+           options: {
+             data: profileData
+           }
+         });
+         if (error) return { data: null, error };
+         finalUser = data.user;
+      }
 
       // Create custom profile in the profiles table
-      if (data.user) {
+      if (finalUser) {
         try {
           const cleanPhoneToSave = profileData.phone ? profileData.phone.replace(/\s+/g, '') : profileData.phone;
           const { error: profileError } = await supabase
             .from('profiles')
             .upsert({
-              id: data.user.id,
+              id: finalUser.id,
               email: email,
               full_name: profileData.fullName,
               nickname: profileData.nickname,
@@ -98,6 +133,7 @@ export const SupabaseService = {
               wallet_ic_gold: 5000.0,
               wallet_ic_silver: 0.0,
               age: profileData.age,
+              age_group: profileData.ageGroup || (profileData.age && profileData.age < 18 ? 'Kids' : 'Adult'),
               updated_at: new Date().toISOString()
             });
           if (profileError) {
@@ -108,7 +144,7 @@ export const SupabaseService = {
         }
       }
 
-      return { data, error: null };
+      return { data: { user: finalUser }, error: null };
     } catch (e: any) {
       return { data: null, error: e };
     }

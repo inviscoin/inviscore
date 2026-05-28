@@ -259,10 +259,18 @@ export const RegisterScreen: React.FC = () => {
     }
 
     try {
+      const fullPhone = `${ddi} ${ddd} ${phone}`;
+      
+      const profileExists = await SupabaseService.checkProfileExists(email, fullPhone);
+      if (profileExists) {
+         setModalObj({ title: "VERIFICAÇÃO", message: "Conta já registrada com este E-mail ou Telefone.", type: "error" });
+         return;
+      }
+      
       const { data, error } = await SupabaseService.signUp(email, password, {
         fullName,
         nickname,
-        phone: `${ddi} ${ddd} ${phone}`,
+        phone: fullPhone,
         ddi,
         birthDate,
         age: calculatedAge,
