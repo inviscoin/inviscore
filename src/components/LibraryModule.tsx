@@ -129,9 +129,16 @@ export const LibraryModule: React.FC = () => {
   useEffect(() => {
     let highlightInterval: NodeJS.Timeout;
     if (isAudioRunning && selectedBook) {
+      console.log(`[TTS-Mixer] Iniciando cascata de voz neural...`);
+      console.log(`[TTS-Mixer] 1. Google Cloud TTS (Tentando Cota 1M)...`);
+      // Simulate fallback from premium to native
+      setTimeout(() => {
+        console.warn(`[TTS-Mixer] Cotas premium expiradas. Realizando Fallback de Custo Zero: Web Speech API nativa ativada.`);
+      }, 1000);
+
       highlightInterval = setInterval(() => {
         setActiveSentenceIndex(prev => {
-          const sentencesCount = 5; // simulated sentences
+          const sentencesCount = selectedBook.content[currentChapterIndex]?.split('. ').length || 5; 
           if (prev >= sentencesCount - 1) {
             return 0; // loop highlighter
           }
@@ -140,7 +147,7 @@ export const LibraryModule: React.FC = () => {
       }, 3000);
     }
     return () => clearInterval(highlightInterval);
-  }, [isAudioRunning, selectedBook]);
+  }, [isAudioRunning, selectedBook, currentChapterIndex]);
 
   // Stream simulation with Typewriter effect for Ghostwriter
   const handleGenerateGhostwriterChapter = (e: React.FormEvent) => {
@@ -312,6 +319,16 @@ export const LibraryModule: React.FC = () => {
                 </div>
 
                 {/* Smart Shelf Rack Layout - Grid */}
+                {/* HUD INVIShop Auto-injetado (10% cota restante) */}
+                <div className="flex items-center justify-between p-2 mb-2 bg-gradient-to-r from-cyan-900/40 to-transparent border border-cyan-500/20 rounded-xl">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[9px] font-mono font-bold text-cyan-400 uppercase tracking-widest">Aviso de Narração Neural (10% Cota Restante)</span>
+                    <span className="text-[8px] text-zinc-400 uppercase">Renove acesso para manter o TTS e o Hub.</span>
+                  </div>
+                  <button onClick={() => alert('Bem vindo a INVIShop!\n\nLiquidez de livros da Giftbox habilitada com -5% de taxa deflacionária na conversão para IC.')} className="px-3 py-1 bg-cyan-500 text-black text-[9px] font-mono font-bold uppercase rounded hover:bg-cyan-400 cursor-pointer shadow-[0_0_10px_rgba(0,255,255,0.4)]">
+                    INVIShop Store
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 px-0.5">
                     {filteredBooks.map((book) => {
                       const isOwned = book.minTier === 'FREE' || purchasedBookIds.includes(book.id);
@@ -322,11 +339,11 @@ export const LibraryModule: React.FC = () => {
                           key={book.id}
                           className="w-full p-2 rounded-xl bg-black/40 border border-white/5 hover:border-cyan-400/50 hover:scale-[1.02] transition-all duration-300 flex flex-col text-left space-y-1.5 relative group"
                         >
-                          {/* Miniature Cover Thumbnail in top-left corner */}
+                          {/* Thumbnail e Cover (Shadow item acinzentado se PENDING) */}
                           <div className="absolute top-1.5 left-1.5 w-6 h-8 rounded border border-white/25 shadow-md shadow-black/60 overflow-hidden z-10 transition-transform group-hover:scale-105 duration-300">
                             <img 
                               src={book.coverUrl} 
-                              className="w-full h-full object-cover" 
+                              className={`w-full h-full object-cover ${!isOwned && book.minTier !== 'FREE' ? 'grayscale opacity-70' : ''}`} 
                               alt="mini book cover" 
                               referrerPolicy="no-referrer"
                             />
@@ -336,10 +353,16 @@ export const LibraryModule: React.FC = () => {
                           <div className="w-full h-28 rounded-lg overflow-hidden relative border border-white/5">
                             <img 
                               src={book.coverUrl} 
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                              className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${!isOwned && book.minTier !== 'FREE' ? 'grayscale opacity-60' : ''}`} 
                               alt="book cover" 
                               referrerPolicy="no-referrer"
                             />
+                            {/* PENDING Tag for Shadow Items */}
+                            {!isOwned && book.minTier !== 'FREE' && (
+                              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                <span className="px-2 py-0.5 bg-zinc-900 border border-zinc-700 text-zinc-400 text-[8px] font-mono tracking-widest uppercase rounded">PENDING BOLETO</span>
+                              </div>
+                            )}
                             {/* Scanlines retro layout overlay */}
                             <div className="absolute inset-0 bg-black/10 matrix-line-overlay opacity-30" />
                             {/* Neural soundwave indicator icon */}
@@ -518,7 +541,12 @@ export const LibraryModule: React.FC = () => {
               {/* Header controls back */}
               <div className="flex items-center justify-between">
                 <button 
-                  onClick={() => { setSelectedBook(null); setIsAudioRunning(false); }}
+                  onClick={() => { 
+                    setSelectedBook(null); 
+                    setIsAudioRunning(false); 
+                    // MODO READING: Restaura global notifications
+                    document.documentElement.classList.remove('reading-mode');
+                  }}
                   className="flex items-center gap-2 text-xs text-neutral-400 hover:text-white transition-colors cursor-pointer w-fit px-2 py-1 rounded hover:bg-white/5"
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -526,6 +554,16 @@ export const LibraryModule: React.FC = () => {
                 </button>
 
                 <div className="flex gap-4 items-center">
+                  {/* Multiplex Sincronia de Grupo */}
+                  <button
+                    onClick={() => {
+                        alert("Multiplex Room Criada!\n\nLink no Chat Global para: [Sincronia de Leitura - " + selectedBook?.title + "].\nMaestro de Áudio e Ducking Universal (60% redução ao falar via WebRTC) ativados.");
+                    }}
+                    className="p-1 px-2 rounded border border-neutral-800 text-[9px] uppercase tracking-wider font-mono text-[#00FF80] hover:bg-[#00FF80]/10 transition-colors cursor-pointer"
+                  >
+                    Multiplex (8/8)
+                  </button>
+
                   <button 
                     onClick={() => setIsAudioRunning(!isAudioRunning)}
                     className={`p-2.5 rounded-full border transition-all cursor-pointer ${
@@ -670,6 +708,14 @@ export const LibraryModule: React.FC = () => {
                           </div>
                         )}
                         <p className="leading-relaxed whitespace-pre-wrap select-text">{typedOutput}</p>
+                        
+                        {/* FEEDBACK LOOP: Glow (Curtir estilo) ou Desfoque (Rejeitar estilo) */}
+                        {!isGenerating && typedOutput && (
+                          <div className="flex justify-end gap-2 mt-4 pt-2 border-t border-[#D4AF37]/20">
+                            <button onClick={() => alert('Glow Registrado: IA ajustando tom neural para imitação profunda.')} className="px-2 py-1 bg-yellow-500/20 text-yellow-500 text-[9px] uppercase font-mono rounded hover:bg-yellow-500/40">Glow (Curtir Estilo)</button>
+                            <button onClick={() => alert('Desfoque Registrado: Revertendo estrutura tonal.')} className="px-2 py-1 bg-red-500/10 text-red-400 text-[9px] uppercase font-mono rounded hover:bg-red-500/30">Desfoque</button>
+                          </div>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>

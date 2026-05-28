@@ -222,22 +222,41 @@ export const MediaModule: React.FC = () => {
   const [showClipMetadataDrawer, setShowClipMetadataDrawer] = useState(false);
   const [adminMenuClip, setAdminMenuClip] = useState<VideoClip | null>(null);
 
+  const [showBumperAd, setShowBumperAd] = useState(false);
+  const [bumperCountdown, setBumperCountdown] = useState(6);
+
   // Video progress interval simulation
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (clipPlaying && selectedClip) {
+    if (clipPlaying && selectedClip && !showBumperAd) {
       interval = setInterval(() => {
         setClipProgress(prev => (prev >= 100 ? 0 : prev + 1));
       }, 3000);
     }
     return () => clearInterval(interval);
-  }, [clipPlaying, selectedClip]);
+  }, [clipPlaying, selectedClip, showBumperAd]);
+
+  useEffect(() => {
+    if (showBumperAd) {
+      const countdown = setInterval(() => {
+        setBumperCountdown(prev => {
+          if (prev <= 1) {
+            setShowBumperAd(false);
+            return 6;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(countdown);
+    }
+  }, [showBumperAd]);
 
   const triggerHaptic = (ms = 20) => {
     if (navigator.vibrate) navigator.vibrate(ms);
   };
 
   const handleClipTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (showBumperAd) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const pct = Math.round((x / rect.width) * 100);
@@ -247,6 +266,8 @@ export const MediaModule: React.FC = () => {
 
   const startClipPlayback = (clip: VideoClip) => {
     setSelectedClip(clip);
+    setShowBumperAd(true); // Monetization: Bumper Ads (6s) na abertura do player
+    setBumperCountdown(6);
     setClipPlaying(true);
     setClipProgress(0);
     triggerHaptic(30);
@@ -1667,15 +1688,32 @@ export const MediaModule: React.FC = () => {
                       referrerPolicy="no-referrer"
                     />
 
-                    {/* Centered large play control action display */}
-                    <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/35">
-                      <button 
-                        onClick={() => { triggerHaptic(20); setClipPlaying(!clipPlaying); }}
-                        className="w-14 h-14 rounded-full bg-black/85 border border-rose-500/50 flex items-center justify-center text-rose-500 hover:scale-110 active:scale-95 transition-all shadow-2xl cursor-pointer"
-                      >
-                        {clipPlaying ? <span className="font-mono text-xs font-bold font-black">||</span> : <Play className="w-6 h-6 fill-rose-500 ml-0.5" />}
-                      </button>
-                    </div>
+                    {showBumperAd ? (
+                      <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
+                        <div className="absolute top-4 left-4 bg-yellow-500/20 text-yellow-500 border border-yellow-500/50 px-2 py-1 rounded text-[9px] font-mono font-black uppercase tracking-widest">
+                          Anúncio
+                        </div>
+                        <div className="text-zinc-300 text-sm font-mono mt-8 mb-2">Bumper Ad</div>
+                        <div className="w-12 h-12 border-4 border-zinc-800 border-t-yellow-500 rounded-full animate-spin mb-4" />
+                        <div className="absolute bottom-4 right-4 bg-black/80 border border-white/10 px-3 py-1.5 rounded-lg text-white font-mono text-[10px] flex items-center gap-2">
+                          <span>Seu vídeo começará em {bumperCountdown}s</span>
+                        </div>
+                        {/* Div invisível bloqueadora para proibir cliques/ações durante o Bumper */}
+                        <div className="absolute inset-0 z-[100] cursor-not-allowed pointer-events-auto" />
+                      </div>
+                    ) : (
+                      <>
+                        {/* Centered large play control action display */}
+                        <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/35">
+                          <button 
+                            onClick={() => { triggerHaptic(20); setClipPlaying(!clipPlaying); }}
+                            className="w-14 h-14 rounded-full bg-black/85 border border-rose-500/50 flex items-center justify-center text-rose-500 hover:scale-110 active:scale-95 transition-all shadow-2xl cursor-pointer"
+                          >
+                            {clipPlaying ? <span className="font-mono text-xs font-bold font-black">||</span> : <Play className="w-6 h-6 fill-rose-500 ml-0.5" />}
+                          </button>
+                        </div>
+                      </>
+                    )}
 
                     {/* SPEC 2: Gestures Touch zones (Left: Brightness, Right: Volume) */}
                     <div className="absolute inset-0 flex pointer-events-none z-20">
@@ -3522,6 +3560,28 @@ export const MediaModule: React.FC = () => {
                                   </div>
                                   <button className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-800/80 hover:bg-zinc-700 border border-white/10 shadow-lg text-zinc-300 transition-colors">
                                     <Clock className="w-4 h-4" />
+                                  </button>
+                                </div>
+
+                                {/* Item: ABR Quality */}
+                                <div className="relative group/menu flex flex-col items-center">
+                                  <div className="absolute bottom-full mb-3 hidden group-hover/menu:flex flex-col bg-zinc-900/90 backdrop-blur-xl rounded-xl border border-white/10 p-1.5 shadow-2xl origin-bottom animate-in fade-in zoom-in duration-200">
+                                    {['1080p', '720p', '480p'].map((q) => (
+                                      <button 
+                                        key={q}
+                                        onClick={() => {
+                                          triggerHaptic(10);
+                                          setAbrMode(q as any);
+                                          alert(`Qualidade HLS ABR alterada para ${q}. Proxy mask reconfigurado.`);
+                                        }}
+                                        className={`px-4 py-2 text-[9px] font-mono font-bold uppercase rounded-lg whitespace-nowrap transition-colors ${abrMode === q ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-300'}`}
+                                      >
+                                        Qualidade: {q}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <button className={`flex items-center justify-center w-10 h-10 rounded-full bg-zinc-800/80 hover:bg-zinc-700 border border-white/10 shadow-lg transition-colors ${abrMode === '1080p' ? 'text-cyan-400' : 'text-zinc-300'}`}>
+                                    <Settings className="w-4 h-4" />
                                   </button>
                                 </div>
 

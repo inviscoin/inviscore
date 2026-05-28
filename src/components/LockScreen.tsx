@@ -225,20 +225,33 @@ export const LockScreen: React.FC = () => {
               </p>
 
               {/* Bio Sensory interactive Fingerprint */}
-              <motion.button
-                id="btn_biometric_lock"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={handleAccess}
-                className="relative w-20 h-20 rounded-full border-2 border-[#00FF80] flex items-center justify-center cursor-pointer overflow-hidden bg-black/40 hover:bg-black/70 transition-all shadow-[0_0_20px_rgba(0,255,128,0.2)] focus:outline-none"
-              >
-                {/* Fingerprint subtle shine */}
-                <span className="absolute inset-0 bg-gradient-to-tr from-cyan-500/10 via-transparent to-emerald-500/20 animate-pulse" />
-                <Fingerprint className="w-10 h-10 text-[#00FF80] filter drop-shadow-[0_0_8px_#00FF80]" />
-              </motion.button>
+              {localStorage.getItem('invis_lang') ? (
+                <motion.button
+                  id="btn_biometric_lock"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={handleAccess}
+                  className="relative w-20 h-20 rounded-full border-2 border-[#00FF80] flex items-center justify-center cursor-pointer overflow-hidden bg-black/40 hover:bg-black/70 transition-all shadow-[0_0_20px_rgba(0,255,128,0.2)] focus:outline-none"
+                >
+                  {/* Fingerprint subtle shine */}
+                  <span className="absolute inset-0 bg-gradient-to-tr from-cyan-500/10 via-transparent to-emerald-500/20 animate-pulse" />
+                  <Fingerprint className="w-10 h-10 text-[#00FF80] filter drop-shadow-[0_0_8px_#00FF80]" />
+                </motion.button>
+              ) : (
+                <motion.button
+                  id="btn_lang_lock"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setLangDrawerOpen(true)}
+                  className="relative px-6 py-3 rounded-xl border border-cyan-500/50 flex items-center justify-center gap-3 cursor-pointer overflow-hidden bg-cyan-950/30 hover:bg-cyan-900/50 transition-all shadow-[0_0_20px_rgba(0,200,255,0.2)] focus:outline-none"
+                >
+                  <Globe className="w-5 h-5 text-cyan-400" />
+                  <span className="font-mono text-xs text-white uppercase tracking-widest">Select Language</span>
+                </motion.button>
+              )}
 
               <span className="text-xs text-neutral-400 select-none tracking-widest uppercase blink-pulse">
-                {currentTexts.toque_para_acessar}
+                {localStorage.getItem('invis_lang') ? currentTexts.toque_para_acessar : "SELECT LANGUAGE TO UNLOCK"}
               </span>
             </motion.div>
           )}
