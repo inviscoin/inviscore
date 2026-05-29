@@ -78,6 +78,7 @@ export interface Movie {
   actors?: string[];
   production?: string;
   streamUrl?: string;
+  audioLanguages?: string[];
 }
 
 export interface InventoryItem {

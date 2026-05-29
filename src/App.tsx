@@ -74,38 +74,15 @@ function AppContent() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
 
-  // Specific UI visibilities
-  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-  const [isFooterVisible, setIsFooterVisible] = useState(true);
-
   // Click tracking for Nav visibility
   useEffect(() => {
-    let clickTimeout: ReturnType<typeof setTimeout> | null = null;
-    let clickCount = 0;
-
-    const handleClickEvent = (e: MouseEvent) => {
-      clickCount++;
-
-      if (clickCount === 1) {
-        clickTimeout = setTimeout(() => {
-          // Single click does nothing now
-          clickCount = 0;
-        }, 250); 
-      } else if (clickCount === 2) {
-        if (clickTimeout) clearTimeout(clickTimeout);
-        // Double click toggles retract/reappear
-        setIsHeaderVisible(prev => !prev);
-        setIsFooterVisible(prev => !prev);
-        setIsNavVisible(prev => !prev);
-        clickCount = 0;
-      }
+    const handleDblClick = () => {
+      setIsNavVisible(prev => !prev);
     };
 
-    window.addEventListener('click', handleClickEvent);
-
+    window.addEventListener('dblclick', handleDblClick);
     return () => {
-      if (clickTimeout) clearTimeout(clickTimeout);
-      window.removeEventListener('click', handleClickEvent);
+      window.removeEventListener('dblclick', handleDblClick);
     };
   }, [setIsNavVisible]);
 
@@ -179,7 +156,7 @@ function AppContent() {
     <div id="invis_app_root" className="h-screen flex flex-col bg-[#050508] text-white relative overflow-hidden antialiased">
       {/* Upper persistent Navigation Bar (Shown on dashboard only) */}
       <AnimatePresence>
-        {currentStage === 'dashboard' && isHeaderVisible && (
+        {currentStage === 'dashboard' && isNavVisible && (
           <motion.div
             initial={{ y: '-100%', opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -206,7 +183,7 @@ function AppContent() {
 
       {/* Downward Navigation Tab Bar (Shown on dashboard only) */}
       <AnimatePresence>
-        {currentStage === 'dashboard' && isFooterVisible && (
+        {currentStage === 'dashboard' && isNavVisible && (
           <motion.div
             initial={{ y: '100%', opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}

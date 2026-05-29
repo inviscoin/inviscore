@@ -406,7 +406,8 @@ export const MediaModule: React.FC = () => {
       rating: 8.4,
       isFavorite: true,
       continueProgress: 45,
-      totalDuration: '164m'
+      totalDuration: '164m',
+      audioLanguages: ['PT-BR', 'EN']
     },
     {
       id: 'tf_interstellar',
@@ -422,7 +423,8 @@ export const MediaModule: React.FC = () => {
       rating: 8.7,
       isFavorite: true,
       continueProgress: 75,
-      totalDuration: '169m'
+      totalDuration: '169m',
+      audioLanguages: ['PT-BR', 'EN']
     },
     {
       id: 'tf_matrix',
@@ -438,7 +440,8 @@ export const MediaModule: React.FC = () => {
       rating: 6.7,
       isFavorite: false,
       continueProgress: 20,
-      totalDuration: '148m'
+      totalDuration: '148m',
+      audioLanguages: ['EN']
     },
     {
       id: 'tf_dune2',
@@ -454,7 +457,8 @@ export const MediaModule: React.FC = () => {
       rating: 8.6,
       isFavorite: true,
       continueProgress: 10,
-      totalDuration: '166m'
+      totalDuration: '166m',
+      audioLanguages: ['PT-BR']
     },
     {
       id: 'tf_maverick',
@@ -470,7 +474,8 @@ export const MediaModule: React.FC = () => {
       rating: 8.3,
       isFavorite: false,
       continueProgress: 90,
-      totalDuration: '130m'
+      totalDuration: '130m',
+      audioLanguages: ['PT-BR', 'EN']
     },
     {
       id: 'tf_edgerunners',
@@ -486,9 +491,10 @@ export const MediaModule: React.FC = () => {
       rating: 8.6,
       isFavorite: true,
       continueProgress: 55,
-      totalDuration: '10 eps'
+      totalDuration: '10 eps',
+      audioLanguages: ['PT-BR', 'EN']
     },
-
+ 
     // Netflix Blockbuster Shelf
     {
       id: 'nft_stranger',
@@ -502,7 +508,8 @@ export const MediaModule: React.FC = () => {
       platform: 'netflix',
       category: 'Sci-Fi',
       rating: 8.7,
-      isFavorite: true
+      isFavorite: true,
+      audioLanguages: ['PT-BR', 'EN']
     },
     {
       id: 'nft_blackmirror',
@@ -827,6 +834,9 @@ export const MediaModule: React.FC = () => {
   const [movieVolume, setMovieVolume] = useState(85);
   const [movieSpeed, setMovieSpeed] = useState<number>(1);
   const [movieAudioLang, setMovieAudioLang] = useState<'PT-BR' | 'EN'>('PT-BR');
+  const [movieSubtitle, setMovieSubtitle] = useState<'OFF' | 'PT-BR' | 'EN' | 'ES'>('OFF');
+  const [wasPausedByScroll, setWasPausedByScroll] = useState(false);
+  const [activeMediaAlert, setActiveMediaAlert] = useState<string | null>(null);
   const [abrMode, setAbrMode] = useState<'1080p' | '720p' | '480p'>('1080p');
   const [showMovieControls, setShowMovieControls] = useState(true);
   const [continueWatchingTime, setContinueWatchingTime] = useState<number | null>(45); // simulated resume timestamp
@@ -984,23 +994,34 @@ export const MediaModule: React.FC = () => {
   }, [expandedSection, selectedMovie, moviesList]);
 
   const memoizedCategories = React.useMemo(() => {
+    // Check if user language is PT-BR based on DDI prefix '+55'
+    const isPtBrUser = currentUser?.ddi === '+55';
+
+    const filterByLanguage = (m: Movie) => {
+      if (!isPtBrUser) return true; // show everything for non PT-BR accounts
+      
+      // Default to PT-BR support if unspecified or empty
+      const languages = m.audioLanguages || ['PT-BR', 'EN'];
+      return languages.includes('PT-BR');
+    };
+
     return {
-      filtered: moviesList.filter(m => {
+      filtered: moviesList.filter(filterByLanguage).filter(m => {
         const matchQuery = searchQuery ? m.title.toLowerCase().includes(searchQuery.toLowerCase()) || m.overview.toLowerCase().includes(searchQuery.toLowerCase()) : true;
         const matchCategory = selectedCategory !== 'Todos' ? (m as any).category === selectedCategory : true;
         const matchScope = scopeFiltering !== 'todos' ? m.type === scopeFiltering : true;
         return matchQuery && matchCategory && matchScope && m.status;
       }),
-      favorites: moviesList.filter(m => m.status && (m as any).isFavorite),
-      continue: moviesList.filter(m => m.status && (m as any).continueProgress),
-      suggestions: moviesList.filter(m => m.status && (m as any).rating >= 8.2),
-      netflix: moviesList.filter(m => m.status && ((m as any).platform === 'netflix' || m.id.startsWith('nft') || m.id.startsWith('tf_b2049') || m.id.startsWith('tf_edgerunners'))),
-      disney: moviesList.filter(m => m.status && ((m as any).platform === 'disney' || m.id.startsWith('dis'))),
-      hbo: moviesList.filter(m => m.status && ((m as any).platform === 'hbo' || m.id.startsWith('hbo') || m.id.startsWith('tf_interstellar') || m.id.startsWith('tf_dune2'))),
-      prime: moviesList.filter(m => m.status && ((m as any).platform === 'prime' || m.id.startsWith('prm') || m.id.startsWith('tf_maverick'))),
-      globoplay: moviesList.filter(m => m.status && ((m as any).platform === 'globoplay' || m.id.startsWith('glo')))
+      favorites: moviesList.filter(filterByLanguage).filter(m => m.status && (m as any).isFavorite),
+      continue: moviesList.filter(filterByLanguage).filter(m => m.status && (m as any).continueProgress),
+      suggestions: moviesList.filter(filterByLanguage).filter(m => m.status && (m as any).rating >= 8.2),
+      netflix: moviesList.filter(filterByLanguage).filter(m => m.status && ((m as any).platform === 'netflix' || m.id.startsWith('nft') || m.id.startsWith('tf_b2049') || m.id.startsWith('tf_edgerunners'))),
+      disney: moviesList.filter(filterByLanguage).filter(m => m.status && ((m as any).platform === 'disney' || m.id.startsWith('dis'))),
+      hbo: moviesList.filter(filterByLanguage).filter(m => m.status && ((m as any).platform === 'hbo' || m.id.startsWith('hbo') || m.id.startsWith('tf_interstellar') || m.id.startsWith('tf_dune2'))),
+      prime: moviesList.filter(filterByLanguage).filter(m => m.status && ((m as any).platform === 'prime' || m.id.startsWith('prm') || m.id.startsWith('tf_maverick'))),
+      globoplay: moviesList.filter(filterByLanguage).filter(m => m.status && ((m as any).platform === 'globoplay' || m.id.startsWith('glo')))
     };
-  }, [moviesList, searchQuery, selectedCategory, scopeFiltering]);
+  }, [moviesList, searchQuery, selectedCategory, scopeFiltering, currentUser]);
 
   // Procedural titles duplication helper for up to 70 titles in expanded shelves
   const getExpandedTitlesForCategory = (category: string) => {
@@ -1398,6 +1419,42 @@ export const MediaModule: React.FC = () => {
     }
   }, [movieVolume]);
 
+  // Auto Pause and Resume video on scroll
+  useEffect(() => {
+    if (!moviePlaying) return;
+    const video = movieVideoRef.current;
+    const playerBlock = document.getElementById('youtube-player-block');
+    if (!playerBlock) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting || entry.intersectionRatio < 0.95) {
+            if (movieIsPlaying) {
+              if (video) video.pause();
+              setMovieIsPlaying(false);
+              setWasPausedByScroll(true);
+            }
+          } else if (entry.intersectionRatio >= 0.95) {
+            if (wasPausedByScroll) {
+              if (video) video.play().catch(() => {});
+              setMovieIsPlaying(true);
+              setWasPausedByScroll(false);
+            }
+          }
+        });
+      },
+      {
+        threshold: [0.0, 0.95, 1.0],
+      }
+    );
+
+    observer.observe(playerBlock);
+    return () => {
+      observer.disconnect();
+    };
+  }, [moviePlaying, movieIsPlaying, wasPausedByScroll]);
+
   const handleMovieTimeUpdate = () => {
     const video = movieVideoRef.current;
     if (video && video.duration) {
@@ -1447,6 +1504,28 @@ export const MediaModule: React.FC = () => {
         video.play().catch(() => {});
       }
     }
+  };
+
+  const getActiveSubtitleText = () => {
+    if (movieSubtitle === 'OFF') return '';
+    const tracks = [
+      { tStart: 1, tEnd: 4, text: { 'PT-BR': '[Música eletrônica de abertura]', 'EN': '[Opening electronic music]', 'ES': '[Música electrónica de apertura]' } },
+      { tStart: 4, tEnd: 8, text: { 'PT-BR': 'O sinal de transmissão criptografado foi estabelecido.', 'EN': 'The encrypted broadcast signal has been established.', 'ES': 'La señal de transmisión encriptada ha sido establecida.' } },
+      { tStart: 8, tEnd: 12, text: { 'PT-BR': 'Aviso: Todos os dados da sessão estão protegidos.', 'EN': 'Warning: All session data is fully protected.', 'ES': 'Advertencia: Todos los datos de la sesión están protegidos.' } },
+      { tStart: 12, tEnd: 16, text: { 'PT-BR': 'Aproveite a experiência sonora de última geração.', 'EN': 'Enjoy the next-generation audio experience.', 'ES': 'Disfrute de la experiencia de audio de próxima generación.' } },
+      { tStart: 16, tEnd: 20, text: { 'PT-BR': 'Use os controles inferiores para áudio, legenda e velocidade.', 'EN': 'Use the lower controls for audio, subtitle and progress speed.', 'ES': 'Use los controles inferiores para audio, subtítulos y velocidad.' } },
+      { tStart: 21, tEnd: 25, text: { 'PT-BR': '[Efeito ultra sônico pulsante]', 'EN': '[Pulsing ultrasonic effect]', 'ES': '[Efecto ultrasónico pulsante]' } },
+      { tStart: 25, tEnd: 30, text: { 'PT-BR': 'Bem-vindo ao Hub de Mídia INVIS Cinema.', 'EN': 'Welcome to the INVIS Cinema Media Hub.', 'ES': 'Bienvenido al Centro de Medios de Cine INVIS.' } }
+    ];
+    const match = tracks.find(track => currentTime >= track.tStart && currentTime <= track.tEnd);
+    return match ? match.text[movieSubtitle] : '';
+  };
+
+  const showAlert = (text: string) => {
+    setActiveMediaAlert(text);
+    setTimeout(() => {
+      setActiveMediaAlert(prev => prev === text ? null : prev);
+    }, 1800);
   };
 
   const getMovieVideoSrc = (movie: Movie | null) => {
@@ -3378,242 +3457,469 @@ export const MediaModule: React.FC = () => {
                     </div>
                   ) : (
                     /* MOVIE PLAYBACK GRAPHIC VIEW WITH ACTIVE STREAM SOURCE */
-                    <div className="space-y-4 text-left w-full flex flex-col h-fit pb-1">
-                      
-                      {/* Real Video playback container using HTML5 video/iframe player */}
-                      <div 
-                        onClick={() => {
-                          if (movieIsPlaying && (!selectedMovie?.streamUrl)) {
-                            triggerHaptic(25);
-                            setMovieIsPlaying(false);
-                          }
-                        }}
-                        className={`transition-all duration-500 bg-black overflow-hidden group flex items-center justify-center w-full aspect-video rounded-3xl border border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.22)] relative ${selectedMovie?.streamUrl ? 'pointer-events-auto' : ''}`}
-                      >
-                        {selectedMovie?.streamUrl ? (
-                          <iframe
-                            src={selectedMovie.streamUrl}
-                            className="w-full h-full border-0"
-                            allowFullScreen
-                            allow="autoplay; encrypted-media"
-                            title="Player vidsrc"
-                          />
-                        ) : (
-                          <video
-                            ref={movieVideoRef}
-                            src={getMovieVideoSrc(selectedMovie)}
-                            className="w-full h-full object-contain pointer-events-none"
-                            onTimeUpdate={handleMovieTimeUpdate}
-                            onLoadedMetadata={handleMovieLoadedMetadata}
-                            onEnded={handleMovieEnded}
-                            autoPlay
-                          />
-                        )}
+                    <div 
+                      id="cinema_player_scrollable_container"
+                      className="w-full h-full overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden flex flex-col pt-4 pb-16 px-4 space-y-8 select-none"
+                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
+                      {/* The standard YouTube-sized video block aspect-video (16:9 ratio) */}
+                      <div className="w-full max-w-4xl mx-auto flex flex-col space-y-3 shrink-0">
+                        <div 
+                          id="youtube-player-block"
+                          className="w-full aspect-video bg-black relative rounded-2xl overflow-hidden border border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.3)] group/player"
+                        >
+                          {/* Inside Video element or iframe */}
+                          {selectedMovie?.streamUrl ? (
+                            <iframe
+                              src={selectedMovie.streamUrl}
+                              className="w-full h-full border-0"
+                              allowFullScreen
+                              allow="autoplay; encrypted-media"
+                              title="Player stream"
+                            />
+                          ) : (
+                            <video
+                              ref={movieVideoRef}
+                              src={getMovieVideoSrc(selectedMovie)}
+                              className="w-full h-full object-contain pointer-events-none"
+                              onTimeUpdate={handleMovieTimeUpdate}
+                              onLoadedMetadata={handleMovieLoadedMetadata}
+                              onEnded={handleMovieEnded}
+                              autoPlay
+                            />
+                          )}
 
-                        {/* Loading spinner overlay */}
-                        {!selectedMovie?.streamUrl && !duration && (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 space-y-2 z-15 select-none pointer-events-none">
-                            <div className="w-10 h-10 border-2 border-cyan-500/30 border-t-cyan-400 animate-spin rounded-full" />
-                            <span className="text-[10px] font-mono text-cyan-300 tracking-widest animate-pulse font-bold">CONECTANDO STREAMING...</span>
-                          </div>
-                        )}
+                          {/* Top Center: Alert HUD Notification for player parameter changes */}
+                          {activeMediaAlert && (
+                            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-cyan-950/90 border border-cyan-400 text-cyan-300 font-mono text-[10px] font-bold px-4 py-1.5 rounded-full z-[100] shadow-lg flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-150">
+                              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+                              <span>{activeMediaAlert}</span>
+                            </div>
+                          )}
 
-                        {/* Center Controls Options when PAUSED / NOT PLAYING (Only for local video) */}
-                        {!selectedMovie?.streamUrl && !movieIsPlaying && duration > 0 && (
+                          {/* Center: Netflix-style persistent subtitler overlay synced with realcurrentTime */}
+                          {movieSubtitle !== 'OFF' && getActiveSubtitleText() !== '' && (
+                            <div className="absolute bottom-16 md:bottom-20 left-1/2 -translate-x-1/2 bg-black/85 border border-white/5 px-4 py-2 rounded-xl text-white font-sans text-xs md:text-sm font-semibold tracking-wide text-center z-50 select-none shadow-[0_4px_15px_rgba(0,0,0,0.8)] max-w-[85%] pointer-events-none animate-in fade-in duration-200">
+                              {getActiveSubtitleText()}
+                            </div>
+                          )}
+
+                          {/* Loading spinner overlay */}
+                          {!selectedMovie?.streamUrl && !duration && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-blackSpace z-50 select-none pointer-events-none">
+                              <div className="w-10 h-10 border-2 border-cyan-500/30 border-t-cyan-400 anonymity-spin rounded-full animate-spin" />
+                              <span className="text-[10px] font-mono text-cyan-300 tracking-widest animate-pulse font-bold mt-2">CONECTANDO CANAL HLS...</span>
+                            </div>
+                          )}
+
+                          {/* Complete control Overlay bar. Hovering shows controls. If paused, controls are locked visible */}
                           <div 
-                            onClick={(e) => e.stopPropagation()} 
-                            className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-30 animate-fade-in"
+                            onClick={(e) => {
+                              // Click on video toggles play/pause
+                              if (!selectedMovie?.streamUrl) {
+                                triggerHaptic(15);
+                                if (movieIsPlaying) {
+                                  if (movieVideoRef.current) movieVideoRef.current.pause();
+                                  setMovieIsPlaying(false);
+                                  showAlert('PAUSADO');
+                                } else {
+                                  if (movieVideoRef.current) movieVideoRef.current.play().catch(() => {});
+                                  setMovieIsPlaying(true);
+                                  showAlert('PLAY');
+                                }
+                              }
+                            }}
+                            className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/50 opacity-0 group-hover/player:opacity-100 flex flex-col justify-between p-4 z-30 transition-opacity duration-300 ${!movieIsPlaying ? 'opacity-100' : ''}`}
                           >
-                            {/* Giant Center Play button */}
-                            {!(isMediaPipMode || activeBlocks.filter(b => !b.minimized).length > 1) && (
-                            <button
-                              onClick={() => {
-                                triggerHaptic(30);
-                                if (movieVideoRef.current) movieVideoRef.current.play();
-                                setMovieIsPlaying(true);
-                              }}
-                              className="absolute z-[80] w-20 h-20 bg-gradient-to-tr from-cyan-600 to-cyan-400 hover:scale-105 active:scale-95 text-black rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(6,182,212,0.6)] border-2 border-white/20 transition-all cursor-pointer top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-                            >
-                              <Play className="w-10 h-10 fill-black ml-1 shadow-inner" />
-                            </button>
-                            )}
+                            {/* Player Header Info */}
+                            <div className="flex justify-between items-start w-full">
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerHaptic(15);
+                                    setMoviePlaying(false);
+                                  }}
+                                  className="w-8 h-8 rounded-full bg-zinc-900/80 hover:bg-zinc-800 border border-white/10 flex items-center justify-center text-white transition-all cursor-pointer"
+                                >
+                                  <ArrowLeft className="w-4 h-4" />
+                                </button>
+                                <div className="text-left">
+                                  <h4 className="text-xs font-black text-white uppercase tracking-wide truncate max-w-[200px] sm:max-w-xs">{selectedMovie?.title}</h4>
+                                  <p className="text-[9px] font-mono text-zinc-400 capitalize">{selectedMovie?.category || 'Cinema Master'}</p>
+                                </div>
+                              </div>
 
-                            {/* Top Right: Actions (Voltar, PIP) */}
-                            <div 
-                              onClick={(e) => e.stopPropagation()}
-                              className="absolute top-6 right-6 flex items-center gap-3 z-50">
-                              <button
-                                onClick={() => { triggerHaptic(20); setMoviePlaying(false); togglePipMode(false); }}
-                                className="px-4 py-2 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-white/10 text-white text-[10px] font-mono font-bold tracking-wider transition-all cursor-pointer shadow-xl flex items-center gap-2"
-                              >
-                                <ArrowLeft className="w-4 h-4" />
-                                VOLTAR
-                              </button>
-                              {(activeBlocks.filter(b => !b.minimized).length === 1 && !isMediaPipMode) && ( // Só fica aparente se o bloco estiver sozinho ativo e não estiver no modo PIP
-                              <button
-                                onClick={() => {
-                                  triggerHaptic(30);
-                                  togglePipMode(true);
-                                  
-                                  const currentVisible = activeBlocks.filter(b => !b.minimized);
-                                  if (currentVisible.length < 3) {
-                                    setShowPipModal(true);
-                                    if (movieVideoRef.current) movieVideoRef.current.pause();
-                                    setMovieIsPlaying(false);
-                                  }
-                                }}
-                                className="px-4 py-2 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-white/10 text-cyan-400 text-[10px] font-mono font-bold tracking-wider transition-all cursor-pointer shadow-xl flex items-center gap-2"
-                              >
-                                <MonitorSmartphone className="w-4 h-4" />
-                                MODO PIP
-                              </button>
-                            )}
+                              {/* Server & Pipeline status */}
+                              <div className="flex items-center gap-2">
+                                <span className="bg-[#E50914] text-white font-mono text-[8px] font-black tracking-widest uppercase px-2 py-0.5 rounded shadow-sm">NETFLIX</span>
+                                <span className="bg-zinc-900/80 border border-cyan-500/30 text-cyan-400 font-mono text-[8px] font-bold px-2 py-0.5 rounded">{activeServer.toUpperCase()}</span>
+                              </div>
                             </div>
 
-                            {/* Expanded Bottom Control HUD */}
+                            {/* Centered Large Play Button Overlay when paused */}
+                            {!movieIsPlaying && !selectedMovie?.streamUrl && (
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  triggerHaptic(30);
+                                  if (movieVideoRef.current) movieVideoRef.current.play().catch(() => {});
+                                  setMovieIsPlaying(true);
+                                  showAlert('PLAY');
+                                }}
+                                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 bg-cyan-500 text-black rounded-full flex items-center justify-center hover:scale-110 active:scale-95 shadow-[0_0_20px_rgba(6,182,212,0.6)] cursor-pointer transition-all z-40"
+                              >
+                                <Play className="w-6 h-6 fill-black ml-0.5" />
+                              </button>
+                            )}
+
+                            {/* Bottom controls container */}
                             <div 
                               onClick={(e) => e.stopPropagation()}
-                              className={`absolute w-[95%] max-w-[900px] flex flex-col gap-0 z-[60] pointer-events-auto ${(isMediaPipMode || activeBlocks.filter(b => !b.minimized).length > 1) ? 'bottom-2' : 'bottom-8'}`}>
-                              
-                              {/* Timeline Navigation */}
-                              <div className={`flex items-center gap-4 bg-black/80 backdrop-blur-xl p-3 border border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] ${(isMediaPipMode || activeBlocks.filter(b => !b.minimized).length > 1) ? 'rounded-3xl' : 'rounded-t-3xl'}`}>
-                                {(isMediaPipMode || activeBlocks.filter(b => !b.minimized).length > 1) && (
+                              className="w-full space-y-3"
+                            >
+                              {/* Timeline scrub bar */}
+                              <div className="flex items-center gap-3 w-full">
+                                <span className="text-[9px] font-mono font-bold text-zinc-300 w-8">{formatTime(currentTime)}</span>
+                                <div 
+                                  onClick={handleMovieTimelineClick}
+                                  className="flex-1 h-1.5 relative bg-white/20 rounded-full cursor-pointer group/timeline flex items-center"
+                                >
+                                  <div 
+                                    className="absolute left-0 h-full bg-cyan-400 rounded-full"
+                                    style={{ width: `${movieProgress}%` }}
+                                  />
+                                  <div 
+                                    className="absolute w-3 h-3 bg-white rounded-full scale-0 group-hover/timeline:scale-100 transition-transform shadow-[0_0_8px_white]"
+                                    style={{ left: `calc(${movieProgress}% - 6px)` }}
+                                  />
+                                </div>
+                                <span className="text-[9px] font-mono font-bold text-zinc-500 w-8">{formatTime(duration)}</span>
+                              </div>
+
+                              {/* Buttons toolbar row */}
+                              <div className="flex items-center justify-between gap-2.5 flex-wrap pt-1 select-none">
+                                {/* Left Side controls */}
+                                <div className="flex items-center gap-3">
+                                  {/* Play/Pause */}
                                   <button
                                     onClick={() => {
-                                      triggerHaptic(30);
+                                      triggerHaptic(15);
                                       if (movieIsPlaying) {
                                         if (movieVideoRef.current) movieVideoRef.current.pause();
                                         setMovieIsPlaying(false);
+                                        showAlert('PAUSADO');
                                       } else {
-                                        if (movieVideoRef.current) movieVideoRef.current.play();
+                                        if (movieVideoRef.current) movieVideoRef.current.play().catch(() => {});
                                         setMovieIsPlaying(true);
+                                        showAlert('PLAY');
                                       }
                                     }}
-                                    className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-600 to-cyan-400 hover:scale-105 active:scale-95 shadow-md flex-shrink-0"
+                                    className="text-white hover:text-cyan-400 transition-colors w-5 h-5 flex items-center justify-center cursor-pointer"
                                   >
-                                    {movieIsPlaying ? <Pause className="w-4 h-4 fill-black" /> : <Play className="w-4 h-4 fill-black ml-0.5" />}
+                                    {movieIsPlaying ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white" />}
                                   </button>
-                                )}
-                                <span className="text-[10px] font-mono font-bold text-cyan-400 w-10 text-right">{formatTime(currentTime)}</span>
-                                <div 
-                                  onClick={handleMovieTimelineClick}
-                                  className="flex-1 h-3 relative flex items-center group/timeline cursor-pointer"
-                                >
-                                  {/* Background Track */}
-                                  <div className="absolute inset-x-0 h-1 bg-white/10 rounded-full" />
-                                  {/* Filled Track */}
-                                  <div 
-                                    className="absolute left-0 h-1 bg-cyan-400 rounded-full shadow-[0_0_15px_rgba(6,182,212,0.8)] transition-all"
-                                    style={{ width: `${movieProgress}%` }}
-                                  />
-                                  {/* Scrubber Ball */}
-                                  <div 
-                                    className="absolute w-4 h-4 bg-white rounded-full transition-transform scale-0 group-hover/timeline:scale-100 shadow-[0_0_15px_white]"
-                                    style={{ left: `calc(${movieProgress}% - 8px)` }}
-                                  />
-                                </div>
-                                <span className="text-[10px] font-mono font-bold text-zinc-400 w-10">{formatTime(duration)}</span>
-                              </div>
 
-                              {/* Option Switches row */}
-                              {!(isMediaPipMode || activeBlocks.filter(b => !b.minimized).length > 1) && (
-                              <div className="flex justify-center items-end gap-3 bg-black/70 backdrop-blur-md pt-3 pb-4 px-6 rounded-b-3xl border-b border-x border-white/10 shadow-2xl">
-                                
-                                {/* Item: Audio Lang */}
-                                <div className="relative group/menu flex flex-col items-center">
-                                  <div className="absolute bottom-full mb-3 hidden group-hover/menu:flex flex-col bg-zinc-900/90 backdrop-blur-xl rounded-xl border border-white/10 p-1.5 shadow-2xl origin-bottom animate-in fade-in zoom-in duration-200">
-                                    <button onClick={() => { setMovieAudioLang('PT-BR'); alert('Áudio: Português do Brasil carregado.'); }} className={`px-4 py-2 text-[9px] font-mono font-bold uppercase rounded-lg whitespace-nowrap transition-colors ${movieAudioLang==='PT-BR' ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-300'}`}>Áudio: PT-BR</button>
-                                    <button onClick={() => { setMovieAudioLang('EN'); alert('Áudio: Inglês Original carregado.'); }} className={`px-4 py-2 text-[9px] font-mono font-bold uppercase rounded-lg whitespace-nowrap transition-colors ${movieAudioLang==='EN' ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-300'}`}>Áudio: EN</button>
+                                  {/* Volume level control */}
+                                  <div className="flex items-center gap-2 group/volume">
+                                    <button
+                                      onClick={() => {
+                                        triggerHaptic(15);
+                                        if (movieVolume > 0) {
+                                          setMovieVolume(0);
+                                          showAlert('MUTADO');
+                                        } else {
+                                          setMovieVolume(85);
+                                          showAlert('VOLUME: 85%');
+                                        }
+                                      }}
+                                      className="text-white hover:text-cyan-400 transition-colors cursor-pointer"
+                                    >
+                                      {movieVolume === 0 ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4" />}
+                                    </button>
+                                    <input 
+                                      type="range"
+                                      min="0"
+                                      max="100"
+                                      value={movieVolume}
+                                      onChange={(e) => {
+                                        const vol = parseInt(e.target.value);
+                                        setMovieVolume(vol);
+                                        if (vol === 0) {
+                                          showAlert('MUTADO');
+                                        } else {
+                                          showAlert(`VOLUME: ${vol}%`);
+                                        }
+                                      }}
+                                      className="w-14 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-cyan-400 focus:outline-none transition-all"
+                                    />
                                   </div>
-                                  <button className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-800/80 hover:bg-zinc-700 border border-white/10 shadow-lg text-zinc-300 transition-colors">
-                                    <Volume2 className="w-4 h-4" />
-                                  </button>
                                 </div>
 
-                                {/* Item: Subtitles */}
-                                <div className="relative group/menu flex flex-col items-center">
-                                  <div className="absolute bottom-full mb-3 hidden group-hover/menu:flex flex-col bg-zinc-900/90 backdrop-blur-xl rounded-xl border border-white/10 p-1.5 shadow-2xl origin-bottom animate-in fade-in zoom-in duration-200">
-                                    <button onClick={() => alert('Legendas desativadas.')} className={`px-4 py-2 text-[9px] font-mono font-bold uppercase rounded-lg whitespace-nowrap transition-colors bg-cyan-500/20 text-cyan-400`}>Legenda: OFF</button>
-                                    <button onClick={() => alert('Legendas PT-BR selecionadas.')} className={`px-4 py-2 text-[9px] font-mono font-bold uppercase rounded-lg whitespace-nowrap transition-colors hover:bg-white/5 text-zinc-300`}>Legenda: PT-BR</button>
+                                {/* Right Side: Netflix Advanced controls */}
+                                <div className="flex items-center gap-2 sm:gap-3.5">
+                                  
+                                  {/* Audio dropdown */}
+                                  <div className="relative group/menu flex flex-col items-center">
+                                    <div className="absolute bottom-full mb-2 hidden group-hover/menu:flex flex-col bg-black/95 border border-white/10 rounded-xl p-1 z-50 shadow-2xl min-w-[100px] animate-in fade-in zoom-in-95 duration-150">
+                                      {(['PT-BR', 'EN'] as const).map((lang) => (
+                                        <button 
+                                          key={lang} 
+                                          onClick={() => {
+                                            triggerHaptic(10);
+                                            setMovieAudioLang(lang);
+                                            showAlert(`ÁUDIO: ${lang === 'PT-BR' ? 'PORTUGUÊS' : 'INGLÊS (EN)'}`);
+                                          }} 
+                                          className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${movieAudioLang === lang ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-400'}`}
+                                        >
+                                          {lang}
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <button className={`w-8 h-8 rounded-full flex items-center justify-center border border-white/5 bg-zinc-900/80 hover:bg-zinc-800 transition-colors cursor-pointer text-zinc-300 hover:text-cyan-400`}>
+                                      <Volume2 className="w-3.5 h-3.5" />
+                                    </button>
                                   </div>
-                                  <button className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-800/80 hover:bg-zinc-700 border border-white/10 shadow-lg text-zinc-300 transition-colors">
-                                    <Type className="w-4 h-4" />
-                                  </button>
-                                </div>
 
-                                {/* Item: Playback Speed */}
-                                <div className="relative group/menu flex flex-col items-center">
-                                  <div className="absolute bottom-full mb-3 hidden group-hover/menu:flex flex-col bg-zinc-900/90 backdrop-blur-xl rounded-xl border border-white/10 p-1.5 shadow-2xl origin-bottom animate-in fade-in zoom-in duration-200">
-                                    {[0.5, 1, 1.5, 2].map((sp) => (
-                                      <button 
-                                        key={sp}
-                                        onClick={() => {
-                                          triggerHaptic(10);
-                                          setMovieSpeed(sp);
-                                          if (movieVideoRef.current) movieVideoRef.current.playbackRate = sp;
-                                        }}
-                                        className={`px-4 py-2 text-[9px] font-mono font-bold uppercase rounded-lg whitespace-nowrap transition-colors ${movieSpeed === sp ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-300'}`}
-                                      >
-                                        Velocidade: {sp}x
-                                      </button>
-                                    ))}
+                                  {/* Subtitles dropdown */}
+                                  <div className="relative group/menu flex flex-col items-center">
+                                    <div className="absolute bottom-full mb-2 hidden group-hover/menu:flex flex-col bg-black/95 border border-white/10 rounded-xl p-1 z-50 shadow-2xl min-w-[110px] animate-in fade-in zoom-in-95 duration-150">
+                                      {(['OFF', 'PT-BR', 'EN', 'ES'] as const).map((sub) => (
+                                        <button 
+                                          key={sub} 
+                                          onClick={() => {
+                                            triggerHaptic(10);
+                                            setMovieSubtitle(sub);
+                                            showAlert(`LEGENDA: ${sub}`);
+                                          }} 
+                                          className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${movieSubtitle === sub ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-400'}`}
+                                        >
+                                          {sub}
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <button className={`w-8 h-8 rounded-full flex items-center justify-center border border-white/5 bg-zinc-900/80 hover:bg-zinc-800 transition-colors cursor-pointer ${movieSubtitle !== 'OFF' ? 'text-cyan-400 border-cyan-500/30' : 'text-zinc-300 hover:text-cyan-400'}`}>
+                                      <Type className="w-3.5 h-3.5" />
+                                    </button>
                                   </div>
-                                  <button className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-800/80 hover:bg-zinc-700 border border-white/10 shadow-lg text-zinc-300 transition-colors">
-                                    <Clock className="w-4 h-4" />
-                                  </button>
-                                </div>
 
-                                {/* Item: ABR Quality */}
-                                <div className="relative group/menu flex flex-col items-center">
-                                  <div className="absolute bottom-full mb-3 hidden group-hover/menu:flex flex-col bg-zinc-900/90 backdrop-blur-xl rounded-xl border border-white/10 p-1.5 shadow-2xl origin-bottom animate-in fade-in zoom-in duration-200">
-                                    {['1080p', '720p', '480p'].map((q) => (
-                                      <button 
-                                        key={q}
-                                        onClick={() => {
-                                          triggerHaptic(10);
-                                          setAbrMode(q as any);
-                                          alert(`Qualidade HLS ABR alterada para ${q}. Proxy mask reconfigurado.`);
-                                        }}
-                                        className={`px-4 py-2 text-[9px] font-mono font-bold uppercase rounded-lg whitespace-nowrap transition-colors ${abrMode === q ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-300'}`}
-                                      >
-                                        Qualidade: {q}
-                                      </button>
-                                    ))}
+                                  {/* Speed dropdown */}
+                                  <div className="relative group/menu flex flex-col items-center">
+                                    <div className="absolute bottom-full mb-2 hidden group-hover/menu:flex flex-col bg-black/95 border border-white/10 rounded-xl p-1 z-50 shadow-2xl min-w-[90px] animate-in fade-in zoom-in-95 duration-150">
+                                      {[0.5, 1, 1.5, 2].map((sp) => (
+                                        <button 
+                                          key={sp} 
+                                          onClick={() => {
+                                            triggerHaptic(10);
+                                            setMovieSpeed(sp);
+                                            if (movieVideoRef.current) movieVideoRef.current.playbackRate = sp;
+                                            showAlert(`VELOCIDADE: ${sp}x`);
+                                          }} 
+                                          className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${movieSpeed === sp ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-400'}`}
+                                        >
+                                          {sp}x
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <button className={`w-8 h-8 rounded-full flex items-center justify-center border border-white/5 bg-zinc-900/80 hover:bg-zinc-800 transition-colors cursor-pointer text-zinc-300 hover:text-cyan-400`}>
+                                      <Clock className="w-3.5 h-3.5" />
+                                    </button>
                                   </div>
-                                  <button className={`flex items-center justify-center w-10 h-10 rounded-full bg-zinc-800/80 hover:bg-zinc-700 border border-white/10 shadow-lg transition-colors ${abrMode === '1080p' ? 'text-cyan-400' : 'text-zinc-300'}`}>
-                                    <Settings className="w-4 h-4" />
-                                  </button>
-                                </div>
 
-                                {/* Item: Favorites */}
-                                <div className="relative group/menu flex flex-col items-center">
-                                  <button 
-                                    onClick={() => { triggerHaptic(20); toggleFavoriteMovie(selectedMovie.id); }}
-                                    className={`flex items-center justify-center w-10 h-10 rounded-full border shadow-lg transition-colors ${
-                                      (selectedMovie as any).isFavorite ? 'bg-rose-950/40 border-rose-500/30 text-rose-400' : 'bg-zinc-800/80 hover:bg-zinc-700 border-white/10 text-zinc-300'
-                                    }`}
+                                  {/* Quality HLS Adaptive */}
+                                  <div className="relative group/menu flex flex-col items-center">
+                                    <div className="absolute bottom-full mb-2 hidden group-hover/menu:flex flex-col bg-black/95 border border-white/10 rounded-xl p-1 z-50 shadow-2xl min-w-[100px] animate-in fade-in zoom-in-95 duration-150">
+                                      {['1080p', '720p', '480p'].map((q) => (
+                                        <button 
+                                          key={q} 
+                                          onClick={() => {
+                                            triggerHaptic(10);
+                                            setAbrMode(q as any);
+                                            showAlert(`RESOLUÇÃO: ${q}`);
+                                          }} 
+                                          className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${abrMode === q ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-400'}`}
+                                        >
+                                          {q}
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <button className={`w-8 h-8 rounded-full flex items-center justify-center border border-white/5 bg-zinc-900/80 hover:bg-zinc-800 transition-colors cursor-pointer text-zinc-300 hover:text-cyan-400`}>
+                                      <Settings className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+
+                                  {/* PiP button (native browser window-floating widget) */}
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      const video = movieVideoRef.current;
+                                      if (!video) return;
+                                      try {
+                                        if (document.pictureInPictureElement) {
+                                          await document.exitPictureInPicture();
+                                          showAlert('SAIU DO PIP');
+                                        } else {
+                                          await video.requestPictureInPicture();
+                                          showAlert('ENTROU EM PIP');
+                                        }
+                                      } catch (err) {
+                                        showAlert('PiP INDISPONÍVEL');
+                                        // fallback
+                                        togglePipMode(true);
+                                      }
+                                    }}
+                                    className="w-8 h-8 rounded-full flex items-center justify-center border border-white/5 bg-zinc-900/80 hover:bg-zinc-800 transition-colors text-zinc-300 hover:text-cyan-400 cursor-pointer"
+                                    title="Modo Picture-in-Picture"
                                   >
-                                    <Heart className={`w-4 h-4 ${(selectedMovie as any).isFavorite ? 'fill-rose-400' : ''}`} />
+                                    <MonitorSmartphone className="w-3.5 h-3.5" />
                                   </button>
-                                </div>
 
-                                {/* Item: Share */}
-                                <div className="relative group/menu flex flex-col items-center">
-                                  <button onClick={() => alert('Link copiado para a área de transferência!')} className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-800/80 hover:bg-zinc-700 border border-white/10 shadow-lg text-cyan-400 transition-colors">
-                                    <Users className="w-4 h-4" />
+                                  {/* Native Fullscreen */}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      triggerHaptic(20);
+                                      const el = document.getElementById('youtube-player-block');
+                                      if (!el) return;
+                                      if (!document.fullscreenElement) {
+                                        el.requestFullscreen().catch(() => {});
+                                        showAlert('TELA CHEIA');
+                                      } else {
+                                        document.exitFullscreen().catch(() => {});
+                                        showAlert('SAIU TELA CHEIA');
+                                      }
+                                    }}
+                                    className="w-8 h-8 rounded-full flex items-center justify-center border border-white/5 bg-zinc-900/80 hover:bg-zinc-800 transition-colors text-zinc-300 hover:text-cyan-400 cursor-pointer"
+                                    title="Tela Cheia"
+                                  >
+                                    <Maximize2 className="w-3.5 h-3.5" />
                                   </button>
-                                </div>
 
+                                </div>
                               </div>
-                              )}
+                            </div>
 
+                          </div>
+
+                        </div>
+
+                        {/* Title & Metadata row like YouTube detail layer */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 bg-zinc-950/40 rounded-2xl border border-white/5">
+                          <div className="space-y-1 text-left">
+                            <h2 className="text-base font-black text-white">{selectedMovie?.title}</h2>
+                            <div className="flex items-center gap-3 text-xs text-zinc-400 font-mono flex-wrap">
+                              <span>Ano: {selectedMovie?.year}</span>
+                              <span className="px-1.5 py-0.5 bg-zinc-800 text-[9px] font-bold uppercase rounded text-zinc-300">{selectedMovie?.type}</span>
+                              <span className="text-cyan-400 font-bold">★ {selectedMovie?.rating || 8.0}</span>
+                              <span className="text-[10px] text-zinc-500 font-medium">Áudio Original: {selectedMovie?.audioLanguages?.join(', ') || 'PT-BR, EN'}</span>
                             </div>
                           </div>
-                        )}
-
-                        {/* PIP Modal Selection is now in DashboardMaster */}
+                          
+                          <div className="flex items-center gap-2">
+                            <span className="text-[9px] font-mono font-black bg-[#E50914] text-white px-2 py-1 rounded tracking-wider shadow-md">INVIS ORIGINAL STREAM</span>
+                            <span className="text-[9px] font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-500/20 px-2 py-1 rounded">{abrMode}</span>
+                          </div>
+                        </div>
 
                       </div>
+
+                      {/* EPISODES & RELATED CONTENT PANELS BELOW PLAYER */}
+                      <div className="w-full max-w-4xl mx-auto space-y-8 select-none">
+                         
+                        {/* Section A: Series Episodes list or Movies chapters based on type */}
+                        <div className="space-y-4">
+                          <h3 className="text-xs font-mono tracking-widest text-cyan-400 uppercase font-black flex items-center gap-2 text-left">
+                            <Tv className="w-4 h-4 text-cyan-400" />
+                            <span>{selectedMovie?.type === 'serie' ? 'Seleção de Episódios' : 'Seleção de Capítulos'}</span>
+                          </h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            {[
+                              { id: 'ep1', title: 'Ep. 1: Conexão Sináptica', duration: '45min', desc: 'As primeiras fendas na barreira física criptografada se revelam.', thumb: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=300&auto=format&fit=crop&q=80' },
+                              { id: 'ep2', title: 'Ep. 2: Multiplexação Virtual', duration: '52min', desc: 'Sistemas paralelos de alocação de largura de banda são rompidos de forma abrupta.', thumb: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&auto=format&fit=crop&q=80' },
+                              { id: 'ep3', title: 'Ep. 3: O Código Matriz', duration: '48min', desc: 'O despertar final frente às transações ocultas do livro-razão criptografado.', thumb: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=300&auto=format&fit=crop&q=80' },
+                            ].map((ep) => (
+                              <div 
+                                key={ep.id}
+                                onClick={() => {
+                                  triggerHaptic(15);
+                                  showAlert(`Carregando ${ep.title}...`);
+                                  const video = movieVideoRef.current;
+                                  if (video) {
+                                    video.currentTime = 0;
+                                    video.play().catch(() => {});
+                                    setMovieIsPlaying(true);
+                                  }
+                                }}
+                                className="group/ep bg-zinc-950/60 hover:bg-zinc-900/80 border border-white/5 hover:border-cyan-500/30 rounded-2xl p-3 flex flex-col space-y-2 cursor-pointer transition-all active:scale-98 text-left"
+                              >
+                                <div className="aspect-video w-full rounded-lg overflow-hidden relative bg-black/50">
+                                  <img src={ep.thumb} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover/ep:scale-105 transition-transform duration-300" />
+                                  <div className="absolute inset-0 bg-black/45 group-hover/ep:bg-black/15 transition-colors flex items-center justify-center">
+                                    <Play className="w-8 h-8 text-white opacity-0 group-hover/ep:opacity-100 transition-opacity bg-cyan-500/80 rounded-full p-2" />
+                                  </div>
+                                  <span className="absolute bottom-1 right-1 bg-black/80 px-1.5 py-0.5 rounded text-[9px] font-mono text-zinc-400">{ep.duration}</span>
+                                </div>
+                                <div className="space-y-0.5">
+                                  <h4 className="text-[11px] font-bold text-white group-hover/ep:text-cyan-400 transition-colors leading-tight truncate">{ep.title}</h4>
+                                  <p className="text-[9px] text-zinc-500 line-clamp-2 leading-relaxed">{ep.desc}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Section B: Related Titles (Filmes Relacionados) */}
+                        <div className="space-y-4">
+                          <h3 className="text-xs font-mono tracking-widest text-[#E50914] uppercase font-black flex items-center gap-2 text-left">
+                            <Film className="w-4 h-4 text-[#E50914]" />
+                            <span>Títulos Relacionados</span>
+                          </h3>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            {moviesList
+                              .filter(m => m.id !== selectedMovie?.id && (m.type === selectedMovie?.type || m.category === selectedMovie?.category))
+                              .slice(0, 4)
+                              .map((m) => (
+                                <div 
+                                  key={m.id}
+                                  onClick={() => {
+                                    triggerHaptic(20);
+                                    selectMovieAndFetchDetails(m);
+                                  }}
+                                  className="group/rel flex flex-col space-y-2 cursor-pointer bg-zinc-950/40 border border-white/5 hover:border-cyan-500/20 p-2.5 rounded-2xl transition-all hover:scale-[1.02] text-left"
+                                >
+                                  <div className="aspect-[2/3] w-full rounded-xl overflow-hidden relative bg-black/50">
+                                    <img src={m.posterUrl} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover/rel:scale-105 transition-transform duration-300" />
+                                    <div className="absolute top-2 right-2 bg-black/80 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold text-cyan-400 uppercase tracking-widest leading-none shrink-0">{m.type}</div>
+                                  </div>
+                                  <div className="px-1 space-y-0.5">
+                                    <h4 className="text-[11px] font-bold text-white group-hover/rel:text-cyan-400 transition-colors truncate">{m.title}</h4>
+                                    <div className="flex items-center justify-between text-[9px] text-zinc-500 font-mono font-bold leading-none select-none">
+                                      <span>{m.year}</span>
+                                      <span className="text-cyan-400 font-bold">★ {m.rating || 8.0}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
+                            }
+                          </div>
+                        </div>
+
+                        {/* Section C: Voltar para Cinema Home Page button option */}
+                        <div className="flex items-center justify-center pt-8 border-t border-white/5">
+                          <button
+                            onClick={() => {
+                              triggerHaptic(20);
+                              setMoviePlaying(false);
+                            }}
+                            className="px-6 py-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 hover:border-cyan-400/30 text-zinc-300 hover:text-white text-[11px] font-bold font-mono tracking-widest uppercase transition-all flex items-center justify-center gap-2 max-w-sm w-full shadow-2xl cursor-pointer active:scale-95"
+                          >
+                            <ArrowLeft className="w-4 h-4" />
+                            <span>VOLTAR À PÁGINA INICIAL DO CINEMA</span>
+                          </button>
+                        </div>
+
+                      </div>
+
                     </div>
                   )}
                 </motion.div>
