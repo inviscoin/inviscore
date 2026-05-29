@@ -84,28 +84,19 @@ function AppContent() {
     let clickCount = 0;
 
     const handleClickEvent = (e: MouseEvent) => {
-      // Don't toggle if clicking on interactive elements like buttons, inputs, etc.
-      // Actually, wait, the user said "anywhere on the screen", so maybe we should globally toggle.
-      // But if we globally toggle on any click, clicking a button will hide the header. 
-      // It's usually better to check if it's not a button, however, we can stick to exact words.
-      // The user said: "1 click na tela em qualquer área = ocultar foot e head. 2 clicks na tela em qualquer área = mostra novamente os foot e head."
-
       clickCount++;
 
       if (clickCount === 1) {
         clickTimeout = setTimeout(() => {
-          // Single click -> Hide
-          setIsHeaderVisible(false);
-          setIsFooterVisible(false);
-          setIsNavVisible(false);
+          // Single click does nothing now
           clickCount = 0;
         }, 250); 
       } else if (clickCount === 2) {
-        // Double click -> Show
         if (clickTimeout) clearTimeout(clickTimeout);
-        setIsHeaderVisible(true);
-        setIsFooterVisible(true);
-        setIsNavVisible(true);
+        // Double click toggles retract/reappear
+        setIsHeaderVisible(prev => !prev);
+        setIsFooterVisible(prev => !prev);
+        setIsNavVisible(prev => !prev);
         clickCount = 0;
       }
     };

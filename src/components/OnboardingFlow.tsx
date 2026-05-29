@@ -3,7 +3,7 @@ import { useInvis, DICTIONARY } from '../context/InvisContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { motion } from 'motion/react';
 import { ShieldCheck, CalendarRange, Scale, AlertOctagon, UserCheck, Trash2 } from 'lucide-react';
-import { SupabaseService, isSupabaseConfigured, supabase } from '../lib/supabase';
+import { SupabaseService, isSupabaseConfigured, supabase, saveLocalProfile } from '../lib/supabase';
 
 export const OnboardingFlow: React.FC = () => {
   const { 
@@ -124,17 +124,29 @@ export const OnboardingFlow: React.FC = () => {
       timestampAcceptance: new Date().toISOString()
     };
 
+    // Save locally to local profiles database fallback for offline robustness
+    saveLocalProfile(finalUser);
+
     if (isSupabaseConfigured()) {
       try {
+        const cleanPhoneToSave = currentUser.phone ? currentUser.phone.replace(/\s+/g, '') : '';
         const { error } = await supabase
             .from('profiles')
             .upsert({
               id: currentUser.id,
+              email: currentUser.email,
+              full_name: currentUser.fullName || 'Fundador INVIS Cérebro',
+              nickname: currentUser.nickname || 'User',
+              phone: cleanPhoneToSave,
+              birth_date: currentUser.birthDate,
+              tier: currentUser.tier || 'FREE',
+              wallet_ic_gold: 5000.0,
+              wallet_ic_silver: 0.0,
               age: currentUser.age,
               age_group: currentUser.ageGroup,
-              tier: currentUser.tier
+              updated_at: new Date().toISOString()
             });
-        if (error) console.error("Could not update profile age/tier", error);
+        if (error) console.error("Could not complete database profile entry:", error);
       } catch (err) {}
     }
 

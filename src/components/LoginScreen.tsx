@@ -7,12 +7,12 @@ import { AuthWrapper } from './AuthWrapper';
 import { InvisModal } from './InvisModal';
 import { Eye, EyeOff, KeyRound, Globe, User, Mail, Lock } from 'lucide-react';
 import { SupabaseService, isSupabaseConfigured, supabase } from '../lib/supabase';
+import { GoogleLogin } from '@react-oauth/google';
 
 export const LoginScreen: React.FC = () => {
   const { 
     setStage, language, setLangDrawerOpen,
-    setCurrentUser, setSystemStatus, setSelectedSupportPage,
-    showToast
+    setCurrentUser, setSystemStatus, setSelectedSupportPage
   } = useInvis();
 
   const [authStatusText, setAuthStatusText] = useState('');
@@ -22,8 +22,6 @@ export const LoginScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [shake, setShake] = useState(false);
-  const [loginErrorType, setLoginErrorType] = useState<'none' | 'credentials' | 'rate-limit' | 'network' | 'unconfirmed'>('none');
 
   const { currentTexts } = useTranslation();
 
@@ -44,127 +42,41 @@ export const LoginScreen: React.FC = () => {
     return () => window.removeEventListener('invis_oauth_not_found', handleOauthNotFound);
   }, [setStage]);
 
-  // Função dedicada para verificar tier e disparar toast personalizado
-  const verifyUserTierAndWelcome = async (userId: string) => {
-    try {
-      const profile = await SupabaseService.getProfile(userId);
-      const tier = profile?.tier || 'FREE';
-      
-      const sessionKey = 'invis_welcome_shown';
-      if (!sessionStorage.getItem(sessionKey)) {
-        sessionStorage.setItem(sessionKey, 'true');
-        
-        let welcomeMessage = `👋 Bem-vindo de volta! Seu tier de segurança é: ${tier}.`;
-        if (tier === 'VIP1' || tier === 'VIP' || tier === 'GOLD' || tier === 'PREMIUM') {
-          welcomeMessage = `✨ Conexão de Elite estabelecida! Bem-vindo, Fundador [Tier: ${tier}]. Todos os sistemas de alta performance estão habilitados.`;
-        } else {
-          welcomeMessage = `🔓 Conexão estabelecida! Bem-vindo de volta ao ecossistema [Tier: ${tier}].`;
-        }
-        
-        showToast(welcomeMessage, 'success');
-      }
-    } catch (err: any) {
-      console.warn("Erro ao buscar tier do usuário para as boas-vindas:", err);
-      showToast("👋 Bem-vindo de volta ao ecossistema!", 'success');
-    }
-  };
-
   const handleStandardLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setLoginErrorType('credentials');
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
-      showToast("E-mail e senha são obrigatórios para a conexão.", 'error');
+      setModalObj({ title: "Acesso Negado", message: currentTexts.login_err_empty || "E-mail e senha são obrigatórios.", type: "error" });
       return;
     }
 
     setAuthStatusText(currentTexts.login_auth || "Autenticando na Matriz...");
     setShowScanner(true);
-    setLoginErrorType('none');
 
     try {
       const { data, error } = await SupabaseService.signIn(email, password);
-      if (error) {
-        throw error;
-      }
-      
-      // Se autenticado com sucesso, verifica tier e dispara toast personalizado
-      if (data?.user) {
-        await verifyUserTierAndWelcome(data.user.id);
-      }
+      if (error) throw error;
+      // InvisContext onAuthStateChange will handle redirection
     } catch (err: any) {
       setShowScanner(false);
-      setShake(true);
-      setTimeout(() => setShake(false), 510);
-      
-      const rawErrorMsg = err?.message || "";
-      let userFriendlyMsg = currentTexts.login_err_invalid || "E-mail ou senha incorretos.";
-      
-      if (rawErrorMsg.includes("Invalid login credentials") || rawErrorMsg.includes("invalid-credential") || rawErrorMsg.includes("invalid_credentials")) {
-        setLoginErrorType('credentials');
-        userFriendlyMsg = "Credenciais inválidas: o e-mail ou a senha informados estão incorretos.";
-      } else if (rawErrorMsg.includes("Email not confirmed")) {
-        setLoginErrorType('unconfirmed');
-        userFriendlyMsg = "E-mail pendente de confirmação! Por favor, valide sua conta através do link enviado.";
-      } else if (rawErrorMsg.includes("Too many requests") || rawErrorMsg.includes("rate limit") || rawErrorMsg.includes("rate_limit")) {
-        setLoginErrorType('rate-limit');
-        userFriendlyMsg = "Operação bloqueada temporariamente devido ao limite de requisições. Aguarde alguns minutos.";
-      } else if (rawErrorMsg.toLowerCase().includes("network") || rawErrorMsg.toLowerCase().includes("failed to fetch")) {
-        setLoginErrorType('network');
-        userFriendlyMsg = "Falha de conexão com a rede. Verifique seu sinal e tente novamente.";
-      } else {
-        setLoginErrorType('credentials');
-        userFriendlyMsg = rawErrorMsg ? `Erro na Autenticação: ${rawErrorMsg}` : userFriendlyMsg;
-      }
-
-      // Dispara o toast vermelho em vez de um pop-up genérico
-      showToast(userFriendlyMsg, 'error');
+      setModalObj({ title: "Falha na Autenticação", message: currentTexts.login_err_invalid || "E-mail ou senha incorretos.", type: "error" });
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setAuthStatusText("Conectando ao Google...");
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    if (!credentialResponse?.credential) return;
+    setAuthStatusText("Conectando ao INVIS...");
     setShowScanner(true);
     try {
-      const { data, error } = await SupabaseService.signInWithOAuth('google');
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: credentialResponse.credential,
+      });
+
       if (error) throw error;
-
-      if (data && data.url) {
-        const popupWidth = 600;
-        const popupHeight = 700;
-        const left = window.screenX + (window.innerWidth - popupWidth) / 2;
-        const top = window.screenY + (window.innerHeight - popupHeight) / 2;
-
-        const popup = window.open(
-          data.url,
-          'supabase_oauth_popup',
-          `width=${popupWidth},height=${popupHeight},left=${left},top=${top},status=no,resizable=yes,scrollbars=yes`
-        );
-
-        if (popup) {
-          // Monitor if the user manually closed the popup without completing authentication
-          const monitorTimer = setInterval(() => {
-            if (popup.closed) {
-              clearInterval(monitorTimer);
-              setShowScanner(false);
-            }
-          }, 1000);
-        } else {
-          setShowScanner(false);
-          showToast("Acesso bloqueado: Por favor, habilite pop-ups em seu navegador para conectar com o Google.", "error");
-        }
-      } else {
-        setShowScanner(false);
-        showToast("Falha ao obter URL de autenticação segura do ecossistema.", "error");
-      }
+      // Sessão será estabelecida, o InvisContext.onAuthStateChange pega automaticamente
     } catch (err: any) {
       setShowScanner(false);
-      setModalObj({ 
-        title: "Erro de Autenticação", 
-        message: err.message || "Falha ao conectar via Google.", 
-        type: "error" 
-      });
+      setModalObj({ title: "Erro de Autenticação", message: err.message || "Falha ao conectar via Google.", type: "error" });
     }
   };
 
@@ -193,15 +105,7 @@ export const LoginScreen: React.FC = () => {
           </button>
         </div>
 
-        <motion.div
-          animate={shake ? { x: [-10, 10, -10, 10, -5, 5, 0] } : {}}
-          transition={{ duration: 0.5 }}
-          className={`w-full p-[1px] bg-gradient-to-b rounded-[32px] bg-black/40 backdrop-blur-md transition-all duration-300 ${
-            loginErrorType !== 'none'
-              ? 'from-red-500/50 to-transparent shadow-[0_0_40px_rgba(239,68,68,0.2)]'
-              : 'from-[#00c8ff]/40 to-transparent shadow-[0_0_30px_rgba(0,200,255,0.15)]'
-          }`}
-        >
+        <div className="w-full p-[1px] bg-gradient-to-b from-[#00c8ff]/40 to-transparent rounded-[32px] shadow-[0_0_30px_rgba(0,200,255,0.15)] bg-black/40 backdrop-blur-md">
           <div className="w-full p-8 rounded-[32px] bg-[#0b0e11]/85 border border-white/5 flex flex-col items-center">
             
             <div className="text-center mb-6">
@@ -215,33 +119,25 @@ export const LoginScreen: React.FC = () => {
 
             <form onSubmit={handleStandardLogin} className="w-full flex flex-col space-y-4 font-sans">
               <div className="relative w-full">
-                <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${loginErrorType !== 'none' ? 'text-red-400' : 'text-cyan-400/60'}`} />
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400/60" />
                 <input
-                  type="email"
-                  placeholder={currentTexts.user_placeholder || "E-mail"}
+                  type="text"
+                  placeholder={currentTexts.user_placeholder || "Usuário, E-mail ou Telefone"}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={`w-full pl-11 pr-4 py-3.5 rounded-xl border bg-black/25 text-left text-sm outline-none transition-all ${
-                    loginErrorType !== 'none' 
-                      ? 'border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.1)] focus:border-red-500 text-red-100 placeholder:text-red-300/40' 
-                      : 'border-cyan-500/20 focus:border-[#00c8ff]'
-                  }`}
+                  className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-cyan-500/20 bg-black/25 text-left text-sm outline-none focus:border-[#00c8ff] transition-all"
                   style={{ WebkitTapHighlightColor: 'transparent' }}
                 />
               </div>
 
               <div className="relative w-full">
-                <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${loginErrorType !== 'none' ? 'text-red-400' : 'text-cyan-400/60'}`} />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400/60" />
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder={currentTexts.password_placeholder || "Senha"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`w-full pl-11 pr-11 py-3.5 rounded-xl border bg-black/25 text-left text-sm outline-none transition-all ${
-                    loginErrorType !== 'none' 
-                      ? 'border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.1)] focus:border-red-500 text-red-100 placeholder:text-red-300/40' 
-                      : 'border-cyan-500/20 focus:border-[#00c8ff]'
-                  }`}
+                  className="w-full pl-11 pr-11 py-3.5 rounded-xl border border-cyan-500/20 bg-black/25 text-left text-sm outline-none focus:border-[#00c8ff] transition-all"
                   style={{ WebkitTapHighlightColor: 'transparent' }}
                 />
                 <button
@@ -253,24 +149,9 @@ export const LoginScreen: React.FC = () => {
                 </button>
               </div>
 
-              {loginErrorType !== 'none' && (
-                <div className="w-full text-left px-1 py-1">
-                  <p className="font-mono text-[9px] text-red-400 uppercase tracking-widest flex items-center gap-1.5 animate-pulse">
-                    ⚠️ {loginErrorType === 'credentials' && "ACESSO NEGADO: CREDENCIAIS DE LOGIN INVALUIDAS"}
-                    {loginErrorType === 'unconfirmed' && "AUTENTICACAO REJEITADA: ATIVACAO PENDENTE POR E-MAIL"}
-                    {loginErrorType === 'rate-limit' && "ACESSO SUSPENSO TEMPORARIAMENTE: MUITAS TENTATIVAS"}
-                    {loginErrorType === 'network' && "FALHA DE COMUNICACAO: SERVIDOR SUPABASE INALCANCALVEL"}
-                  </p>
-                </div>
-              )}
-
               <button
                 type="submit"
-                className={`w-full py-4 mt-2 rounded-xl text-black font-black hover:scale-[1.02] active:scale-[0.98] transition-all text-sm uppercase cursor-pointer outline-none ${
-                  loginErrorType !== 'none'
-                    ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
-                    : 'bg-[#00c8ff] shadow-[0_0_15px_rgba(0,200,255,0.3)]'
-                }`}
+                className="w-full py-4 mt-2 rounded-xl bg-[#00c8ff] text-black font-black hover:scale-[1.02] active:scale-[0.98] transition-all text-sm uppercase shadow-[0_0_15px_rgba(0,200,255,0.3)] cursor-pointer outline-none"
                 style={{ WebkitTapHighlightColor: 'transparent' }}
               >
                 {currentTexts.login_btn || "ENTRAR"}
@@ -294,20 +175,30 @@ export const LoginScreen: React.FC = () => {
               </p>
 
               <div className="grid grid-cols-1 gap-2 w-full">
-                <button
-                  type="button"
-                  onClick={handleGoogleSignIn}
-                  className="flex items-center justify-center gap-3 w-full py-3.5 rounded-xl border border-white/5 bg-black/30 hover:bg-[#4285F4]/10 transition-all cursor-pointer outline-none text-sm font-sans text-white hover:border-[#4285F4]/40"
-                  style={{ WebkitTapHighlightColor: 'transparent' }}
-                >
-                  <svg viewBox="0 0 24 24" width="22" height="22">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-1 .67-2.28 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                  <span className="font-semibold text-neutral-300">Google</span>
-                </button>
+                <div className="relative w-full h-full flex items-center justify-center rounded-xl border border-white/5 bg-black/30 hover:bg-[#4285F4]/10 transition-all cursor-pointer overflow-hidden group py-3">
+                  <div className="flex items-center justify-center p-3 pointer-events-none">
+                    <svg viewBox="0 0 24 24" width="22" height="22">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-1 .67-2.28 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                  </div>
+                  <div className="absolute inset-0 z-10 opacity-0 cursor-pointer flex justify-center items-center scale-x-[10] scale-y-[3]">
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={() => {
+                        setModalObj({ title: "Erro do Google", message: "Ocorreu um erro no provedor Google.", type: "error" });
+                      }}
+                      useOneTap={false}
+                      type="standard"
+                      shape="rectangular"
+                      theme="filled_black"
+                      size="large"
+                      width="100%"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex flex-col items-center space-y-3 pt-6 w-full">
@@ -320,7 +211,7 @@ export const LoginScreen: React.FC = () => {
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         <div className="mt-6 flex gap-4 text-xs text-neutral-500 font-sans">
           <button onClick={() => { setSelectedSupportPage('privacidade'); setStage('onboarding_terms'); }} className="hover:text-cyan-400 hover:underline cursor-pointer outline-none" style={{ WebkitTapHighlightColor: 'transparent' }}>Política de Privacidade</button>

@@ -33,6 +33,32 @@ export const isSupabaseConfigured = () => {
   return true;
 };
 
+// Local Mock database for offline/local fallback
+export const getLocalProfiles = (): any[] => {
+  try {
+    const list = localStorage.getItem('invis_local_profiles');
+    return list ? JSON.parse(list) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+export const saveLocalProfile = (profile: any) => {
+  try {
+    const list = getLocalProfiles();
+    const cleanPhone = profile.phone ? profile.phone.replace(/\s+/g, '') : '';
+    const filtered = list.filter((p: any) => p.id !== profile.id && p.email?.toLowerCase().trim() !== profile.email?.toLowerCase().trim());
+    filtered.push({
+      ...profile,
+      phone: cleanPhone,
+      updated_at: new Date().toISOString()
+    });
+    localStorage.setItem('invis_local_profiles', JSON.stringify(filtered));
+  } catch (e) {
+    console.error(e);
+  }
+};
+
 /**
  * Highly Robust Supabase Database Service
  * Bridges local state seamlessly with remote Supabase Postgres tables & real-time capabilities.
@@ -65,31 +91,43 @@ export const SupabaseService = {
 
   // 1. AUTHENTICATION & PROFILE PERSISTENCE
   async checkProfileExists(email: string, phone: string) {
-    if (!isSupabaseConfigured()) return false;
-    
-    // Check if email or phone exists in profiles
     const cleanPhone = phone ? phone.replace(/\s+/g, '') : phone;
     const cleanEmail = email.toLowerCase().trim();
+
+    // Check local database first for extra safety
+    const localList = getLocalProfiles();
+    const localExists = localList.some((p: any) => 
+      p.email?.toLowerCase().trim() === cleanEmail || 
+      (p.phone && p.phone.replace(/\s+/g, '') === cleanPhone)
+    );
+    if (localExists) return true;
+
+    if (!isSupabaseConfigured()) return false;
     
-    // We check either email or phone
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id')
-      .or(`email.eq.${cleanEmail},phone.eq.${cleanPhone}`)
-      .limit(1);
+    // Check if email or phone exists in profiles on Supabase
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .or(`email.eq.${cleanEmail},phone.eq.${cleanPhone}`)
+        .limit(1);
+        
+      if (error) {
+        console.warn("Erro ao checar perfil existente:", error);
+        return false; // Safely proceed to try anyway
+      }
       
-    if (error) {
-      console.warn("Erro ao checar perfil existente:", error);
-      return false; // Safely proceed to try anyway
+      return data && data.length > 0;
+    } catch (err) {
+      return false;
     }
-    
-    return data && data.length > 0;
   },
 
   async signUp(email: string, pass: string, profileData: any) {
     if (!isSupabaseConfigured()) {
       console.warn('[INVIS Supabase Service] Using Local Authentication (Offline Mode). Configure VITE_SUPABASE_ANON_KEY for live Postgres Auth.');
-      return { data: { user: { id: 'usr_' + Math.random().toString(36).substring(2, 9), ...profileData } }, error: null };
+      const tempId = 'usr_' + Math.random().toString(36).substring(2, 9);
+      return { data: { user: { id: tempId, email, ...profileData } }, error: null };
     }
     
     try {
@@ -116,33 +154,7 @@ export const SupabaseService = {
          finalUser = data.user;
       }
 
-      // Create custom profile in the profiles table
-      if (finalUser) {
-        try {
-          const cleanPhoneToSave = profileData.phone ? profileData.phone.replace(/\s+/g, '') : profileData.phone;
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: finalUser.id,
-              email: email,
-              full_name: profileData.fullName,
-              nickname: profileData.nickname,
-              phone: cleanPhoneToSave,
-              birth_date: profileData.birthDate,
-              tier: 'FREE',
-              wallet_ic_gold: 5000.0,
-              wallet_ic_silver: 0.0,
-              age: profileData.age,
-              age_group: profileData.ageGroup || (profileData.age && profileData.age < 18 ? 'Kids' : 'Adult'),
-              updated_at: new Date().toISOString()
-            });
-          if (profileError) {
-            this.handleError(profileError, 'criar perfil inicial na tabela profiles');
-          }
-        } catch (profileEx) {
-          console.warn('[INVIS Sync Catch] Erro ao criar perfil do usuário:', profileEx);
-        }
-      }
+      // Do NOT insert details into 'profiles' table here. Let them complete onboarding ("modal de ciência") to accept terms first!
 
       return { data: { user: finalUser }, error: null };
     } catch (e: any) {
@@ -153,7 +165,18 @@ export const SupabaseService = {
   async signIn(identifier: string, pass: string) {
     if (!isSupabaseConfigured()) {
       console.warn('[INVIS Supabase Service] Using Local SignIn (Offline Mode).');
-      return { data: { user: { id: 'local_current_user', email: identifier.includes('@') ? identifier : 'guest@invis.com' } }, error: null };
+      const list = getLocalProfiles();
+      const cleanPhone = identifier.trim().replace(/\D/g, '');
+      const found = list.find((p: any) => 
+        p.email?.toLowerCase().trim() === identifier.toLowerCase().trim() ||
+        p.nickname?.toLowerCase().trim() === identifier.toLowerCase().trim() ||
+        (p.phone && p.phone.replace(/\s+/g, '') === cleanPhone)
+      );
+      if (found) {
+        return { data: { user: found, email: found.email }, error: null };
+      }
+      // If not registered locally, fail local sign in to trigger register modal
+      return { data: null, error: new Error('Conta local não localizada. Por favor, registre-se primeiro.') };
     }
 
     try {
@@ -162,19 +185,31 @@ export const SupabaseService = {
       if (!identifier.includes('@')) {
         try {
           const cleanPhone = identifier.trim().replace(/\D/g, '');
-          const orQuery = cleanPhone.length > 5 
-            ? `nickname.eq.${identifier},phone.ilike.%${cleanPhone}%` 
-            : `nickname.eq.${identifier}`;
-
-          const { data: profile, error: lookupErr } = await supabase
-            .from('profiles')
-            .select('email')
-            .or(orQuery)
-            .limit(1)
-            .single();
           
-          if (!lookupErr && profile?.email) {
-            email = profile.email;
+          // Check local directory first to speed up or resolve offline entries
+          const localList = getLocalProfiles();
+          const localFound = localList.find((p: any) => 
+            p.nickname?.toLowerCase().trim() === identifier.toLowerCase().trim() ||
+            (p.phone && p.phone.replace(/\s+/g, '') === cleanPhone)
+          );
+
+          if (localFound && localFound.email) {
+            email = localFound.email;
+          } else {
+            const orQuery = cleanPhone.length > 5 
+              ? `nickname.eq.${identifier},phone.ilike.%${cleanPhone}%` 
+              : `nickname.eq.${identifier}`;
+
+            const { data: profile, error: lookupErr } = await supabase
+              .from('profiles')
+              .select('email')
+              .or(orQuery)
+              .limit(1)
+              .single();
+            
+            if (!lookupErr && profile?.email) {
+              email = profile.email;
+            }
           }
         } catch (lookupEx) {
           // ignore lookup error and fallback to trying login with identifier as raw email
@@ -202,8 +237,7 @@ export const SupabaseService = {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: provider as any,
         options: {
-          redirectTo: window.location.origin,
-          skipBrowserRedirect: true
+          redirectTo: window.location.origin
         }
       });
       return { data, error };
@@ -222,7 +256,10 @@ export const SupabaseService = {
   },
 
   async getProfile(userId: string) {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      const list = getLocalProfiles();
+      return list.find((p: any) => p.id === userId) || null;
+    }
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -231,12 +268,15 @@ export const SupabaseService = {
         .single();
       if (error) {
         this.handleError(error, 'obter perfil da tabela profiles');
-        return null;
+        // Check local storage fallback if network/schema missing
+        const list = getLocalProfiles();
+        return list.find((p: any) => p.id === userId) || null;
       }
       return data;
     } catch (e: any) {
       console.warn('[INVIS Sync Catch] Erro na consulta de perfil:', e.message);
-      return null;
+      const list = getLocalProfiles();
+      return list.find((p: any) => p.id === userId) || null;
     }
   },
 
