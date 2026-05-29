@@ -25,24 +25,78 @@ const requireAuth = async (req: express.Request, res: express.Response, next: ex
   }
 
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    console.warn(`⚠️ [requireAuth 401 Rejection] Missing or malformed Authorization header. Path: ${req.path}. Received: ${authHeader ? 'Invalid starting scheme or token template' : 'undefined/empty'}`);
-    return res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+  if (!authHeader) {
+    console.warn(`⚠️ [requireAuth 401 Rejection] Missing Authorization header. Path: ${req.path}`);
+    return res.status(401).json({ error: "Unauthorized: Missing token" });
+  }
+
+  if (!authHeader.startsWith("Bearer ")) {
+    console.warn(`⚠️ [requireAuth 401 Rejection] Malformed Authorization header format (missing Bearer prefix). Path: ${req.path}. Received prefix: "${authHeader.slice(0, 15)}..."`);
+    return res.status(401).json({ error: "Unauthorized: Invalid token format" });
   }
 
   const token = authHeader.split(" ")[1];
+  if (!token) {
+    console.warn(`⚠️ [requireAuth 401 Rejection] Void Bearer token value. Path: ${req.path}`);
+    return res.status(401).json({ error: "Unauthorized: Empty token" });
+  }
+
+  // Pre-decode JWT segments and verify expiration status natively to assist in debugging
+  const tokenParts = token.split(".");
+  let decodedPayload: any = null;
+  let isExpiredNatively = false;
+  let nativeExpiryDateStr = "N/A";
+
+  if (tokenParts.length === 3) {
+    try {
+      const base64Payload = tokenParts[1].replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = Buffer.from(base64Payload, "base64").toString("utf-8");
+      decodedPayload = JSON.parse(jsonPayload);
+      
+      if (decodedPayload && decodedPayload.exp) {
+        const expTimeSec = decodedPayload.exp;
+        const nowSec = Math.floor(Date.now() / 1000);
+        nativeExpiryDateStr = new Date(expTimeSec * 1000).toISOString();
+        if (nowSec >= expTimeSec) {
+          isExpiredNatively = true;
+        }
+      }
+    } catch (parseErr: any) {
+      console.warn(`⚠️ [requireAuth Token Parsing Warning] Token parts count is 3 but failed to decode base64 payload: ${parseErr.message}`);
+    }
+  } else {
+    console.warn(`⚠️ [requireAuth Token Parsing Warning] Token format is invalid. Segments count: ${tokenParts.length} (expected 3). Path: ${req.path}`);
+  }
+
   try {
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
     if (error || !user) {
-      console.warn(`⚠️ [requireAuth 401 Rejection] Supabase Auth token validation failed. Path: ${req.path}. Error detail: ${error ? error.message : 'No user associated with this token'}. Token slice: ${token ? token.substring(0, 15) : 'none'}...`);
-      return res.status(401).json({ error: "Unauthorized: Invalid session token" });
+      const errorMsg = error ? error.message : "No associated user found in database state";
+      console.warn(
+        `⚠️ [requireAuth 401 Rejection] Supabase Auth validation failed.\n` +
+        `  • Path: ${req.path}\n` +
+        `  • Error details: ${errorMsg}\n` +
+        `  • Token parts count: ${tokenParts.length}\n` +
+        `  • Decoded JWT Email: ${decodedPayload?.email || "unknown"}\n` +
+        `  • Decoded JWT Sub/ID: ${decodedPayload?.sub || "unknown"}\n` +
+        `  • Expiration date: ${nativeExpiryDateStr} (Expired natively? ${isExpiredNatively})\n` +
+        `  • Token Slice (First 20 chars): ${token.substring(0, 20)}...`
+      );
+      
+      let returnErrMessage = "Unauthorized: Invalid session token";
+      if (isExpiredNatively) {
+        returnErrMessage = "Unauthorized: Session token has expired. Please sign in again.";
+      } else if (tokenParts.length !== 3) {
+        returnErrMessage = "Unauthorized: Malformed JWT structure.";
+      }
+      return res.status(401).json({ error: returnErrMessage });
     }
 
     (req as any).user = user;
     next();
   } catch (err: any) {
-    console.error(`💥 [requireAuth 401 Exception] Internal exception during JWT verification for Path: ${req.path}. Error: ${err.message}`);
+    console.error(`💥 [requireAuth 401 Exception] Unexpected internal exception during JWT verification. Path: ${req.path}. error: ${err.message}`);
     return res.status(401).json({ error: "Unauthorized: Invalid session token", details: err.message });
   }
 };

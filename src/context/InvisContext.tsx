@@ -1140,7 +1140,43 @@ export const InvisProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const fetchAndSetUser = async (user: any) => {
-      const profile = await SupabaseService.getProfile(user.id);
+      let profile = await SupabaseService.getProfile(user.id);
+      
+      // If profile doesn't exist but the user is authenticated via Supabase OAuth (e.g. Google),
+      // we auto-provision a profile row dynamically to bypass the "not found" loop and guarantee seamless transition.
+      if (!profile && user && (user.app_metadata?.provider === 'google' || user.email)) {
+        console.log("⚡ Auto-provisioning profile row in PostgreSQL for authenticated OAuth user:", user.email);
+        try {
+          const rawName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Fundador INVIS';
+          const finalNickname = user.user_metadata?.custom_nickname || user.email?.split('@')[0] || 'User';
+          
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: user.id,
+              email: user.email,
+              full_name: rawName,
+              nickname: finalNickname,
+              phone: '',
+              birth_date: '1995-10-31',
+              tier: 'FREE',
+              wallet_ic_gold: 5000.0,
+              wallet_ic_silver: 0.0,
+              age: 30,
+              age_group: 'Adult',
+              updated_at: new Date().toISOString()
+            });
+
+          if (!profileError) {
+            profile = await SupabaseService.getProfile(user.id);
+          } else {
+            console.error("🔴 Failed to auto-provision user profile inside fetchAndSetUser:", profileError);
+          }
+        } catch (errEx) {
+          console.error("🔴 Unexpected exception during user profile auto-provisioning:", errEx);
+        }
+      }
+
       if (profile) {
           setCurrentUser({
             id: user.id,
@@ -1162,8 +1198,22 @@ export const InvisProvider: React.FC<{ children: React.ReactNode }> = ({ childre
              setWallet(prev => ({ ...prev, icGold: profile.wallet_ic_gold, icSilver: profile.wallet_ic_silver }));
           }
           setStage('dashboard');
+
+          // Trigger single security-tier welcome toast in browser storage to avoid duplicates
+          const sessionKey = 'invis_welcome_shown';
+          if (!sessionStorage.getItem(sessionKey)) {
+             sessionStorage.setItem(sessionKey, 'true');
+             const tier = profile.tier || 'FREE';
+             let welcomeMessage = `👋 Bem-vindo de volta! Seu tier de segurança é: ${tier}.`;
+             if (tier === 'VIP1' || tier === 'VIP' || tier === 'GOLD' || tier === 'PREMIUM') {
+               welcomeMessage = `✨ Conexão de Elite estabelecida! Bem-vindo, Fundador [Tier: ${tier}]. Todos os sistemas de alta performance estão habilitados.`;
+             } else {
+               welcomeMessage = `🔓 Conexão estabelecida! Bem-vindo de volta ao ecossistema [Tier: ${tier}].`;
+             }
+             showToast(welcomeMessage, 'success');
+          }
       } else {
-          // System Y Logic: User logged in via OAuth but does NOT exist in invis DB (profiles).
+          // System Y Logic backup: User logged in via OAuth but does NOT exist in profiles database
           setCurrentUser(null);
           localStorage.setItem('invis_oauth_error', 'not_found');
           window.dispatchEvent(new Event('invis_oauth_not_found'));

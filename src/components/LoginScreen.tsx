@@ -22,6 +22,8 @@ export const LoginScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [shake, setShake] = useState(false);
+  const [loginErrorType, setLoginErrorType] = useState<'none' | 'credentials' | 'rate-limit' | 'network' | 'unconfirmed'>('none');
 
   const { currentTexts } = useTranslation();
 
@@ -48,14 +50,19 @@ export const LoginScreen: React.FC = () => {
       const profile = await SupabaseService.getProfile(userId);
       const tier = profile?.tier || 'FREE';
       
-      let welcomeMessage = `👋 Bem-vindo de volta! Seu tier de segurança é: ${tier}.`;
-      if (tier === 'VIP1' || tier === 'VIP' || tier === 'GOLD' || tier === 'PREMIUM') {
-        welcomeMessage = `✨ Conexão de Elite estabelecida! Bem-vindo, Fundador [Tier: ${tier}]. Todos os sistemas de alta performance estão habilitados.`;
-      } else {
-        welcomeMessage = `🔓 Conexão estabelecida! Bem-vindo de volta ao ecossistema [Tier: ${tier}].`;
+      const sessionKey = 'invis_welcome_shown';
+      if (!sessionStorage.getItem(sessionKey)) {
+        sessionStorage.setItem(sessionKey, 'true');
+        
+        let welcomeMessage = `👋 Bem-vindo de volta! Seu tier de segurança é: ${tier}.`;
+        if (tier === 'VIP1' || tier === 'VIP' || tier === 'GOLD' || tier === 'PREMIUM') {
+          welcomeMessage = `✨ Conexão de Elite estabelecida! Bem-vindo, Fundador [Tier: ${tier}]. Todos os sistemas de alta performance estão habilitados.`;
+        } else {
+          welcomeMessage = `🔓 Conexão estabelecida! Bem-vindo de volta ao ecossistema [Tier: ${tier}].`;
+        }
+        
+        showToast(welcomeMessage, 'success');
       }
-      
-      showToast(welcomeMessage, 'success');
     } catch (err: any) {
       console.warn("Erro ao buscar tier do usuário para as boas-vindas:", err);
       showToast("👋 Bem-vindo de volta ao ecossistema!", 'success');
@@ -65,12 +72,16 @@ export const LoginScreen: React.FC = () => {
   const handleStandardLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setModalObj({ title: "Acesso Negado", message: currentTexts.login_err_empty || "E-mail e senha são obrigatórios.", type: "error" });
+      setLoginErrorType('credentials');
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+      showToast("E-mail e senha são obrigatórios para a conexão.", 'error');
       return;
     }
 
     setAuthStatusText(currentTexts.login_auth || "Autenticando na Matriz...");
     setShowScanner(true);
+    setLoginErrorType('none');
 
     try {
       const { data, error } = await SupabaseService.signIn(email, password);
@@ -84,26 +95,31 @@ export const LoginScreen: React.FC = () => {
       }
     } catch (err: any) {
       setShowScanner(false);
+      setShake(true);
+      setTimeout(() => setShake(false), 510);
       
-      // Feedback amigável e detalhado para falhas de login
       const rawErrorMsg = err?.message || "";
       let userFriendlyMsg = currentTexts.login_err_invalid || "E-mail ou senha incorretos.";
       
       if (rawErrorMsg.includes("Invalid login credentials") || rawErrorMsg.includes("invalid-credential") || rawErrorMsg.includes("invalid_credentials")) {
-        userFriendlyMsg = "Credenciais inválidas: o e-mail ou a senha informados estão incorretos. Verifique suas credenciais e tente digitar novamente.";
+        setLoginErrorType('credentials');
+        userFriendlyMsg = "Credenciais inválidas: o e-mail ou a senha informados estão incorretos.";
       } else if (rawErrorMsg.includes("Email not confirmed")) {
-        userFriendlyMsg = "E-mail ainda não confirmado! Por favor, valide sua conta através do link enviado ao seu e-mail antes de efetuar o login.";
+        setLoginErrorType('unconfirmed');
+        userFriendlyMsg = "E-mail pendente de confirmação! Por favor, valide sua conta através do link enviado.";
       } else if (rawErrorMsg.includes("Too many requests") || rawErrorMsg.includes("rate limit") || rawErrorMsg.includes("rate_limit")) {
-        userFriendlyMsg = "Operação bloqueada temporariamente devido ao limite de requisições. Por favor, aguarde alguns minutos antes de tentar novamente.";
-      } else if (rawErrorMsg) {
-        userFriendlyMsg = `Erro na Matriz de Autenticação: ${rawErrorMsg}. Revise seus dados de entrada.`;
+        setLoginErrorType('rate-limit');
+        userFriendlyMsg = "Operação bloqueada temporariamente devido ao limite de requisições. Aguarde alguns minutos.";
+      } else if (rawErrorMsg.toLowerCase().includes("network") || rawErrorMsg.toLowerCase().includes("failed to fetch")) {
+        setLoginErrorType('network');
+        userFriendlyMsg = "Falha de conexão com a rede. Verifique seu sinal e tente novamente.";
+      } else {
+        setLoginErrorType('credentials');
+        userFriendlyMsg = rawErrorMsg ? `Erro na Autenticação: ${rawErrorMsg}` : userFriendlyMsg;
       }
 
-      setModalObj({ 
-        title: "Falha na Autenticação", 
-        message: userFriendlyMsg, 
-        type: "error" 
-      });
+      // Dispara o toast vermelho em vez de um pop-up genérico
+      showToast(userFriendlyMsg, 'error');
     }
   };
 
@@ -144,7 +160,15 @@ export const LoginScreen: React.FC = () => {
           </button>
         </div>
 
-        <div className="w-full p-[1px] bg-gradient-to-b from-[#00c8ff]/40 to-transparent rounded-[32px] shadow-[0_0_30px_rgba(0,200,255,0.15)] bg-black/40 backdrop-blur-md">
+        <motion.div
+          animate={shake ? { x: [-10, 10, -10, 10, -5, 5, 0] } : {}}
+          transition={{ duration: 0.5 }}
+          className={`w-full p-[1px] bg-gradient-to-b rounded-[32px] bg-black/40 backdrop-blur-md transition-all duration-300 ${
+            loginErrorType !== 'none'
+              ? 'from-red-500/50 to-transparent shadow-[0_0_40px_rgba(239,68,68,0.2)]'
+              : 'from-[#00c8ff]/40 to-transparent shadow-[0_0_30px_rgba(0,200,255,0.15)]'
+          }`}
+        >
           <div className="w-full p-8 rounded-[32px] bg-[#0b0e11]/85 border border-white/5 flex flex-col items-center">
             
             <div className="text-center mb-6">
@@ -158,25 +182,33 @@ export const LoginScreen: React.FC = () => {
 
             <form onSubmit={handleStandardLogin} className="w-full flex flex-col space-y-4 font-sans">
               <div className="relative w-full">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400/60" />
+                <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${loginErrorType !== 'none' ? 'text-red-400' : 'text-cyan-400/60'}`} />
                 <input
                   type="email"
                   placeholder={currentTexts.user_placeholder || "E-mail"}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-cyan-500/20 bg-black/25 text-left text-sm outline-none focus:border-[#00c8ff] transition-all"
+                  className={`w-full pl-11 pr-4 py-3.5 rounded-xl border bg-black/25 text-left text-sm outline-none transition-all ${
+                    loginErrorType !== 'none' 
+                      ? 'border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.1)] focus:border-red-500 text-red-100 placeholder:text-red-300/40' 
+                      : 'border-cyan-500/20 focus:border-[#00c8ff]'
+                  }`}
                   style={{ WebkitTapHighlightColor: 'transparent' }}
                 />
               </div>
 
               <div className="relative w-full">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400/60" />
+                <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${loginErrorType !== 'none' ? 'text-red-400' : 'text-cyan-400/60'}`} />
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder={currentTexts.password_placeholder || "Senha"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-11 py-3.5 rounded-xl border border-cyan-500/20 bg-black/25 text-left text-sm outline-none focus:border-[#00c8ff] transition-all"
+                  className={`w-full pl-11 pr-11 py-3.5 rounded-xl border bg-black/25 text-left text-sm outline-none transition-all ${
+                    loginErrorType !== 'none' 
+                      ? 'border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.1)] focus:border-red-500 text-red-100 placeholder:text-red-300/40' 
+                      : 'border-cyan-500/20 focus:border-[#00c8ff]'
+                  }`}
                   style={{ WebkitTapHighlightColor: 'transparent' }}
                 />
                 <button
@@ -188,9 +220,24 @@ export const LoginScreen: React.FC = () => {
                 </button>
               </div>
 
+              {loginErrorType !== 'none' && (
+                <div className="w-full text-left px-1 py-1">
+                  <p className="font-mono text-[9px] text-red-400 uppercase tracking-widest flex items-center gap-1.5 animate-pulse">
+                    ⚠️ {loginErrorType === 'credentials' && "ACESSO NEGADO: CREDENCIAIS DE LOGIN INVALUIDAS"}
+                    {loginErrorType === 'unconfirmed' && "AUTENTICACAO REJEITADA: ATIVACAO PENDENTE POR E-MAIL"}
+                    {loginErrorType === 'rate-limit' && "ACESSO SUSPENSO TEMPORARIAMENTE: MUITAS TENTATIVAS"}
+                    {loginErrorType === 'network' && "FALHA DE COMUNICACAO: SERVIDOR SUPABASE INALCANCALVEL"}
+                  </p>
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full py-4 mt-2 rounded-xl bg-[#00c8ff] text-black font-black hover:scale-[1.02] active:scale-[0.98] transition-all text-sm uppercase shadow-[0_0_15px_rgba(0,200,255,0.3)] cursor-pointer outline-none"
+                className={`w-full py-4 mt-2 rounded-xl text-black font-black hover:scale-[1.02] active:scale-[0.98] transition-all text-sm uppercase cursor-pointer outline-none ${
+                  loginErrorType !== 'none'
+                    ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                    : 'bg-[#00c8ff] shadow-[0_0_15px_rgba(0,200,255,0.3)]'
+                }`}
                 style={{ WebkitTapHighlightColor: 'transparent' }}
               >
                 {currentTexts.login_btn || "ENTRAR"}
@@ -240,7 +287,7 @@ export const LoginScreen: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         <div className="mt-6 flex gap-4 text-xs text-neutral-500 font-sans">
           <button onClick={() => { setSelectedSupportPage('privacidade'); setStage('onboarding_terms'); }} className="hover:text-cyan-400 hover:underline cursor-pointer outline-none" style={{ WebkitTapHighlightColor: 'transparent' }}>Política de Privacidade</button>
