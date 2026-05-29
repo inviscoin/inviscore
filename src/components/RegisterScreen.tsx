@@ -3,7 +3,7 @@ import { useInvis, DICTIONARY } from '../context/InvisContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Mail, Tag, Lock, ChevronDown, Check, ArrowLeft, X, Calendar } from 'lucide-react';
-import { SupabaseService } from '../lib/supabase';
+import { SupabaseService, saveLocalProfile, isSupabaseConfigured, supabase } from '../lib/supabase';
 import { AuthWrapper } from './AuthWrapper';
 import { InvisModal } from './InvisModal';
 
@@ -293,7 +293,7 @@ export const RegisterScreen: React.FC = () => {
         return;
       }
 
-      setCurrentUser({
+       const newProfile = {
         id: user?.id || 'usr_temp_' + Math.random().toString(36).substr(2, 9),
         fullName,
         nickname,
@@ -307,8 +307,49 @@ export const RegisterScreen: React.FC = () => {
         isActive: true,
         termsAccepted: false,
         biometricsActive: false,
-        tempPassword: password
-      } as any);
+        tempPassword: password,
+        password: password
+      };
+
+      // Ensure it is saved locally immediately to avoid "User not located" or "lost account" scenarios
+      saveLocalProfile({
+        id: newProfile.id,
+        email: newProfile.email,
+        full_name: newProfile.fullName,
+        nickname: newProfile.nickname,
+        phone: newProfile.phone,
+        ddi: newProfile.ddi,
+        birth_date: newProfile.birthDate,
+        age: newProfile.age,
+        tier: newProfile.tier,
+        age_group: newProfile.ageGroup,
+        tempPassword: newProfile.tempPassword,
+        password: newProfile.password
+      });
+
+      // Also upsert immediately in Supabase profiles table if online/configured
+      if (isSupabaseConfigured() && user?.id) {
+        try {
+          await supabase.from('profiles').upsert({
+            id: user.id,
+            email,
+            full_name: fullName,
+            nickname,
+            phone: `${ddi} ${ddd} ${phone}`.replace(/\s+/g, ''),
+            birth_date: birthDate,
+            tier: 'FREE',
+            wallet_ic_gold: 5000.0,
+            wallet_ic_silver: 0.0,
+            age: calculatedAge,
+            age_group: calculatedAge < 18 ? 'Kids' : 'Adult',
+            updated_at: new Date().toISOString()
+          });
+        } catch (supabaseErr) {
+          console.warn("Could not save profile to Database on signup immediate:", supabaseErr);
+        }
+      }
+
+      setCurrentUser(newProfile as any);
 
       setStage('onboarding_age');
     } catch (err: any) {

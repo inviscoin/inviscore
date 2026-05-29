@@ -140,38 +140,27 @@ export const LoginScreen: React.FC = () => {
           return;
         }
 
-        // Fluxo com Supabase habilitado
-        const profileExists = await SupabaseService.checkProfileExists(googleEmail, '');
-        if (profileExists) {
-          const { error } = await supabase.auth.signInWithIdToken({
-            provider: 'google',
-            token: tokenResponse.access_token,
+        // Fluxo com Supabase habilitado: Verificamos o perfil associado ao email do Google diretamente
+        const profile = await SupabaseService.getProfileByEmail(googleEmail);
+        if (profile) {
+          setCurrentUser({
+            id: profile.id,
+            fullName: profile.full_name || profile.fullName || googleName,
+            nickname: profile.nickname || googleEmail.split('@')[0],
+            email: googleEmail,
+            phone: profile.phone || '+5511999999999',
+            ddi: profile.ddi || '+55',
+            birthDate: profile.birth_date || profile.birthDate || '1995-10-31',
+            age: profile.age || 30,
+            tier: profile.tier || 'FREE',
+            ageGroup: (profile.age || 30) < 18 ? 'Kids' : 'Adult',
+            isActive: true,
+            termsAccepted: true,
+            biometricsActive: false
           });
-          if (error) {
-            // Em caso de falhas com ID token, criamos a sessão local baseada no registro existente
-            const profile = await SupabaseService.getProfileByEmail(googleEmail); // Lookup via email
-            if (profile) {
-              setCurrentUser({
-                id: profile.id,
-                fullName: profile.full_name || profile.fullName || googleName,
-                nickname: profile.nickname || googleEmail.split('@')[0],
-                email: googleEmail,
-                phone: profile.phone || '+5511999999999',
-                ddi: profile.ddi || '+55',
-                birthDate: profile.birth_date || profile.birthDate || '1995-10-31',
-                age: profile.age || 30,
-                tier: profile.tier || 'FREE',
-                ageGroup: (profile.age || 30) < 18 ? 'Kids' : 'Adult',
-                isActive: true,
-                termsAccepted: true,
-                biometricsActive: false
-              });
-              setShowScanner(false);
-              setStage('dashboard');
-              return;
-            }
-            throw error;
-          }
+          setShowScanner(false);
+          setStage('dashboard');
+          return;
         } else {
           setShowScanner(false);
           setModalObj({
