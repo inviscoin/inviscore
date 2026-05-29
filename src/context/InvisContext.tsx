@@ -1133,9 +1133,39 @@ export const InvisProvider: React.FC<{ children: React.ReactNode }> = ({ childre
          }
       }
     );
+
+    const handlePopupOauthSuccess = async (event: MessageEvent) => {
+      // Validate origin matches current window
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data?.type === 'SUPABASE_OAUTH_SUCCESS') {
+        console.log("⚡ [InvisContext] Message received from OAuth popup: SUCCESS. Fetching fresh session state from cookies/storage...");
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
+          if (session?.user) {
+            clearHashSilently();
+            fetchAndSetUser(session.user);
+          } else {
+            // Buffer wait of 500ms to allow session state to propagate
+            setTimeout(async () => {
+              const { data: { session: retrySession } } = await supabase.auth.getSession();
+              if (retrySession?.user) {
+                clearHashSilently();
+                fetchAndSetUser(retrySession.user);
+              }
+            }, 600);
+          }
+        } catch (err) {
+          console.error("Failed to parse session on parent context from popup postMessage request:", err);
+        }
+      }
+    };
+
+    window.addEventListener('message', handlePopupOauthSuccess);
     
     return () => {
        authListener.subscription.unsubscribe();
+       window.removeEventListener('message', handlePopupOauthSuccess);
     }
   }, []);
 

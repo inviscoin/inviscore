@@ -71,11 +71,59 @@ if (typeof window !== 'undefined') {
   };
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <App />
-    </GoogleOAuthProvider>
-  </StrictMode>,
-);
+let shouldRender = true;
+if (typeof window !== 'undefined') {
+  const isPopup = window.opener && (
+    window.location.hash.includes('access_token') || 
+    window.location.hash.includes('id_token') || 
+    window.location.search.includes('access_token')
+  );
+  
+  if (isPopup) {
+    shouldRender = false;
+    try {
+      console.log("⚡ [OAuth Popup] Detected active session in popup context. Communicating back to opener...");
+      
+      // Dispatch authentication message with hash parameters back to the parent iframe
+      window.opener.postMessage({ 
+        type: 'SUPABASE_OAUTH_SUCCESS', 
+        hash: window.location.hash 
+      }, window.location.origin);
+      
+      // Render a polished Branded Success Screen inside the popup window
+      document.body.innerHTML = `
+        <div style="background-color:#0b0e11;color:#ffffff;font-family:sans-serif;height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;margin:0;padding:20px;box-sizing:border-box;">
+          <div style="width:72px;height:72px;border-radius:50%;background:rgba(0,200,255,0.06);border:2px solid #00c8ff;display:flex;align-items:center;justify-content:center;margin-bottom:24px;box-shadow:0 0 30px rgba(0,200,255,0.3);animation:pulse 1.4s infinite alternate;">
+            <svg viewBox="0 0 24 24" width="32" height="32" stroke="#00c8ff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+          <h2 style="font-size:20px;letter-spacing:4px;margin:0 0 10px 0;text-transform:uppercase;color:#ffffff;font-weight:900;text-shadow:0 0 10px rgba(0,255,255,0.2);">CONEXÃO OK</h2>
+          <p style="font-size:12px;color:#8f9cae;margin:0 auto;max-width:340px;line-height:1.6;font-family:monospace;letter-spacing:1px;text-transform:uppercase;">AUTENTICAÇÃO EXECUTADA COM SUCESSO. ESTE TERMINAL SERÁ ENCERRADO EM INSTANTES.</p>
+          <style>
+            @keyframes pulse {
+              from { transform: scale(0.95); box-shadow: 0 0 15px rgba(0,200,255,0.15); }
+              to { transform: scale(1.05); box-shadow: 0 0 35px rgba(0,200,255,0.55); }
+            }
+          </style>
+        </div>
+      `;
+      setTimeout(() => {
+        window.close();
+      }, 1500);
+    } catch (e) {
+      console.error("Popup communication error:", e);
+    }
+  }
+}
+
+if (shouldRender) {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        <App />
+      </GoogleOAuthProvider>
+    </StrictMode>,
+  );
+}
 

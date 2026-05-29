@@ -129,9 +129,42 @@ export const LoginScreen: React.FC = () => {
     try {
       const { data, error } = await SupabaseService.signInWithOAuth('google');
       if (error) throw error;
+
+      if (data && data.url) {
+        const popupWidth = 600;
+        const popupHeight = 700;
+        const left = window.screenX + (window.innerWidth - popupWidth) / 2;
+        const top = window.screenY + (window.innerHeight - popupHeight) / 2;
+
+        const popup = window.open(
+          data.url,
+          'supabase_oauth_popup',
+          `width=${popupWidth},height=${popupHeight},left=${left},top=${top},status=no,resizable=yes,scrollbars=yes`
+        );
+
+        if (popup) {
+          // Monitor if the user manually closed the popup without completing authentication
+          const monitorTimer = setInterval(() => {
+            if (popup.closed) {
+              clearInterval(monitorTimer);
+              setShowScanner(false);
+            }
+          }, 1000);
+        } else {
+          setShowScanner(false);
+          showToast("Acesso bloqueado: Por favor, habilite pop-ups em seu navegador para conectar com o Google.", "error");
+        }
+      } else {
+        setShowScanner(false);
+        showToast("Falha ao obter URL de autenticação segura do ecossistema.", "error");
+      }
     } catch (err: any) {
       setShowScanner(false);
-      setModalObj({ title: "Erro de Autenticação", message: err.message || "Falha ao conectar via Google.", type: "error" });
+      setModalObj({ 
+        title: "Erro de Autenticação", 
+        message: err.message || "Falha ao conectar via Google.", 
+        type: "error" 
+      });
     }
   };
 
