@@ -25,15 +25,15 @@ const DDI_COUNTRIES = [
 const getDdiPhoneRule = (code: string) => {
   switch (code) {
     case '+55':
-      return { minLocal: 10, maxLocal: 11, placeholder: '(DD) 99999-9999', label: 'Brasil: DDD (2) + Nº (8 ou 9 dgt)' };
+      return { minLocal: 8, maxLocal: 9, placeholder: '99999-9999', label: 'Brasil: Nº (8 ou 9 dgt) sem DDD' };
     case '+1':
-      return { minLocal: 10, maxLocal: 10, placeholder: '(AAA) 555-0199', label: 'USA/Canada: Area (3) + Nº (7 dgt)' };
+      return { minLocal: 10, maxLocal: 10, placeholder: '555-0199', label: 'USA/Canada: Area (3) + Nº (7 dgt)' };
     case '+34':
-      return { minLocal: 9, maxLocal: 9, placeholder: '600000000', label: 'Espanha: Nº de 9 dígitos' };
+      return { minLocal: 8, maxLocal: 9, placeholder: '600000000', label: 'Espanha: Nº de 9 dígitos' };
     case '+33':
-      return { minLocal: 9, maxLocal: 9, placeholder: '600000000', label: 'França: Nº de 9 dígitos' };
+      return { minLocal: 8, maxLocal: 9, placeholder: '600000000', label: 'França: Nº de 9 dígitos' };
     default:
-      return { minLocal: 8, maxLocal: 11, placeholder: 'Número de telefone', label: 'Local: 8 a 11 dígitos' };
+      return { minLocal: 8, maxLocal: 9, placeholder: 'Número de telefone', label: 'Local: 8 a 9 dígitos' };
   }
 };
 
@@ -69,6 +69,16 @@ export const RegisterScreen: React.FC = () => {
         type: "info"
       });
     }
+
+    const prefilled = sessionStorage.getItem('invis_google_prefilled');
+    if (prefilled) {
+      try {
+        const parsed = JSON.parse(prefilled);
+        if (parsed.email) setEmail(parsed.email);
+        if (parsed.fullName) setFullName(parsed.fullName);
+        sessionStorage.removeItem('invis_google_prefilled');
+      } catch (e) {}
+    }
   }, []);
 
   // Block Spaces physically on key down / change
@@ -91,7 +101,7 @@ export const RegisterScreen: React.FC = () => {
   };
 
   const handlePhoneChange = (val: string) => {
-    const digits = val.replace(/\D/g, '');
+    const digits = val.replace(/\D/g, '').substring(0, 9);
     setPhone(digits);
 
     const rule = getDdiPhoneRule(ddi);
@@ -109,7 +119,7 @@ export const RegisterScreen: React.FC = () => {
   // Re-validate phone when DDI changes
   useEffect(() => {
     if (phone) {
-      const digits = phone.replace(/\D/g, '');
+      const digits = phone.replace(/\D/g, '').substring(0, 9);
       const rule = getDdiPhoneRule(ddi);
       if (digits.length < rule.minLocal) {
         setPhoneError(`Mínimo de ${rule.minLocal} dígitos para este DDI.`);
@@ -409,15 +419,19 @@ export const RegisterScreen: React.FC = () => {
                   </button>
 
                   <div className="relative flex-1">
-                    <span className="absolute left-4 top-1/2 -translate-y-[55%] text-sm select-none text-neutral-400 font-bold font-mono border-r border-white/5 pr-2">DDD</span>
+                    {ddd.length === 0 && (
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm select-none text-neutral-400 font-bold font-mono pointer-events-none">
+                        DDD
+                      </span>
+                    )}
                     <input
                       type="text"
-                      placeholder="Ex: 11"
+                      placeholder=""
                       value={ddd}
-                      maxLength={3}
+                      maxLength={2}
                       onKeyDown={handleNoSpacesInput}
                       onChange={(e) => setDdd(e.target.value.replace(/\D/g, ''))}
-                      className={`w-full pl-14 pr-2 py-3.5 rounded-xl border bg-black/25 text-left text-sm outline-none transition-all ${
+                      className={`w-full pl-4 pr-2 py-3.5 rounded-xl border bg-black/25 text-left text-sm outline-none transition-all ${
                         dddError 
                           ? 'border-red-500/50 focus:border-red-400 text-red-200' 
                           : 'border-cyan-500/20 focus:border-[#00FF80]'
@@ -432,6 +446,7 @@ export const RegisterScreen: React.FC = () => {
                       type="text"
                       placeholder={getDdiPhoneRule(ddi).placeholder}
                       value={phone}
+                      maxLength={9}
                       onKeyDown={handleNoSpacesInput}
                       onChange={(e) => handlePhoneChange(e.target.value)}
                       className={`w-full pl-11 pr-4 py-3.5 rounded-xl border bg-black/25 text-left text-sm outline-none transition-all ${
