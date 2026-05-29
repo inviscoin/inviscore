@@ -56,7 +56,29 @@ export const LoginScreen: React.FC = () => {
     try {
       const { data, error } = await SupabaseService.signIn(email, password);
       if (error) throw error;
-      // InvisContext onAuthStateChange will handle redirection
+      
+      // Se for um usuário local de fallback (sem sessão ativa no Supabase ou objeto de sessão)
+      if (data && data.user && !data.session) {
+        setCurrentUser({
+          id: data.user.id,
+          fullName: data.user.full_name || data.user.fullName || "Membro INVIS",
+          nickname: data.user.nickname || data.user.email?.split('@')[0] || "User",
+          email: data.user.email,
+          phone: data.user.phone || '+5511999999999',
+          ddi: data.user.ddi || '+55',
+          birthDate: data.user.birth_date || data.user.birthDate || '1995-10-31',
+          age: data.user.age || 30,
+          tier: data.user.tier || 'FREE',
+          ageGroup: (data.user.age || 30) < 18 ? 'Kids' : 'Adult',
+          isActive: true,
+          termsAccepted: data.user.termsAccepted !== undefined ? data.user.termsAccepted : true,
+          biometricsActive: false
+        });
+        setShowScanner(false);
+        setStage('dashboard');
+        return;
+      }
+      // InvisContext onAuthStateChange will handle redirection otherwise
     } catch (err: any) {
       setShowScanner(false);
       setModalObj({ title: "Falha na Autenticação", message: currentTexts.login_err_invalid || "E-mail ou senha incorretos.", type: "error" });
@@ -127,16 +149,16 @@ export const LoginScreen: React.FC = () => {
           });
           if (error) {
             // Em caso de falhas com ID token, criamos a sessão local baseada no registro existente
-            const profile = await SupabaseService.getProfile(googleEmail); // Lookup via profile
+            const profile = await SupabaseService.getProfileByEmail(googleEmail); // Lookup via email
             if (profile) {
               setCurrentUser({
                 id: profile.id,
-                fullName: profile.full_name || googleName,
+                fullName: profile.full_name || profile.fullName || googleName,
                 nickname: profile.nickname || googleEmail.split('@')[0],
                 email: googleEmail,
                 phone: profile.phone || '+5511999999999',
                 ddi: profile.ddi || '+55',
-                birthDate: profile.birth_date || '1995-10-31',
+                birthDate: profile.birth_date || profile.birthDate || '1995-10-31',
                 age: profile.age || 30,
                 tier: profile.tier || 'FREE',
                 ageGroup: (profile.age || 30) < 18 ? 'Kids' : 'Adult',

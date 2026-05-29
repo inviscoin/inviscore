@@ -3,7 +3,7 @@ import {
   UserProfile, WalletState, Transaction, DashboardBlock, 
   Book, Movie, InventoryItem, UserTier, AgeGroup, BlockType 
 } from '../types';
-import { supabase, SupabaseService, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, SupabaseService, isSupabaseConfigured, getLocalProfiles, saveLocalProfile } from '../lib/supabase';
 
 // Multi-language dictionary for exact 12-language support
 export const DICTIONARY = {
@@ -1023,8 +1023,24 @@ interface InvisContextType {
 const InvisContext = createContext<InvisContextType | undefined>(undefined);
 
 export const InvisProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentStage, setStage] = useState<'locks' | 'login' | 'register' | 'onboarding_age' | 'onboarding_terms' | 'dashboard' | 'recovery'>('locks');
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [currentStage, setStage] = useState<'locks' | 'login' | 'register' | 'onboarding_age' | 'onboarding_terms' | 'dashboard' | 'recovery'>(() => {
+    try {
+      const savedUser = localStorage.getItem('invis_current_user');
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        return u.termsAccepted ? 'dashboard' : 'onboarding_age';
+      }
+    } catch (e) {}
+    return 'locks';
+  });
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
+    try {
+      const saved = localStorage.getItem('invis_current_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [language, setLanguage] = useState<keyof typeof DICTIONARY>('pt-BR');
   const [isLangDrawerOpen, setLangDrawerOpen] = useState(false);
   const [isCoinGolden, setCoinGolden] = useState(true);
@@ -1100,6 +1116,15 @@ export const InvisProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [mediaIsPlaying, setMediaIsPlaying] = useState(false);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
 
+  // Salvamento dinâmico do estado do usuário logado na memória local do navegador para persistência extrema
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('invis_current_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('invis_current_user');
+    }
+  }, [currentUser]);
+
   // Supabase Real-time Auth Persistence and Synchronization Hook
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
@@ -1128,16 +1153,52 @@ export const InvisProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const fetchAndSetUser = async (user: any) => {
-      const profile = await SupabaseService.getProfile(user.id);
+      let profile = await SupabaseService.getProfile(user.id);
+      
+      // Auto-reconcile profile by email if ID is different/new
+      if (!profile && user.email) {
+          profile = await SupabaseService.getProfileByEmail(user.email);
+      }
+
+      // Auto-heal missing profile row
+      if (!profile && user.email) {
+          const list = getLocalProfiles();
+          const localFound = list.find((p: any) => p.email?.toLowerCase().trim() === user.email?.toLowerCase().trim());
+          
+          const profileToSave = {
+            id: user.id,
+            email: user.email,
+            full_name: localFound?.fullName || localFound?.full_name || 'Membro INVIS',
+            nickname: localFound?.nickname || user.email?.split('@')[0] || 'User',
+            phone: localFound?.phone || '+5511999999999',
+            birth_date: localFound?.birthDate || localFound?.birth_date || '1995-10-31',
+            tier: localFound?.tier || 'FREE',
+            wallet_ic_gold: localFound?.wallet_ic_gold ?? 5000.0,
+            wallet_ic_silver: localFound?.wallet_ic_silver ?? 0.0,
+            age: localFound?.age || 30,
+            age_group: localFound?.ageGroup || localFound?.age_group || 'Adult',
+            updated_at: new Date().toISOString()
+          };
+
+          try {
+            await supabase.from('profiles').upsert(profileToSave);
+          } catch (e) {
+            console.warn("Auto-healing profiles upsert failed:", e);
+          }
+
+          saveLocalProfile(profileToSave);
+          profile = profileToSave;
+      }
+
       if (profile) {
           setCurrentUser({
-            id: user.id,
-            fullName: profile.full_name || 'Fundador INVIS Cérebro',
+            id: user.id || profile.id,
+            fullName: profile.full_name || profile.fullName || 'Fundador INVIS Cérebro',
             nickname: profile.nickname || user.email?.split('@')[0] || 'User',
-            email: user.email,
+            email: user.email || profile.email,
             phone: profile.phone || '+5511999999999',
             ddi: profile.ddi || '+55',
-            birthDate: profile.birth_date || '1995-10-31',
+            birthDate: profile.birth_date || profile.birthDate || '1995-10-31',
             age: profile.age || 30,
             tier: profile.tier || 'FREE',
             ageGroup: (profile.age || 30) < 18 ? 'Kids' : 'Adult',

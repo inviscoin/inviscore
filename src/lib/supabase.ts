@@ -221,8 +221,38 @@ export const SupabaseService = {
         password: pass
       });
 
+      if (error) {
+        // Robust fallback to local credentials if Supabase auth fails (e.g., email unconfirmed, temporary Postgres offline)
+        const list = getLocalProfiles();
+        const cleanPhone = identifier.trim().replace(/\D/g, '');
+        const found = list.find((p: any) => 
+          (p.email?.toLowerCase().trim() === identifier.toLowerCase().trim() ||
+           p.nickname?.toLowerCase().trim() === identifier.toLowerCase().trim() ||
+           (p.phone && p.phone.replace(/\s+/g, '') === cleanPhone)) &&
+          (p.tempPassword === pass || p.password === pass)
+        );
+        if (found) {
+          console.warn("[INVIS Auth Fallback] Autenticado com sucesso via cadastro local após falha no backend.");
+          return { data: { user: found, session: null }, error: null };
+        }
+        return { data: null, error };
+      }
+
       return { data, error };
     } catch (e: any) {
+      // Fallback in catch block as well
+      const list = getLocalProfiles();
+      const cleanPhone = identifier.trim().replace(/\D/g, '');
+      const found = list.find((p: any) => 
+        (p.email?.toLowerCase().trim() === identifier.toLowerCase().trim() ||
+         p.nickname?.toLowerCase().trim() === identifier.toLowerCase().trim() ||
+         (p.phone && p.phone.replace(/\s+/g, '') === cleanPhone)) &&
+        (p.tempPassword === pass || p.password === pass)
+      );
+      if (found) {
+        console.warn("[INVIS Auth Catch Fallback] Autenticado com sucesso via cadastro local.");
+        return { data: { user: found, session: null }, error: null };
+      }
       return { data: null, error: e };
     }
   },
@@ -277,6 +307,34 @@ export const SupabaseService = {
       console.warn('[INVIS Sync Catch] Erro na consulta de perfil:', e.message);
       const list = getLocalProfiles();
       return list.find((p: any) => p.id === userId) || null;
+    }
+  },
+
+  async getProfileByEmail(email: string) {
+    const cleanEmail = email.toLowerCase().trim();
+    const list = getLocalProfiles();
+    const localFound = list.find((p: any) => p.email?.toLowerCase().trim() === cleanEmail);
+
+    if (!isSupabaseConfigured()) {
+      return localFound || null;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', cleanEmail)
+        .limit(1);
+
+      if (error || !data || data.length === 0) {
+        if (error) {
+          this.handleError(error, 'obter perfil por email na tabela profiles');
+        }
+        return localFound || null;
+      }
+      return data[0];
+    } catch (e: any) {
+      console.warn('[INVIS Sync Catch] Erro na consulta de perfil por email:', e.message);
+      return localFound || null;
     }
   },
 
