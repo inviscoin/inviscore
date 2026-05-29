@@ -1104,9 +1104,20 @@ export const InvisProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
     
+    const clearHashSilently = () => {
+      if (typeof window !== 'undefined' && window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('id_token'))) {
+        try {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        } catch (e) {
+          console.warn("Could not clean URL hash:", e);
+        }
+      }
+    };
+
     // Initial fetch to restore session if app was reloaded
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
+         clearHashSilently();
          fetchAndSetUser(session.user);
       }
     });
@@ -1114,6 +1125,7 @@ export const InvisProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
           if (event === 'SIGNED_IN' && session?.user) {
+            clearHashSilently();
             fetchAndSetUser(session.user);
          } else if (event === 'SIGNED_OUT') {
             setCurrentUser(null);

@@ -11,7 +11,8 @@ import { SupabaseService, isSupabaseConfigured, supabase } from '../lib/supabase
 export const LoginScreen: React.FC = () => {
   const { 
     setStage, language, setLangDrawerOpen,
-    setCurrentUser, setSystemStatus, setSelectedSupportPage
+    setCurrentUser, setSystemStatus, setSelectedSupportPage,
+    showToast
   } = useInvis();
 
   const [authStatusText, setAuthStatusText] = useState('');
@@ -41,6 +42,26 @@ export const LoginScreen: React.FC = () => {
     return () => window.removeEventListener('invis_oauth_not_found', handleOauthNotFound);
   }, [setStage]);
 
+  // Função dedicada para verificar tier e disparar toast personalizado
+  const verifyUserTierAndWelcome = async (userId: string) => {
+    try {
+      const profile = await SupabaseService.getProfile(userId);
+      const tier = profile?.tier || 'FREE';
+      
+      let welcomeMessage = `👋 Bem-vindo de volta! Seu tier de segurança é: ${tier}.`;
+      if (tier === 'VIP1' || tier === 'VIP' || tier === 'GOLD' || tier === 'PREMIUM') {
+        welcomeMessage = `✨ Conexão de Elite estabelecida! Bem-vindo, Fundador [Tier: ${tier}]. Todos os sistemas de alta performance estão habilitados.`;
+      } else {
+        welcomeMessage = `🔓 Conexão estabelecida! Bem-vindo de volta ao ecossistema [Tier: ${tier}].`;
+      }
+      
+      showToast(welcomeMessage, 'success');
+    } catch (err: any) {
+      console.warn("Erro ao buscar tier do usuário para as boas-vindas:", err);
+      showToast("👋 Bem-vindo de volta ao ecossistema!", 'success');
+    }
+  };
+
   const handleStandardLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -53,11 +74,36 @@ export const LoginScreen: React.FC = () => {
 
     try {
       const { data, error } = await SupabaseService.signIn(email, password);
-      if (error) throw error;
-      // InvisContext onAuthStateChange will handle redirection
+      if (error) {
+        throw error;
+      }
+      
+      // Se autenticado com sucesso, verifica tier e dispara toast personalizado
+      if (data?.user) {
+        await verifyUserTierAndWelcome(data.user.id);
+      }
     } catch (err: any) {
       setShowScanner(false);
-      setModalObj({ title: "Falha na Autenticação", message: currentTexts.login_err_invalid || "E-mail ou senha incorretos.", type: "error" });
+      
+      // Feedback amigável e detalhado para falhas de login
+      const rawErrorMsg = err?.message || "";
+      let userFriendlyMsg = currentTexts.login_err_invalid || "E-mail ou senha incorretos.";
+      
+      if (rawErrorMsg.includes("Invalid login credentials") || rawErrorMsg.includes("invalid-credential") || rawErrorMsg.includes("invalid_credentials")) {
+        userFriendlyMsg = "Credenciais inválidas: o e-mail ou a senha informados estão incorretos. Verifique suas credenciais e tente digitar novamente.";
+      } else if (rawErrorMsg.includes("Email not confirmed")) {
+        userFriendlyMsg = "E-mail ainda não confirmado! Por favor, valide sua conta através do link enviado ao seu e-mail antes de efetuar o login.";
+      } else if (rawErrorMsg.includes("Too many requests") || rawErrorMsg.includes("rate limit") || rawErrorMsg.includes("rate_limit")) {
+        userFriendlyMsg = "Operação bloqueada temporariamente devido ao limite de requisições. Por favor, aguarde alguns minutos antes de tentar novamente.";
+      } else if (rawErrorMsg) {
+        userFriendlyMsg = `Erro na Matriz de Autenticação: ${rawErrorMsg}. Revise seus dados de entrada.`;
+      }
+
+      setModalObj({ 
+        title: "Falha na Autenticação", 
+        message: userFriendlyMsg, 
+        type: "error" 
+      });
     }
   };
 

@@ -61,6 +61,17 @@ export const RegisterScreen: React.FC = () => {
   const { currentTexts } = useTranslation();
 
   useEffect(() => {
+    // Se houver uma sessão OAuth ativa do Google, pré-preenche o campo de e-mail automaticamente
+    if (typeof window !== 'undefined') {
+      import('../lib/supabase').then(({ supabase }) => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.user?.email) {
+            setEmail(session.user.email);
+          }
+        }).catch(() => {});
+      }).catch(() => {});
+    }
+
     if (localStorage.getItem('invis_oauth_error') === 'not_found') {
       localStorage.removeItem('invis_oauth_error');
       setModalObj({
@@ -323,7 +334,12 @@ export const RegisterScreen: React.FC = () => {
             <div className="w-full flex justify-start mb-2">
               <button 
                 id="register_back_login"
-                onClick={() => setStage('login')}
+                onClick={async () => {
+                  try {
+                    await SupabaseService.signOut();
+                  } catch (e) {}
+                  setStage('login');
+                }}
                 className="flex items-center gap-2 text-xs text-neutral-400 hover:text-white transition-all cursor-pointer outline-none focus:outline-none"
                 style={{ WebkitTapHighlightColor: 'transparent' }}
               >

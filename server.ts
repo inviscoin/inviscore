@@ -20,23 +20,31 @@ const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabase
 // Auth Middleware to protect sensitive endpoints
 const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (!supabase) {
+    console.error("🔴 [requireAuth Bypass/Failure] Supabase client is not initialized.");
     return res.status(500).json({ error: "Supabase client not configured on server" });
   }
 
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    console.warn(`⚠️ [requireAuth 401 Rejection] Missing or malformed Authorization header. Path: ${req.path}. Received: ${authHeader ? 'Invalid starting scheme or token template' : 'undefined/empty'}`);
     return res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
   }
 
   const token = authHeader.split(" ")[1];
-  const { data: { user }, error } = await supabase.auth.getUser(token);
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
 
-  if (error || !user) {
-    return res.status(401).json({ error: "Unauthorized: Invalid session token" });
+    if (error || !user) {
+      console.warn(`⚠️ [requireAuth 401 Rejection] Supabase Auth token validation failed. Path: ${req.path}. Error detail: ${error ? error.message : 'No user associated with this token'}. Token slice: ${token ? token.substring(0, 15) : 'none'}...`);
+      return res.status(401).json({ error: "Unauthorized: Invalid session token" });
+    }
+
+    (req as any).user = user;
+    next();
+  } catch (err: any) {
+    console.error(`💥 [requireAuth 401 Exception] Internal exception during JWT verification for Path: ${req.path}. Error: ${err.message}`);
+    return res.status(401).json({ error: "Unauthorized: Invalid session token", details: err.message });
   }
-
-  (req as any).user = user;
-  next();
 };
 
 // Lazy-loaded Gemini Client
