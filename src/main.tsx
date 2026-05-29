@@ -4,7 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
-const GOOGLE_CLIENT_ID = (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || '220771370208-32kn8rjcnifdvs4mqnscl1kb1p7qun51.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || '563039381952-8bevtsh2r9p2qaq5pcq5ltme8vao1sqe.apps.googleusercontent.com';
 
 // Ignorar erros benignos de WebSocket do Vite HMR causados pelo sandboxing do iframe/Cloud Run
 if (typeof window !== 'undefined') {
