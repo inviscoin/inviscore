@@ -854,7 +854,11 @@ export const MediaModule: React.FC = () => {
         setBouncerStreamData(data);
         
         if (data.status === 'active' && data.stream_url) {
-          if (Hls.isSupported()) {
+          if (data.source_type === 'mp4' || data.stream_url.includes('.mp4')) {
+            // Direct MP4 fallback for full-length public domain simulation
+            movieVideoRef.current!.src = data.stream_url;
+            movieVideoRef.current!.play().catch(e => console.warn("Player autoplay blocked", e));
+          } else if (Hls.isSupported()) {
             hlsInstance = new Hls();
             hlsInstance.loadSource(data.stream_url);
             hlsInstance.attachMedia(movieVideoRef.current!);
@@ -863,9 +867,6 @@ export const MediaModule: React.FC = () => {
                 movieVideoRef.current.play().catch(e => console.warn("Player autoplay blocked", e));
               }
             });
-            
-            // Set initial language from DDI logic or context
-            // HLS allows switching audio tracks if available in m3u8
           } else if (movieVideoRef.current!.canPlayType('application/vnd.apple.mpegurl')) {
             // Native Safari support for HLS
             movieVideoRef.current!.src = data.stream_url;
@@ -1669,13 +1670,8 @@ export const MediaModule: React.FC = () => {
   };
 
   const getMovieVideoSrc = (movie: Movie | null) => {
-    if (!movie) return 'https://www.w3schools.com/html/mov_bbb.mp4';
-    let src = movie.videoUrl || "";
-    // If it's a youtube embed link or empty, fallback to sample high quality movie mp4
-    if (src === "" || src.includes('youtube.com') || src.includes('youtu.be') || !src.includes('.')) {
-      return 'https://www.w3schools.com/html/mov_bbb.mp4';
-    }
-    return src;
+    if (!movie) return 'https://archive.org/download/night_of_the_living_dead/night_of_the_living_dead_512kb.mp4';
+    return "https://archive.org/download/night_of_the_living_dead/night_of_the_living_dead_512kb.mp4";
   };
 
   const formatTime = (timeInSeconds: number) => {

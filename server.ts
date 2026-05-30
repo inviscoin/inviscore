@@ -580,25 +580,26 @@ async function startServer() {
 
   // Bouncer Proxy Route - Source Masking (Mascarar Origem do Vídeo)
   app.get("/api/bouncer/stream/:token/:id", async (req, res) => {
-    const { id } = req.params;
+    const { id, token } = req.params;
     const isMovie = id.startsWith("movie_");
     const numericId = id.replace("movie_", "").replace("tv_", "");
     
-    // Simulate Crawler Matchmaking retrieving multiple tracks and HLS
-    // Emulating ABR (Adaptive Bitrate) streaming link in JSON
+    // Simulate Crawler Matchmaking retrieving multiple tracks
+    // Using a Public Domain full-length MP4 (> 20 mins) to allow custom player UI (timeline jumping, pause detection)
+    // Night of the Living Dead (1968) - 1 hour 35 minutes
+    const publicDomainMP4 = "https://archive.org/download/night_of_the_living_dead/night_of_the_living_dead_512kb.mp4";
+    
     res.json({
       status: 'active',
-      stream_url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", // Big Buck Bunny ABR sample
-      source_type: "hls",
-      resolution: "auto",
+      stream_url: publicDomainMP4, 
+      source_type: "mp4",
+      resolution: "1080p",
       audios: [
-        { id: "pt-BR", label: "Português (Brasil) - Dublado", isDefault: false },
-        { id: "en-US", label: "English - Original", isDefault: false },
-        { id: "es-ES", label: "Español - Latino", isDefault: false },
+        { id: "pt-BR", label: "Português (Brasil) - Dublado", isDefault: true },
+        { id: "en-US", label: "English - Original", isDefault: false }
       ],
       subtitles: [
         { id: "pt-BR", label: "Português (Brasil)" },
-        { id: "en-US", label: "English" },
         { id: "OFF", label: "Desligado" }
       ]
     });
