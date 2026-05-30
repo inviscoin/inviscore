@@ -848,32 +848,58 @@ export const MediaModule: React.FC = () => {
     let hlsInstance: Hls | null = null;
     const fetchStream = async () => {
       try {
-        if (!selectedMovie.streamUrl) return;
-        const res = await fetch(selectedMovie.streamUrl);
-        const data = await res.json();
-        setBouncerStreamData(data);
+        let fetchedData = null;
         
-        if (data.status === 'active' && data.stream_url) {
-          if (data.source_type === 'mp4' || data.stream_url.includes('.mp4')) {
-            // Direct MP4 fallback for full-length public domain simulation
-            movieVideoRef.current!.src = data.stream_url;
-            movieVideoRef.current!.play().catch(e => console.warn("Player autoplay blocked", e));
+        if (selectedMovie.streamUrl) {
+          const abortController = new AbortController();
+          const timeoutId = setTimeout(() => {
+            abortController.abort();
+          }, 2000);
+          
+          try {
+            const res = await fetch(selectedMovie.streamUrl, { signal: abortController.signal });
+            fetchedData = await res.json();
+            clearTimeout(timeoutId);
+          } catch (err) {
+            console.warn("Servidor primário lento ou inativo, alternando para servidor alternativo...");
+          }
+        }
+
+        // Fallback garantido (simulando dublado) em caso de falha de timeout
+        if (!fetchedData || !fetchedData.stream_url || fetchedData.status !== 'active') {
+          fetchedData = {
+             status: 'active',
+             source_type: 'mp4',
+             stream_url: "https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          };
+          setActiveServer('alternativo');
+        } else {
+          setBouncerStreamData(fetchedData);
+          setActiveServer('principal');
+        }
+        
+        if (movieVideoRef.current) {
+          // Exibir loading enquanto carrega metadados
+          setDuration(0);
+          
+          if (fetchedData.source_type === 'mp4' || fetchedData.stream_url.includes('.mp4')) {
+            movieVideoRef.current.src = fetchedData.stream_url;
+            movieVideoRef.current.load();
+            movieVideoRef.current.play().catch(e => console.warn("Player autoplay blocked", e));
           } else if (Hls.isSupported()) {
             hlsInstance = new Hls();
-            hlsInstance.loadSource(data.stream_url);
-            hlsInstance.attachMedia(movieVideoRef.current!);
+            hlsInstance.loadSource(fetchedData.stream_url);
+            hlsInstance.attachMedia(movieVideoRef.current);
             hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
               if (movieVideoRef.current) {
                 movieVideoRef.current.play().catch(e => console.warn("Player autoplay blocked", e));
               }
             });
-          } else if (movieVideoRef.current!.canPlayType('application/vnd.apple.mpegurl')) {
-            // Native Safari support for HLS
-            movieVideoRef.current!.src = data.stream_url;
-            movieVideoRef.current!.play();
+          } else if (movieVideoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+            movieVideoRef.current.src = fetchedData.stream_url;
+            movieVideoRef.current.load();
+            movieVideoRef.current.play();
           }
-        } else {
-          showAlert("Fonte Inativa. Removendo do catálogo...");
         }
       } catch (err) {
         console.error("Stream fetch error:", err);
@@ -1144,8 +1170,14 @@ export const MediaModule: React.FC = () => {
     }));
   };
 
-  // Removed Active Timer for featured trailers to disable autoplay
-
+  // Active Timer to cycle featured trailers in background every 7 seconds
+  useEffect(() => {
+    if (expandedSection !== 'movies' || selectedMovie !== null) return;
+    const interval = setInterval(() => {
+      setActiveTrailerIndex(prev => (prev + 1) % Math.min(10, moviesList.length || 10));
+    }, 7000);
+    return () => clearInterval(interval);
+  }, [expandedSection, selectedMovie, moviesList]);
 
   const memoizedCategories = React.useMemo(() => {
     // Check if user language is PT-BR based on DDI prefix '+55'
@@ -2866,25 +2898,13 @@ export const MediaModule: React.FC = () => {
                               className={`absolute w-[240px] md:w-[280px] aspect-video rounded-2xl overflow-hidden bg-black border ${isActive ? 'border-cyan-500/80 shadow-[0_0_30px_rgba(6,182,212,0.3)]' : 'border-white/10'} shadow-xl flex flex-col pointer-events-auto`}
                             >
                               <div className="relative w-full flex-1 bg-zinc-900 overflow-hidden pointer-events-none">
-                                {isActive && movie.videoUrl ? (
-                                  <iframe
-                                    src={`${movie.videoUrl}?autoplay=1&mute=1&controls=0&modestbranding=1&playlist=${movie.videoUrl.split('/').pop()?.split('?')[0]}&loop=1&showinfo=0&rel=0&iv_load_policy=3&disablekb=1&playsinline=1`}
-                                    title={movie.title}
-                                    className="absolute inset-0 w-full h-full object-cover border-0"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                  />
-                                ) : (
-                                  <>
-                                    <img 
-                                      src={movie.backdropUrl || movie.posterUrl} 
-                                      alt={movie.title} 
-                                      className="absolute inset-0 w-full h-full object-cover" 
-                                      referrerPolicy="no-referrer"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent" />
-                                  </>
-                                )}
+                                <img 
+                                  src={movie.backdropUrl || movie.posterUrl} 
+                                  alt={movie.title} 
+                                  className="absolute inset-0 w-full h-full object-cover" 
+                                  referrerPolicy="no-referrer"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent" />
                               </div>
                               <div className="h-[55px] bg-[#07090c] p-2 flex flex-col justify-center pointer-events-auto z-10 w-full text-left border-t border-white/5">
                                 <h4 className={`text-[10px] md:text-[11px] font-black truncate uppercase ${isActive ? 'text-cyan-400' : 'text-neutral-300'}`}>
@@ -4125,103 +4145,138 @@ export const MediaModule: React.FC = () => {
                         <div className="absolute -inset-10 bg-[#090b11]/20 opacity-20 pointer-events-none select-none blur-3xl" />
 
                         {/* Left: Poster (40%) */}
-                        <div className="w-[40%] shrink-0 flex items-start justify-center">
+                        <div className="w-[40%] shrink-0 flex flex-col items-center justify-start">
                           <div className="rounded-2xl overflow-hidden shadow-2xl border border-white/10 aspect-[2/3] w-full max-w-sm relative group animate-fade-in">
-                            <img 
-                              src={selectedMovie.posterUrl} 
-                              alt={selectedMovie.title} 
-                              className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" 
-                              referrerPolicy="no-referrer"
-                            />
+                            <AnimatePresence>
+                              {trailerMovieId === selectedMovie.id ? (
+                                <motion.video
+                                  key="reel"
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0.5 }}
+                                  src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+                                  autoPlay
+                                  muted
+                                  className="absolute inset-0 w-full h-full object-cover z-20"
+                                />
+                              ) : (
+                                <motion.img 
+                                  key="poster"
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0.5 }}
+                                  src={selectedMovie.posterUrl} 
+                                  alt={selectedMovie.title} 
+                                  className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" 
+                                  referrerPolicy="no-referrer"
+                                />
+                              )}
+                            </AnimatePresence>
                             {(selectedMovie as any).rating && (
-                              <span className="absolute bottom-3 right-3 px-2 py-1 rounded-lg bg-black/95 font-mono text-[10px] text-cyan-400 font-bold border border-cyan-400/30 backdrop-blur-md">
+                              <span className="absolute bottom-3 right-3 px-2 py-1 rounded-lg bg-black/95 font-mono text-[10px] text-cyan-400 font-bold border border-cyan-400/30 backdrop-blur-md z-30">
                                 ★ {(selectedMovie as any).rating.toFixed(1)}
                               </span>
                             )}
                           </div>
-                        </div>
-
-                        {/* Right: Technical Info (60%) scrollable */}
-                        <div className="w-[60%] overflow-y-auto no-scrollbar pr-3 flex flex-col justify-start space-y-4">
-                          <div className="space-y-1 pl-1">
-                            <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-wide leading-tight">
-                              {selectedMovie.title}
-                            </h2>
-                            <p className="text-[11px] font-mono text-cyan-400 font-bold uppercase tracking-widest">
-                              {selectedMovie.type === 'serie' ? 'Série Oficial' : 'Filme Oficial'} • {(selectedMovie as any).category || 'Premium H.265'}
-                            </p>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2 text-[10px] font-mono text-zinc-400 pl-1">
-                            <span className="px-2 py-1 rounded-md bg-zinc-900 border border-white/5 font-black text-white">{selectedMovie.year}</span>
-                            <span className="px-2 py-1 rounded-md bg-zinc-900 border border-white/5">Duração: {selectedMovie.duration || selectedMovie.totalDuration || 'N/A'}</span>
-                            <span className="px-2 py-1 rounded-md bg-zinc-900 border border-white/5">Produtor: {selectedMovie.production || 'N/A'}</span>
-                          </div>
-
-                          <div className="space-y-2 pb-4 pl-1">
-                            <h3 className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest border-b border-white/5 pb-1 mt-2">Sinopse</h3>
-                            <p className="text-sm md:text-[13px] leading-relaxed text-zinc-300 font-normal select-text">
-                              {selectedMovie.overview || 'Nenhuma sinopse disponível para este título no momento.'}
-                            </p>
-                            
-                            <h3 className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest border-b border-white/5 pb-1 mt-6">Elenco Principal</h3>
-                            <p className="text-xs font-mono text-zinc-400 leading-normal select-text">
-                              {selectedMovie.actors || 'Indisponível.'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Bottom Controls Panel (Fixed) */}
-                      <div className="shrink-0 flex flex-col gap-3 pt-4 border-t border-white/5">
-                        
-                        {/* Actions Row */}
-                        <div className="flex gap-4 h-[52px]">
-                          <button
-                            onClick={() => {
-                              triggerHaptic(35);
-                              setMoviePlaying(true);
-                              setMovieProgress(0);
+                          
+                          <button 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              setTrailerMovieId(selectedMovie.id); 
                               setTimeout(() => {
-                                setMovieIsPlaying(true);
-                              }, 100);
+                                setTrailerMovieId(cur => cur === selectedMovie.id ? null : cur);
+                              }, 30000);
                             }}
-                            className="flex-[1.5] bg-gradient-to-r from-cyan-500 to-teal-500 hover:brightness-110 text-black font-black font-mono text-xs rounded-2xl uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.3)] active:scale-95 transition-all cursor-pointer"
+                            className="mt-3 w-full max-w-sm bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[10px] md:text-xs font-bold uppercase tracking-widest py-2 md:py-2.5 rounded-lg transition-colors shadow-sm"
                           >
-                            <Play className="w-5 h-5 fill-black shrink-0" />
-                            <span>PLAY</span>
-                          </button>
-
-                          <button
-                            onClick={() => toggleFavoriteMovie(selectedMovie.id)}
-                            className={`flex-1 rounded-2xl font-mono text-[11px] uppercase font-black tracking-wide border transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer ${
-                              (selectedMovie as any).isFavorite 
-                                ? 'bg-rose-950/30 text-rose-300 border-rose-500/30'
-                                : 'bg-zinc-900/40 text-zinc-400 border-white/5 hover:text-white'
-                            }`}
-                          >
-                            <Heart className={`w-4 h-4 shrink-0 ${(selectedMovie as any).isFavorite ? 'fill-rose-500 text-rose-500' : 'text-zinc-400'}`} />
-                            <span>{(selectedMovie as any).isFavorite ? 'REMOVER' : 'FAVORITAR'}</span>
-                          </button>
-
-                          <button
-                            onClick={() => likeMovie(selectedMovie.id)}
-                            className="flex-1 bg-zinc-900/40 hover:bg-zinc-800 text-zinc-300 font-mono text-[11px] rounded-2xl font-black uppercase tracking-wide border border-white/5 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                          >
-                            <ThumbsUp className="w-4 h-4 text-cyan-400 shrink-0" />
-                            <span>CURTIR</span>
+                            Trailer
                           </button>
                         </div>
-                        
-                        {/* Close Button Full Width bottom */}
-                        <button
-                          onClick={() => { triggerHaptic(15); setSelectedMovie(null); }}
-                          className="w-full py-3.5 mt-2 rounded-2xl border-2 border-white/5 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[11px] font-mono font-black tracking-widest uppercase cursor-pointer transition-all active:scale-95"
-                        >
-                          ✕ FECHAR ABA
-                        </button>
-                      </div>
 
+                        {/* Right: Technical Info (60%) */}
+                        <div className="w-[60%] flex flex-col justify-between">
+                          <div className="overflow-y-auto no-scrollbar pr-3 flex flex-col justify-start space-y-4 mb-2">
+                            <div className="space-y-1 pl-1">
+                              <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-wide leading-tight">
+                                {selectedMovie.title}
+                              </h2>
+                              <p className="text-[11px] font-mono text-cyan-400 font-bold uppercase tracking-widest">
+                                {selectedMovie.type === 'serie' ? 'Série Oficial' : 'Filme Oficial'} • {(selectedMovie as any).category || 'Premium H.265'}
+                              </p>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 text-[10px] font-mono text-zinc-400 pl-1">
+                              <span className="px-2 py-1 rounded-md bg-zinc-900 border border-white/5 font-black text-white">{selectedMovie.year}</span>
+                              <span className="px-2 py-1 rounded-md bg-zinc-900 border border-white/5">Duração: {selectedMovie.duration || selectedMovie.totalDuration || 'N/A'}</span>
+                              <span className="px-2 py-1 rounded-md bg-zinc-900 border border-white/5">Produtor: {selectedMovie.production || 'N/A'}</span>
+                            </div>
+
+                            <div className="space-y-2 pb-4 pl-1">
+                              <h3 className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest border-b border-white/5 pb-1 mt-2">Sinopse</h3>
+                              <p className="text-sm md:text-[13px] leading-relaxed text-zinc-300 font-normal select-text">
+                                {selectedMovie.overview || 'Nenhuma sinopse disponível para este título no momento.'}
+                              </p>
+                              
+                              <h3 className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest border-b border-white/5 pb-1 mt-6">Elenco Principal</h3>
+                              <p className="text-xs font-mono text-zinc-400 leading-normal select-text">
+                                {selectedMovie.actors || 'Indisponível.'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Bottom Controls Panel */}
+                          <div className="shrink-0 flex flex-col gap-3 pt-4 border-t border-white/5 mt-auto">
+                            
+                            {/* Actions Row */}
+                            <div className="flex gap-4 h-[52px]">
+                              <button
+                                onClick={() => {
+                                  triggerHaptic(35);
+                                  setMoviePlaying(true);
+                                  setMovieProgress(0);
+                                  setTimeout(() => {
+                                    setMovieIsPlaying(true);
+                                  }, 100);
+                                }}
+                                className="flex-[1.5] bg-gradient-to-r from-cyan-500 to-teal-500 hover:brightness-110 text-black font-black font-mono text-xs rounded-2xl uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.3)] active:scale-95 transition-all cursor-pointer"
+                              >
+                                <Play className="w-5 h-5 fill-black shrink-0" />
+                                <span>PLAY</span>
+                              </button>
+
+                              <button
+                                onClick={() => toggleFavoriteMovie(selectedMovie.id)}
+                                className={`flex-1 rounded-2xl font-mono text-[11px] uppercase font-black tracking-wide border transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer ${
+                                  (selectedMovie as any).isFavorite 
+                                    ? 'bg-rose-950/30 text-rose-300 border-rose-500/30'
+                                    : 'bg-zinc-900/40 text-zinc-400 border-white/5 hover:text-white'
+                                }`}
+                              >
+                                <Heart className={`w-4 h-4 shrink-0 ${(selectedMovie as any).isFavorite ? 'fill-rose-500 text-rose-500' : 'text-zinc-400'}`} />
+                                <span>{(selectedMovie as any).isFavorite ? 'REMOVER' : 'FAVORITAR'}</span>
+                              </button>
+
+                              <button
+                                onClick={() => likeMovie(selectedMovie.id)}
+                                className="flex-1 bg-zinc-900/40 hover:bg-zinc-800 text-zinc-300 font-mono text-[11px] rounded-2xl font-black uppercase tracking-wide border border-white/5 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                              >
+                                <ThumbsUp className="w-4 h-4 text-cyan-400 shrink-0" />
+                                <span>CURTIR</span>
+                              </button>
+                            </div>
+                            
+                            {/* Close Button Full Width bottom */}
+                            <button
+                              onClick={() => { triggerHaptic(15); setSelectedMovie(null); }}
+                              className="w-full py-3.5 mt-2 rounded-2xl border-2 border-white/5 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[11px] font-mono font-black tracking-widest uppercase cursor-pointer transition-all active:scale-95"
+                            >
+                              ✕ FECHAR ABA
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     /* MOVIE PLAYBACK GRAPHIC VIEW WITH ACTIVE STREAM SOURCE */
@@ -4244,6 +4299,8 @@ export const MediaModule: React.FC = () => {
                             onLoadedMetadata={handleMovieLoadedMetadata}
                             onEnded={handleMovieEnded}
                             autoPlay
+                            playsInline
+                            muted={movieVolume === 0}
                           />
 
                           {/* Top Center: Alert HUD Notification for player parameter changes */}

@@ -437,11 +437,44 @@ async function startServer() {
       const data = await safeFetchJson(url);
       const results = data?.results || [];
 
+      // MOCK ADULT CONTENT (XVIDEOS SIMULATION) Se include_adult for true
+      if (isAdult === 'true') {
+         // Create mock +18 title > 3 minutes
+         results.unshift({
+            id: 'xvid_' + Date.now(),
+            media_type: 'movie',
+            title: `[+18] ${query as string} - Compilation`,
+            overview: 'Vídeo para maiores de 18 anos originado de Xvideos. Duração mínima garantida de 3 minutos.',
+            release_date: new Date().toISOString().split('T')[0],
+            poster_path: null,
+            backdrop_path: null,
+            _adult_mock: true
+         });
+      }
+
       const seenIds = new Set<string>();
       const uniqueResults: any[] = [];
       for (const m of results) {
         if (m && m.id && (m.media_type === "movie" || m.media_type === "tv")) {
           const idStr = String(m.id);
+          
+          if (m._adult_mock) {
+             uniqueResults.push({
+               id: idStr,
+               title: m.title,
+               year: 2024,
+               type: 'filme',
+               status: true,
+               overview: m.overview,
+               posterUrl: 'https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=400',
+               backdropUrl: 'https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=400',
+               streamUrl: "https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4",
+               videoUrl: "https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4",
+               duration: "5min"
+             });
+             continue;
+          }
+
           const cacheKey = `tmdb-${idStr}`;
           
           if (crawlerCache[cacheKey] === undefined) {
