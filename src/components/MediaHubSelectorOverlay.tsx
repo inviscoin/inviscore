@@ -79,7 +79,7 @@ export const MediaHubSelectorOverlay: React.FC = () => {
           onMouseEnter={() => { setHoveredIndex(0); triggerHaptic(8); }}
           onMouseLeave={() => setHoveredIndex(null)}
           onClick={() => handleCardSelect('videotube')}
-          className={`relative w-full h-[125px] rounded-[28px] border bg-gradient-to-br from-white/[0.04] to-white/[0.08] backdrop-blur-2xl transition-all duration-500 cursor-pointer flex items-center overflow-hidden p-1 ${
+          className={`relative w-full h-[125px] rounded-[28px] border bg-gradient-to-br from-white/[0.04] to-white/[0.08] backdrop-blur-2xl transition-transform transition-opacity duration-500 cursor-pointer flex items-center overflow-hidden p-1 transform-gpu ${
             hoveredIndex === 0 
               ? 'border-red-500/70 shadow-[0_0_30px_rgba(239,68,68,0.45)] scale-[1.03]' 
               : hoveredIndex !== null
@@ -167,7 +167,7 @@ export const MediaHubSelectorOverlay: React.FC = () => {
           onMouseEnter={() => { setHoveredIndex(1); triggerHaptic(8); }}
           onMouseLeave={() => setHoveredIndex(null)}
           onClick={() => handleCardSelect('music')}
-          className={`relative w-full h-[125px] rounded-[28px] border bg-gradient-to-br from-white/[0.04] to-white/[0.08] backdrop-blur-2xl transition-all duration-500 cursor-pointer flex items-center overflow-hidden p-1 ${
+          className={`relative w-full h-[125px] rounded-[28px] border bg-gradient-to-br from-white/[0.04] to-white/[0.08] backdrop-blur-2xl transition-transform transition-opacity duration-500 cursor-pointer flex items-center overflow-hidden p-1 transform-gpu ${
             hoveredIndex === 1 
               ? 'border-purple-500/70 shadow-[0_0_30px_rgba(168,85,247,0.45)] scale-[1.03]' 
               : hoveredIndex !== null
@@ -253,7 +253,7 @@ export const MediaHubSelectorOverlay: React.FC = () => {
           onMouseEnter={() => { setHoveredIndex(2); triggerHaptic(8); }}
           onMouseLeave={() => setHoveredIndex(null)}
           onClick={() => handleCardSelect('movies')}
-          className={`relative w-full h-[125px] rounded-[28px] border bg-gradient-to-br from-white/[0.04] to-white/[0.08] backdrop-blur-2xl transition-all duration-500 cursor-pointer flex items-center overflow-hidden p-1 ${
+          className={`relative w-full h-[125px] rounded-[28px] border bg-gradient-to-br from-white/[0.04] to-white/[0.08] backdrop-blur-2xl transition-transform transition-opacity duration-500 cursor-pointer flex items-center overflow-hidden p-1 transform-gpu ${
             hoveredIndex === 2 
               ? 'border-cyan-400/80 shadow-[0_0_30px_rgba(6,182,212,0.45)] scale-[1.03]' 
               : hoveredIndex !== null

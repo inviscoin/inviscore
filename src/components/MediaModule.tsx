@@ -879,30 +879,37 @@ export const MediaModule: React.FC = () => {
         }
         
         if (movieVideoRef.current) {
+          setIsVideoBuffering(true);
           // Exibir loading enquanto carrega metadados
           setDuration(0);
           
           if (fetchedData.source_type === 'mp4' || fetchedData.stream_url.includes('.mp4')) {
             movieVideoRef.current.src = fetchedData.stream_url;
             movieVideoRef.current.load();
-            movieVideoRef.current.play().catch(e => console.warn("Player autoplay blocked", e));
+            movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(e => { console.warn("Player autoplay blocked", e); setIsVideoBuffering(false); });
           } else if (Hls.isSupported()) {
             hlsInstance = new Hls();
             hlsInstance.loadSource(fetchedData.stream_url);
             hlsInstance.attachMedia(movieVideoRef.current);
             hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
               if (movieVideoRef.current) {
-                movieVideoRef.current.play().catch(e => console.warn("Player autoplay blocked", e));
+                movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(e => { console.warn("Player autoplay blocked", e); setIsVideoBuffering(false); });
+              }
+            });
+            hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+              if (data.fatal) {
+                 setIsVideoBuffering(false);
               }
             });
           } else if (movieVideoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
             movieVideoRef.current.src = fetchedData.stream_url;
             movieVideoRef.current.load();
-            movieVideoRef.current.play();
+            movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(() => setIsVideoBuffering(false));
           }
         }
       } catch (err) {
         console.error("Stream fetch error:", err);
+        setIsVideoBuffering(false);
       }
     };
     
@@ -925,6 +932,7 @@ export const MediaModule: React.FC = () => {
   const [movieIsPlaying, setMovieIsPlaying] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isVideoBuffering, setIsVideoBuffering] = useState(true);
 
   // Player behavior and options selections states
   const [useInternalPlayer, setUseInternalPlayer] = useState<boolean>(true);
@@ -4130,7 +4138,7 @@ export const MediaModule: React.FC = () => {
                 >
                   {!moviePlaying ? (
                     /* PREMIUM MOVIE DETAILS PANEL */
-                    <div className="w-full max-w-4xl flex flex-col rounded-[32px] bg-[#07080c]/98 border border-cyan-500/20 p-5 md:p-8 relative shadow-[0_0_50px_rgba(0,180,255,0.15)] text-left bg-gradient-to-b from-[#090b11] to-[#040508] max-h-[90vh] overflow-hidden">
+                    <div className="w-full max-w-4xl flex flex-col rounded-[32px] bg-[#07080c]/98 border border-cyan-500/20 p-4 md:p-6 relative shadow-[0_0_50px_rgba(0,180,255,0.15)] text-left bg-gradient-to-b from-[#090b11] to-[#040508] h-[85vh] md:h-[60vh] overflow-hidden transform-gpu">
                       {/* Top bar */}
                       <div className="flex justify-between items-center z-10 shrink-0 pb-3">
                         <span className="text-[10px] font-mono text-cyan-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
@@ -4140,13 +4148,13 @@ export const MediaModule: React.FC = () => {
                       </div>
 
                       {/* Content middle */}
-                      <div className="flex flex-row gap-6 items-stretch relative flex-1 min-h-0 overflow-hidden text-left mb-4 mt-2">
+                      <div className="flex flex-col md:flex-row gap-6 items-stretch relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden md:overflow-hidden text-left mb-4 mt-2">
                         {/* Blur Backdrop Effect */}
-                        <div className="absolute -inset-10 bg-[#090b11]/20 opacity-20 pointer-events-none select-none blur-3xl" />
+                        <div className="absolute -inset-10 bg-[#090b11]/20 opacity-20 pointer-events-none select-none blur-3xl transform-gpu" />
 
                         {/* Left: Poster (40%) */}
-                        <div className="w-[40%] shrink-0 flex flex-col items-center justify-start">
-                          <div className="rounded-2xl overflow-hidden shadow-2xl border border-white/10 aspect-[2/3] w-full max-w-sm relative group animate-fade-in">
+                        <div className="w-full md:w-[40%] shrink-0 flex flex-col items-center justify-start z-10">
+                          <div className="rounded-2xl overflow-hidden shadow-2xl border border-white/10 aspect-[2/3] w-3/4 md:w-full max-w-[200px] md:max-w-sm relative group animate-fade-in transform-gpu">
                             <AnimatePresence>
                               {trailerMovieId === selectedMovie.id ? (
                                 <motion.video
@@ -4169,7 +4177,7 @@ export const MediaModule: React.FC = () => {
                                   transition={{ duration: 0.5 }}
                                   src={selectedMovie.posterUrl} 
                                   alt={selectedMovie.title} 
-                                  className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" 
+                                  className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 transform-gpu" 
                                   referrerPolicy="no-referrer"
                                 />
                               )}
@@ -4189,25 +4197,25 @@ export const MediaModule: React.FC = () => {
                                 setTrailerMovieId(cur => cur === selectedMovie.id ? null : cur);
                               }, 30000);
                             }}
-                            className="mt-3 w-full max-w-sm bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[10px] md:text-xs font-bold uppercase tracking-widest py-2 md:py-2.5 rounded-lg transition-colors shadow-sm"
+                            className="mt-3 w-3/4 md:w-full max-w-[200px] md:max-w-sm bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[10px] md:text-xs font-bold uppercase tracking-widest py-2 md:py-2.5 rounded-lg transition-colors shadow-sm z-10"
                           >
                             Trailer
                           </button>
                         </div>
 
                         {/* Right: Technical Info (60%) */}
-                        <div className="w-[60%] flex flex-col justify-between">
-                          <div className="overflow-y-auto no-scrollbar pr-3 flex flex-col justify-start space-y-4 mb-2">
-                            <div className="space-y-1 pl-1">
-                              <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-wide leading-tight">
+                        <div className="w-full md:w-[60%] flex flex-col justify-start z-10 md:overflow-y-auto no-scrollbar md:pr-3">
+                          <div className="space-y-4 mb-2">
+                            <div className="space-y-1 pl-1 text-center md:text-left">
+                              <h2 className="text-xl md:text-3xl font-black text-white uppercase tracking-wide leading-tight">
                                 {selectedMovie.title}
                               </h2>
-                              <p className="text-[11px] font-mono text-cyan-400 font-bold uppercase tracking-widest">
+                              <p className="text-[10px] md:text-[11px] font-mono text-cyan-400 font-bold uppercase tracking-widest">
                                 {selectedMovie.type === 'serie' ? 'Série Oficial' : 'Filme Oficial'} • {(selectedMovie as any).category || 'Premium H.265'}
                               </p>
                             </div>
 
-                            <div className="flex flex-wrap gap-2 text-[10px] font-mono text-zinc-400 pl-1">
+                            <div className="flex flex-wrap gap-2 text-[10px] font-mono text-zinc-400 pl-1 justify-center md:justify-start">
                               <span className="px-2 py-1 rounded-md bg-zinc-900 border border-white/5 font-black text-white">{selectedMovie.year}</span>
                               <span className="px-2 py-1 rounded-md bg-zinc-900 border border-white/5">Duração: {selectedMovie.duration || selectedMovie.totalDuration || 'N/A'}</span>
                               <span className="px-2 py-1 rounded-md bg-zinc-900 border border-white/5">Produtor: {selectedMovie.production || 'N/A'}</span>
@@ -4215,67 +4223,66 @@ export const MediaModule: React.FC = () => {
 
                             <div className="space-y-2 pb-4 pl-1">
                               <h3 className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest border-b border-white/5 pb-1 mt-2">Sinopse</h3>
-                              <p className="text-sm md:text-[13px] leading-relaxed text-zinc-300 font-normal select-text">
+                              <p className="text-xs md:text-[13px] leading-relaxed text-zinc-300 font-normal select-text">
                                 {selectedMovie.overview || 'Nenhuma sinopse disponível para este título no momento.'}
                               </p>
                               
                               <h3 className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest border-b border-white/5 pb-1 mt-6">Elenco Principal</h3>
-                              <p className="text-xs font-mono text-zinc-400 leading-normal select-text">
+                              <p className="text-[11px] md:text-xs font-mono text-zinc-400 leading-normal select-text">
                                 {selectedMovie.actors || 'Indisponível.'}
                               </p>
                             </div>
                           </div>
-
-                          {/* Bottom Controls Panel */}
-                          <div className="shrink-0 flex flex-col gap-3 pt-4 border-t border-white/5 mt-auto">
-                            
-                            {/* Actions Row */}
-                            <div className="flex gap-4 h-[52px]">
-                              <button
-                                onClick={() => {
-                                  triggerHaptic(35);
-                                  setMoviePlaying(true);
-                                  setMovieProgress(0);
-                                  setTimeout(() => {
-                                    setMovieIsPlaying(true);
-                                  }, 100);
-                                }}
-                                className="flex-[1.5] bg-gradient-to-r from-cyan-500 to-teal-500 hover:brightness-110 text-black font-black font-mono text-xs rounded-2xl uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.3)] active:scale-95 transition-all cursor-pointer"
-                              >
-                                <Play className="w-5 h-5 fill-black shrink-0" />
-                                <span>PLAY</span>
-                              </button>
-
-                              <button
-                                onClick={() => toggleFavoriteMovie(selectedMovie.id)}
-                                className={`flex-1 rounded-2xl font-mono text-[11px] uppercase font-black tracking-wide border transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer ${
-                                  (selectedMovie as any).isFavorite 
-                                    ? 'bg-rose-950/30 text-rose-300 border-rose-500/30'
-                                    : 'bg-zinc-900/40 text-zinc-400 border-white/5 hover:text-white'
-                                }`}
-                              >
-                                <Heart className={`w-4 h-4 shrink-0 ${(selectedMovie as any).isFavorite ? 'fill-rose-500 text-rose-500' : 'text-zinc-400'}`} />
-                                <span>{(selectedMovie as any).isFavorite ? 'REMOVER' : 'FAVORITAR'}</span>
-                              </button>
-
-                              <button
-                                onClick={() => likeMovie(selectedMovie.id)}
-                                className="flex-1 bg-zinc-900/40 hover:bg-zinc-800 text-zinc-300 font-mono text-[11px] rounded-2xl font-black uppercase tracking-wide border border-white/5 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                              >
-                                <ThumbsUp className="w-4 h-4 text-cyan-400 shrink-0" />
-                                <span>CURTIR</span>
-                              </button>
-                            </div>
-                            
-                            {/* Close Button Full Width bottom */}
-                            <button
-                              onClick={() => { triggerHaptic(15); setSelectedMovie(null); }}
-                              className="w-full py-3.5 mt-2 rounded-2xl border-2 border-white/5 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[11px] font-mono font-black tracking-widest uppercase cursor-pointer transition-all active:scale-95"
-                            >
-                              ✕ FECHAR ABA
-                            </button>
-                          </div>
                         </div>
+                      </div>
+
+                      {/* Bottom Controls Panel - FIXED TO BOTTOM */}
+                      <div className="shrink-0 flex flex-col gap-2 md:gap-3 pt-3 md:pt-4 border-t border-white/5 mt-auto bg-black/40 backdrop-blur-md rounded-b-[32px] md:rounded-none z-20">
+                        {/* Actions Row */}
+                        <div className="flex gap-2 md:gap-4 h-[44px] md:h-[52px]">
+                          <button
+                            onClick={() => {
+                              triggerHaptic(35);
+                              setMoviePlaying(true);
+                              setMovieProgress(0);
+                              setTimeout(() => {
+                                setMovieIsPlaying(true);
+                              }, 100);
+                            }}
+                            className="flex-[1.5] bg-gradient-to-r from-cyan-500 to-teal-500 hover:brightness-110 text-black font-black font-mono text-xs md:text-sm rounded-xl md:rounded-2xl uppercase tracking-wider flex items-center justify-center gap-1 md:gap-2 shadow-[0_0_20px_rgba(6,182,212,0.3)] active:scale-95 transition-all cursor-pointer transform-gpu"
+                          >
+                            <Play className="w-4 h-4 md:w-5 md:h-5 fill-black shrink-0" />
+                            <span>PLAY</span>
+                          </button>
+
+                          <button
+                            onClick={() => toggleFavoriteMovie(selectedMovie.id)}
+                            className={`flex-1 rounded-xl md:rounded-2xl font-mono text-[9px] md:text-[11px] uppercase font-black tracking-wide border transition-all active:scale-95 flex items-center justify-center gap-1 md:gap-2 cursor-pointer transform-gpu ${
+                              (selectedMovie as any).isFavorite 
+                                ? 'bg-rose-950/30 text-rose-300 border-rose-500/30'
+                                : 'bg-zinc-900/40 text-zinc-400 border-white/5 hover:text-white'
+                            }`}
+                          >
+                            <Heart className={`w-3 h-3 md:w-4 md:h-4 shrink-0 ${(selectedMovie as any).isFavorite ? 'fill-rose-500 text-rose-500' : 'text-zinc-400'}`} />
+                            <span className="hidden sm:inline">{(selectedMovie as any).isFavorite ? 'REMOVER' : 'FAVORITAR'}</span>
+                          </button>
+
+                          <button
+                            onClick={() => likeMovie(selectedMovie.id)}
+                            className="flex-1 bg-zinc-900/40 hover:bg-zinc-800 text-zinc-300 font-mono text-[9px] md:text-[11px] rounded-xl md:rounded-2xl font-black uppercase tracking-wide border border-white/5 active:scale-95 transition-all flex items-center justify-center gap-1 md:gap-2 cursor-pointer transform-gpu"
+                          >
+                            <ThumbsUp className="w-3 h-3 md:w-4 md:h-4 text-cyan-400 shrink-0" />
+                            <span className="hidden sm:inline">CURTIR</span>
+                          </button>
+                        </div>
+                        
+                        {/* Close Button Full Width bottom */}
+                        <button
+                          onClick={() => { triggerHaptic(15); setSelectedMovie(null); }}
+                          className="w-full py-2.5 md:py-3.5 mt-1 rounded-xl md:rounded-2xl border border-white/5 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[10px] md:text-[11px] font-mono font-black tracking-widest uppercase cursor-pointer transition-all active:scale-95 transform-gpu"
+                        >
+                          ✕ FECHAR ABA
+                        </button>
                       </div>
                     </div>
                   ) : (
@@ -4298,6 +4305,9 @@ export const MediaModule: React.FC = () => {
                             onTimeUpdate={handleMovieTimeUpdate}
                             onLoadedMetadata={handleMovieLoadedMetadata}
                             onEnded={handleMovieEnded}
+                            onWaiting={() => setIsVideoBuffering(true)}
+                            onPlaying={() => setIsVideoBuffering(false)}
+                            onCanPlay={() => setIsVideoBuffering(false)}
                             autoPlay
                             playsInline
                             muted={movieVolume === 0}
@@ -4319,7 +4329,7 @@ export const MediaModule: React.FC = () => {
                           )}
 
                           {/* Loading spinner overlay */}
-                          {!duration && (
+                          {isVideoBuffering && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-blackSpace z-50 select-none pointer-events-none">
                               <div className="w-10 h-10 border-2 border-cyan-500/30 border-t-cyan-400 anonymity-spin rounded-full animate-spin" />
                               <span className="text-[10px] font-mono text-cyan-300 tracking-widest animate-pulse font-bold mt-2">CONECTANDO CANAL HLS...</span>
