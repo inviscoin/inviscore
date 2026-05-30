@@ -995,7 +995,9 @@ export const MediaModule: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
   const [activeTrailerIndex, setActiveTrailerIndex] = useState(0);
+  const [trailerMovieId, setTrailerMovieId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [includeAdult, setIncludeAdult] = useState(false);
 
   // Floating suggestion focus overlay state
   const [showSuggestionsFocus, setShowSuggestionsFocus] = useState(false);
@@ -1040,7 +1042,14 @@ export const MediaModule: React.FC = () => {
 
     const timer = setTimeout(async () => {
       try {
-        const resp = await fetch(`/api/tmdb/search?query=${encodeURIComponent(searchQuery)}`);
+        // Save search keyword to local history for recommendations
+        const searchHistory = JSON.parse(localStorage.getItem('invis_search_history') || '[]');
+        if (!searchHistory.includes(searchQuery.toLowerCase())) {
+          searchHistory.unshift(searchQuery.toLowerCase());
+          localStorage.setItem('invis_search_history', JSON.stringify(searchHistory.slice(0, 10)));
+        }
+
+        const resp = await fetch(`/api/tmdb/search?query=${encodeURIComponent(searchQuery)}&include_adult=${includeAdult}`);
         if (resp.ok) {
           const results = await resp.json();
           if (results && results.length > 0) {
@@ -1059,10 +1068,10 @@ export const MediaModule: React.FC = () => {
       } catch (err) {
         console.error("Failed to fetch search results from TMDb:", err);
       }
-    }, 300);
+    }, 600); // 600ms debounce
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, includeAdult]);
 
   // Lazy-load detailed TMDb assets (duration, cast/actors, production, stream & video URL) on movie card click
   const selectMovieAndFetchDetails = async (movie: Movie) => {
@@ -1098,9 +1107,19 @@ export const MediaModule: React.FC = () => {
   // Toggle favorite trigger with catalog synchronization
   const toggleFavoriteMovie = (id: string) => {
     triggerHaptic(30);
+    const updatedFavorites = JSON.parse(localStorage.getItem('invis_favorites') || '[]');
+    const isFav = updatedFavorites.includes(id);
+    
+    if (isFav) {
+      localStorage.setItem('invis_favorites', JSON.stringify(updatedFavorites.filter((fid: string) => fid !== id)));
+    } else {
+      updatedFavorites.push(id);
+      localStorage.setItem('invis_favorites', JSON.stringify(updatedFavorites));
+    }
+
     setMoviesList(prev => prev.map(m => {
       if (m.id === id) {
-        const updated = { ...m, isFavorite: !m.isFavorite };
+        const updated = { ...m, isFavorite: !isFav };
         if (selectedMovie && selectedMovie.id === id) {
           setSelectedMovie(updated);
         }
@@ -1125,14 +1144,8 @@ export const MediaModule: React.FC = () => {
     }));
   };
 
-  // Active Timer to cycle featured trailers in background every 20 seconds (spec requirement) unless selected by user
-  useEffect(() => {
-    if (expandedSection !== 'movies' || selectedMovie !== null) return;
-    const interval = setInterval(() => {
-      setActiveTrailerIndex(prev => (prev + 1) % Math.min(10, moviesList.length || 10));
-    }, 20000);
-    return () => clearInterval(interval);
-  }, [expandedSection, selectedMovie, moviesList]);
+  // Removed Active Timer for featured trailers to disable autoplay
+
 
   const memoizedCategories = React.useMemo(() => {
     // Check if user language is PT-BR based on DDI prefix '+55'
@@ -1153,8 +1166,14 @@ export const MediaModule: React.FC = () => {
         const matchScope = scopeFiltering !== 'todos' ? m.type === scopeFiltering : true;
         return matchQuery && matchCategory && matchScope && m.status;
       }),
-      favorites: moviesList.filter(filterByLanguage).filter(m => m.status && (m as any).isFavorite),
-      continue: moviesList.filter(filterByLanguage).filter(m => m.status && (m as any).continueProgress),
+      favorites: moviesList.filter(filterByLanguage).filter(m => {
+        const favs = JSON.parse(localStorage.getItem('invis_favorites') || '[]');
+        return m.status && favs.includes(m.id);
+      }),
+      continue: moviesList.filter(filterByLanguage).filter(m => {
+        const progress = JSON.parse(localStorage.getItem('invis_continue') || '{}');
+        return m.status && progress[m.id];
+      }),
       suggestions: moviesList.filter(filterByLanguage).filter(m => m.status && (m as any).rating >= 8.2),
       netflix: moviesList.filter(filterByLanguage).filter(m => m.status && ((m as any).platform === 'netflix' || m.id.startsWith('nft') || m.id.startsWith('tf_b2049') || m.id.startsWith('tf_edgerunners'))),
       disney: moviesList.filter(filterByLanguage).filter(m => m.status && ((m as any).platform === 'disney' || m.id.startsWith('dis'))),
@@ -1164,7 +1183,7 @@ export const MediaModule: React.FC = () => {
     };
   }, [moviesList, searchQuery, selectedCategory, scopeFiltering, currentUser]);
 
-  // Procedural titles duplication helper for up to 70 titles in expanded shelves
+  // Return titles straight from backend which supports batching naturally ~50
   const getExpandedTitlesForCategory = (category: string) => {
     let shelfItems: Movie[] = (memoizedCategories as any)[category] || [];
 
@@ -1172,27 +1191,7 @@ export const MediaModule: React.FC = () => {
       shelfItems = moviesList.slice(0, 10);
     }
 
-    // Populate up to 70 titles procedurally
-    let expanded: Movie[] = [...shelfItems];
-    const originalCount = shelfItems.length;
-    let cycle = 1;
-    const suffixes = ["(Ultra HD)", "Parte II", "A Origem", "O Retorno", "Edição Especial", "Corte do Diretor", "Legado", "Nova Era", "Ragnarok", "Revelações"];
-    
-    while (expanded.length < 70 && originalCount > 0) {
-      for (let i = 0; i < originalCount; i++) {
-        if (expanded.length >= 70) break;
-        const baseItem = shelfItems[i];
-        const suffix = suffixes[(cycle - 1 + i) % suffixes.length];
-        expanded.push({
-          ...baseItem,
-          id: `${baseItem.id}_ext_${cycle}_${i}`,
-          title: `${baseItem.title} - ${suffix}`,
-          year: baseItem.year + Math.floor(cycle / 2)
-        });
-      }
-      cycle++;
-    }
-    return expanded;
+    return shelfItems;
   };
 
   // Infinite Scroll Trigger for Vertical Catalog Grid
@@ -1602,6 +1601,13 @@ export const MediaModule: React.FC = () => {
       setCurrentTime(video.currentTime);
       setDuration(video.duration);
       setMovieProgress((video.currentTime / video.duration) * 100);
+
+      // Save continue watching progress selectively (every ~5 seconds)
+      if (Math.floor(video.currentTime) % 5 === 0 && selectedMovie) {
+        const progressObj = JSON.parse(localStorage.getItem('invis_continue') || '{}');
+        progressObj[selectedMovie.id] = (video.currentTime / video.duration) * 100;
+        localStorage.setItem('invis_continue', JSON.stringify(progressObj));
+      }
     }
   };
 
@@ -1610,8 +1616,14 @@ export const MediaModule: React.FC = () => {
     if (video) {
       setDuration(video.duration);
       video.volume = movieVolume / 100;
-      if (continueWatchingTime) {
-        video.currentTime = 0.45 * video.duration;
+      
+      // Load exact progress from local storage
+      if (selectedMovie) {
+         const progressObj = JSON.parse(localStorage.getItem('invis_continue') || '{}');
+         const savedPct = progressObj[selectedMovie.id];
+         if (savedPct) {
+            video.currentTime = (savedPct / 100) * video.duration;
+         }
       }
     }
   };
@@ -1819,6 +1831,7 @@ export const MediaModule: React.FC = () => {
 
                         {/* Text and Overlay Metadata (SPEC PAGE 3) */}
                         <div className="pt-1.5 text-left space-y-1 relative">
+
                           <h4 className="text-[10px] font-black text-white leading-snug group-hover:text-rose-400 transition-colors tracking-wide filter drop-shadow-[0_0_2px_black]">
                             {clip.title}
                           </h4>
@@ -2456,6 +2469,17 @@ export const MediaModule: React.FC = () => {
                     )}
                   </AnimatePresence>
                 </div>
+                {(!currentUser?.age || currentUser.age >= 18) && (
+                  <label className="flex items-center gap-2 mt-2 cursor-pointer select-none text-left">
+                    <input 
+                      type="checkbox" 
+                      checked={includeAdult} 
+                      onChange={(e) => setIncludeAdult(e.target.checked)}
+                      className="accent-cyan-500 w-3 h-3 appearance-none border border-cyan-500/50 rounded-sm checked:bg-cyan-500 rounded cursor-pointer transition-colors"
+                    />
+                    <span className="text-[10px] font-mono text-zinc-500 transition-colors uppercase tracking-widest font-black">Pesquisa Inclusiva (18+)</span>
+                  </label>
+                )}
               </div>
             )}
 
@@ -2918,17 +2942,56 @@ export const MediaModule: React.FC = () => {
                               onClick={() => selectMovieAndFetchDetails(movie)}
                             >
                               <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                               </div>
                               <div className="pt-1.5 text-left space-y-0.5">
+
                                 <h4 className="text-[9.5px] font-bold text-neutral-200 uppercase truncate group-hover:text-cyan-400 transition-colors">{movie.title}</h4>
                                 <div className="flex justify-between items-center text-[7.5px] font-mono text-zinc-500">
                                   <span>{movie.year} • {movie.type.toUpperCase()}</span>
                                   {movie.status && <span className="text-cyan-400 font-extrabold font-mono">● SINAL ON</span>}
                                 </div>
-                              </div>
-                            </div>
-                          ))}
+                              
+      <button 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          setTrailerMovieId(movie.id); 
+          setTimeout(() => {
+            setTrailerMovieId(cur => cur === movie.id ? null : cur);
+          }, 30000);
+        }}
+        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+      >
+        Trailer
+      </button>
+    </div>
+  </div>
+))}
                       </div>
 
                       {/* PROGRESSIVE MORE POSTERS LOAD SENSOR CONTROL */}
@@ -2972,20 +3035,59 @@ export const MediaModule: React.FC = () => {
                               className="group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-cyan-500/40 p-1.5 transition-all cursor-pointer"
                             >
                               <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                                 <div className="absolute top-1.5 left-1.5 bg-black/60 border border-red-500/30 px-1 py-0.5 rounded text-[6.5px] font-sans text-red-400 flex items-center gap-0.5 font-bold">
                                   <Heart className="w-2 h-2 fill-red-500 text-red-500" /> FAV
                                 </div>
                               </div>
                               <div className="pt-1.5 text-left">
+
                                 <h5 className="text-[9px] font-bold text-neutral-200 uppercase truncate">{movie.title}</h5>
                                 <div className="flex justify-between items-center text-[7px] font-mono text-zinc-500 mt-0.5">
                                   <span>{movie.year} • {movie.type.toUpperCase()}</span>
                                   {movie.status && <span className="text-cyan-405 font-bold">H.265</span>}
                                 </div>
-                              </div>
-                            </div>
-                          ))}
+                              
+      <button 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          setTrailerMovieId(movie.id); 
+          setTimeout(() => {
+            setTrailerMovieId(cur => cur === movie.id ? null : cur);
+          }, 30000);
+        }}
+        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+      >
+        Trailer
+      </button>
+    </div>
+  </div>
+))}
                         </div>
                       ) : (
                         /* Infinite Scrollable Box with program scroll detection */
@@ -3003,20 +3105,59 @@ export const MediaModule: React.FC = () => {
                                 className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-cyan-500/40 p-1.5 transition-all cursor-pointer inline-block"
                               >
                                 <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                  <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                  <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                                   <div className="absolute top-1.5 left-1.5 bg-black/60 border border-red-500/30 px-1 py-0.5 rounded text-[6.5px] font-sans text-red-400 flex items-center gap-0.5 font-bold">
                                     <Heart className="w-2 h-2 fill-red-500 text-red-500" /> FAV
                                   </div>
                                 </div>
                                 <div className="pt-1.5 text-left">
+
                                   <h5 className="text-[9px] font-bold text-neutral-200 uppercase truncate">{movie.title}</h5>
                                   <div className="flex justify-between items-center text-[7px] font-mono text-zinc-500 mt-0.5">
                                     <span>{movie.year} • {movie.type.toUpperCase()}</span>
                                     {movie.status && <span className="text-cyan-405 font-bold">H.265</span>}
                                   </div>
-                                </div>
-                              </div>
-                            ))}
+                                
+      <button 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          setTrailerMovieId(movie.id); 
+          setTimeout(() => {
+            setTrailerMovieId(cur => cur === movie.id ? null : cur);
+          }, 30000);
+        }}
+        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+      >
+        Trailer
+      </button>
+    </div>
+  </div>
+))}
                         </div>
                       )}
                     </div>
@@ -3045,12 +3186,38 @@ export const MediaModule: React.FC = () => {
                                 className="group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-purple-500/40 p-1.5 transition-all cursor-pointer"
                               >
                                 <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                  <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                  <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                                   <div className="absolute bottom-0 left-0 w-full h-1 bg-zinc-800">
                                     <div className="bg-red-600 h-full transition-all" style={{ width: `${progress}%` }} />
                                   </div>
                                 </div>
                                 <div className="pt-1.5 text-left">
+
                                   <h5 className="text-[9px] font-bold text-neutral-200 uppercase truncate">{movie.title}</h5>
                                   <div className="flex justify-between items-center text-[7px] font-mono text-zinc-500 mt-0.5">
                                     <span>{progress}% Concluído</span>
@@ -3078,7 +3245,32 @@ export const MediaModule: React.FC = () => {
                                   className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-purple-500/40 p-1.5 transition-all cursor-pointer inline-block"
                                 >
                                   <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                    <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                    <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                                     
                                     {/* Red Progress Indicator at visual footer */}
                                     <div className="absolute bottom-0 left-0 w-full h-1 bg-zinc-800">
@@ -3123,7 +3315,32 @@ export const MediaModule: React.FC = () => {
                                 className="group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-cyan-500/40 p-1.5 transition-all cursor-pointer"
                               >
                                 <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                  <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                  <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                                   <div className="absolute top-1.5 right-1.5 bg-black/80 px-1.5 py-0.5 rounded text-[6.5px] font-mono text-cyan-400 border border-cyan-500/30">
                                     ★ {rating.toFixed(1)}
                                   </div>
@@ -3153,7 +3370,32 @@ export const MediaModule: React.FC = () => {
                                   className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-cyan-500/40 p-1.5 transition-all cursor-pointer inline-block"
                                 >
                                   <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                    <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                    <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                                     <div className="absolute top-1.5 right-1.5 bg-black/80 px-1.5 py-0.5 rounded text-[6.5px] font-mono text-cyan-400 border border-cyan-500/30">
                                       ★ {rating.toFixed(1)}
                                     </div>
@@ -3194,14 +3436,52 @@ export const MediaModule: React.FC = () => {
                                 <span className="absolute top-1.5 left-1.5 text-red-500 font-sans font-black text-xl select-none leading-none z-10 antialiased italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                                   #{index + 1}
                                 </span>
-                                <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                               </div>
                               <div className="pt-1.5 text-left">
                                 <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
                                 <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'NETFLIX'}</span>
-                              </div>
-                            </div>
-                          ))}
+                              
+      <button 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          setTrailerMovieId(movie.id); 
+          setTimeout(() => {
+            setTrailerMovieId(cur => cur === movie.id ? null : cur);
+          }, 30000);
+        }}
+        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+      >
+        Trailer
+      </button>
+    </div>
+  </div>
+))}
                         </div>
                       ) : (
                         <div
@@ -3221,14 +3501,53 @@ export const MediaModule: React.FC = () => {
                                   <span className="absolute top-1.5 left-1.5 text-red-500 font-sans font-black text-xl select-none leading-none z-10 antialiased italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                                     #{index + 1}
                                   </span>
-                                  <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                  <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                                 </div>
                                 <div className="pt-1.5 text-left">
+
                                   <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
                                   <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'NETFLIX'}</span>
-                                </div>
-                              </div>
-                            ))}
+                                
+      <button 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          setTrailerMovieId(movie.id); 
+          setTimeout(() => {
+            setTrailerMovieId(cur => cur === movie.id ? null : cur);
+          }, 30000);
+        }}
+        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+      >
+        Trailer
+      </button>
+    </div>
+  </div>
+))}
                         </div>
                       )}
                     </div>
@@ -3255,14 +3574,53 @@ export const MediaModule: React.FC = () => {
                               className="group rounded-xl overflow-hidden bg-[#07090f] border border-blue-900/10 hover:border-blue-400/45 p-1.5 transition-all cursor-pointer"
                             >
                               <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                               </div>
                               <div className="pt-1.5 text-left">
+
                                 <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
                                 <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'DISNEY+'}</span>
-                              </div>
-                            </div>
-                          ))}
+                              
+      <button 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          setTrailerMovieId(movie.id); 
+          setTimeout(() => {
+            setTrailerMovieId(cur => cur === movie.id ? null : cur);
+          }, 30000);
+        }}
+        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+      >
+        Trailer
+      </button>
+    </div>
+  </div>
+))}
                         </div>
                       ) : (
                         <div
@@ -3279,14 +3637,53 @@ export const MediaModule: React.FC = () => {
                                 className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-[#07090f] border border-blue-900/10 hover:border-blue-400/45 p-1.5 transition-all cursor-pointer inline-block"
                               >
                                 <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                  <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                  <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                                 </div>
                                 <div className="pt-1.5 text-left">
+
                                   <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
                                   <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'DISNEY+'}</span>
-                                </div>
-                              </div>
-                            ))}
+                                
+      <button 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          setTrailerMovieId(movie.id); 
+          setTimeout(() => {
+            setTrailerMovieId(cur => cur === movie.id ? null : cur);
+          }, 30000);
+        }}
+        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+      >
+        Trailer
+      </button>
+    </div>
+  </div>
+))}
                         </div>
                       )}
                     </div>
@@ -3313,14 +3710,53 @@ export const MediaModule: React.FC = () => {
                               className="group rounded-xl overflow-hidden bg-[#09070c] border border-purple-900/10 hover:border-purple-400/45 p-1.5 transition-all cursor-pointer"
                             >
                               <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                               </div>
                               <div className="pt-1.5 text-left">
+
                                 <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
                                 <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'HBO MAX'}</span>
-                              </div>
-                            </div>
-                          ))}
+                              
+      <button 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          setTrailerMovieId(movie.id); 
+          setTimeout(() => {
+            setTrailerMovieId(cur => cur === movie.id ? null : cur);
+          }, 30000);
+        }}
+        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+      >
+        Trailer
+      </button>
+    </div>
+  </div>
+))}
                         </div>
                       ) : (
                         <div
@@ -3337,14 +3773,53 @@ export const MediaModule: React.FC = () => {
                                 className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-[#09070c] border border-purple-900/10 hover:border-purple-400/45 p-1.5 transition-all cursor-pointer inline-block"
                               >
                                 <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                  <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                  <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                                 </div>
                                 <div className="pt-1.5 text-left">
+
                                   <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
                                   <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'HBO MAX'}</span>
-                                </div>
-                              </div>
-                            ))}
+                                
+      <button 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          setTrailerMovieId(movie.id); 
+          setTimeout(() => {
+            setTrailerMovieId(cur => cur === movie.id ? null : cur);
+          }, 30000);
+        }}
+        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+      >
+        Trailer
+      </button>
+    </div>
+  </div>
+))}
                         </div>
                       )}
                     </div>
@@ -3371,14 +3846,53 @@ export const MediaModule: React.FC = () => {
                               className="group rounded-xl overflow-hidden bg-[#07090b] border border-sky-900/10 hover:border-sky-400/45 p-1.5 transition-all cursor-pointer"
                             >
                               <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                               </div>
                               <div className="pt-1.5 text-left">
+
                                 <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
                                 <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'PRIME Video'}</span>
-                              </div>
-                            </div>
-                          ))}
+                              
+      <button 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          setTrailerMovieId(movie.id); 
+          setTimeout(() => {
+            setTrailerMovieId(cur => cur === movie.id ? null : cur);
+          }, 30000);
+        }}
+        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+      >
+        Trailer
+      </button>
+    </div>
+  </div>
+))}
                         </div>
                       ) : (
                         <div
@@ -3395,14 +3909,53 @@ export const MediaModule: React.FC = () => {
                                 className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-[#07090b] border border-sky-900/10 hover:border-sky-400/45 p-1.5 transition-all cursor-pointer inline-block"
                               >
                                 <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                  <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                  <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                                 </div>
                                 <div className="pt-1.5 text-left">
+
                                   <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
                                   <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'PRIME VIDEO'}</span>
-                                </div>
-                              </div>
-                            ))}
+                                
+      <button 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          setTrailerMovieId(movie.id); 
+          setTimeout(() => {
+            setTrailerMovieId(cur => cur === movie.id ? null : cur);
+          }, 30000);
+        }}
+        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+      >
+        Trailer
+      </button>
+    </div>
+  </div>
+))}
                         </div>
                       )}
                     </div>
@@ -3429,14 +3982,53 @@ export const MediaModule: React.FC = () => {
                               className="group rounded-xl overflow-hidden bg-[#0b0807] border border-orange-900/10 hover:border-orange-400/45 p-1.5 transition-all cursor-pointer"
                             >
                               <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                               </div>
                               <div className="pt-1.5 text-left">
+
                                 <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
                                 <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'GLOBOPLAY'}</span>
-                              </div>
-                            </div>
-                          ))}
+                              
+      <button 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          setTrailerMovieId(movie.id); 
+          setTimeout(() => {
+            setTrailerMovieId(cur => cur === movie.id ? null : cur);
+          }, 30000);
+        }}
+        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+      >
+        Trailer
+      </button>
+    </div>
+  </div>
+))}
                         </div>
                       ) : (
                         <div
@@ -3453,14 +4045,53 @@ export const MediaModule: React.FC = () => {
                                 className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-[#0b0807] border border-orange-900/10 hover:border-orange-400/45 p-1.5 transition-all cursor-pointer inline-block"
                               >
                                 <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                  <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                                  <AnimatePresence>
+      {trailerMovieId === movie.id ? (
+        <motion.video
+          key="reel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          autoPlay
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+      ) : (
+        <motion.img
+          key="poster"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          src={movie.posterUrl} 
+          alt={movie.title} 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
+        />
+      )}
+    </AnimatePresence>
                                 </div>
                                 <div className="pt-1.5 text-left">
+
                                   <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
                                   <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'GLOBOPLAY'}</span>
-                                </div>
-                              </div>
-                            ))}
+                                
+      <button 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          setTrailerMovieId(movie.id); 
+          setTimeout(() => {
+            setTrailerMovieId(cur => cur === movie.id ? null : cur);
+          }, 30000);
+        }}
+        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+      >
+        Trailer
+      </button>
+    </div>
+  </div>
+))}
                         </div>
                       )}
                     </div>
@@ -3558,7 +4189,7 @@ export const MediaModule: React.FC = () => {
                             className="flex-[1.5] bg-gradient-to-r from-cyan-500 to-teal-500 hover:brightness-110 text-black font-black font-mono text-xs rounded-2xl uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.3)] active:scale-95 transition-all cursor-pointer"
                           >
                             <Play className="w-5 h-5 fill-black shrink-0" />
-                            <span>PLAY STREAMING</span>
+                            <span>PLAY</span>
                           </button>
 
                           <button
@@ -3994,8 +4625,8 @@ export const MediaModule: React.FC = () => {
                       {/* EPISODES & RELATED CONTENT PANELS BELOW PLAYER */}
                       <div className="w-full max-w-4xl mx-auto space-y-8 select-none">
                          
-                        {/* Section A: Series Episodes list or Movies chapters based on type (Only visible when PAUSED) */}
-                        {!movieIsPlaying && (
+                        {/* Section A: Series Episodes list or Movies chapters based on type */}
+                        {(!movieIsPlaying || selectedMovie?.type === 'serie') && (
                           <div className="space-y-4 animate-in fade-in duration-300">
                             <h3 className="text-xs font-mono tracking-widest text-cyan-400 uppercase font-black flex items-center gap-2 text-left">
                               <Tv className="w-4 h-4 text-cyan-400" />
