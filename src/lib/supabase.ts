@@ -90,37 +90,100 @@ export const SupabaseService = {
   },
 
   // 1. AUTHENTICATION & PROFILE PERSISTENCE
-  async checkProfileExists(email: string, phone: string) {
-    const cleanPhone = phone ? phone.replace(/\s+/g, '') : phone;
-    const cleanEmail = email.toLowerCase().trim();
+  async checkProfileConflict(email: string, phone: string, nickname?: string) {
+    const cleanPhoneDigits = (p: string | undefined): string => {
+      if (!p) return '';
+      return p.replace(/\D/g, '');
+    };
+    const cleanEmail = email ? email.toLowerCase().trim() : '';
+    const cleanNickname = nickname ? nickname.toLowerCase().trim() : '';
+    const cleanPhone = phone ? phone.replace(/\s+/g, '') : '';
+    const inputDigits = cleanPhoneDigits(phone);
 
-    // Check local database first for extra safety
+    // 1st Layer: Local Profiles Verification (Cross-referencing)
     const localList = getLocalProfiles();
-    const localExists = localList.some((p: any) => 
-      p.email?.toLowerCase().trim() === cleanEmail || 
-      (p.phone && p.phone.replace(/\s+/g, '') === cleanPhone)
-    );
-    if (localExists) return true;
-
-    if (!isSupabaseConfigured()) return false;
-    
-    // Check if email or phone exists in profiles on Supabase
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .or(`email.eq.${cleanEmail},phone.eq.${cleanPhone}`)
-        .limit(1);
-        
-      if (error) {
-        console.warn("Erro ao checar perfil existente:", error);
-        return false; // Safely proceed to try anyway
+    for (const p of localList) {
+      if (cleanEmail && p.email?.toLowerCase().trim() === cleanEmail) {
+        return { exists: true, field: 'email', value: p.email };
       }
-      
-      return data && data.length > 0;
-    } catch (err) {
-      return false;
+      if (cleanNickname && p.nickname?.toLowerCase().trim() === cleanNickname) {
+        return { exists: true, field: 'nickname', value: p.nickname };
+      }
+      if (phone) {
+        const dbDigits = cleanPhoneDigits(p.phone);
+        if (dbDigits && inputDigits && dbDigits === inputDigits) {
+          return { exists: true, field: 'phone', value: p.phone };
+        }
+        if (p.phone && p.phone.replace(/\s+/g, '') === cleanPhone) {
+          return { exists: true, field: 'phone', value: p.phone };
+        }
+      }
     }
+
+    if (!isSupabaseConfigured()) {
+      return { exists: false };
+    }
+
+    // 2nd Layer: Supabase Database Verification (Cross-referencing)
+    try {
+      const orConditions: string[] = [];
+      if (cleanEmail) {
+        orConditions.push(`email.ilike.${cleanEmail}`);
+      }
+      if (cleanNickname) {
+        orConditions.push(`nickname.ilike.${cleanNickname}`);
+      }
+      if (cleanPhone) {
+        orConditions.push(`phone.eq.${cleanPhone}`);
+      }
+      if (inputDigits && inputDigits.length > 5) {
+        orConditions.push(`phone.ilike.%${inputDigits}%`);
+      }
+
+      if (orConditions.length > 0) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, email, phone, nickname')
+          .or(orConditions.join(','));
+
+        if (error) {
+          console.warn("Erro ao buscar duplicidade no Supabase:", error);
+          return { exists: false };
+        }
+
+        if (data && data.length > 0) {
+          // Identify which field exactly has the conflict
+          for (const match of data) {
+            if (cleanEmail && match.email?.toLowerCase().trim() === cleanEmail) {
+              return { exists: true, field: 'email', value: match.email };
+            }
+            if (cleanNickname && match.nickname?.toLowerCase().trim() === cleanNickname) {
+              return { exists: true, field: 'nickname', value: match.nickname };
+            }
+            if (phone) {
+              const dbDigits = cleanPhoneDigits(match.phone);
+              if (dbDigits && inputDigits && dbDigits === inputDigits) {
+                return { exists: true, field: 'phone', value: match.phone };
+              }
+              if (match.phone && match.phone.replace(/\s+/g, '') === cleanPhone) {
+                return { exists: true, field: 'phone', value: match.phone };
+              }
+            }
+          }
+          // Default generic conflict fallback
+          return { exists: true, field: 'generic', value: data[0].email || data[0].nickname || data[0].phone };
+        }
+      }
+      return { exists: false };
+    } catch (err) {
+      console.error("Erro na checa de conflitos de perfil:", err);
+      return { exists: false };
+    }
+  },
+
+  async checkProfileExists(email: string, phone: string, nickname?: string) {
+    const conflict = await SupabaseService.checkProfileConflict(email, phone, nickname);
+    return conflict.exists;
   },
 
   async signUp(email: string, pass: string, profileData: any) {
@@ -197,8 +260,8 @@ export const SupabaseService = {
             email = localFound.email;
           } else {
             const orQuery = cleanPhone.length > 5 
-              ? `nickname.eq.${identifier},phone.ilike.%${cleanPhone}%` 
-              : `nickname.eq.${identifier}`;
+              ? `nickname.ilike.${identifier},phone.ilike.%${cleanPhone}%` 
+              : `nickname.ilike.${identifier}`;
 
             const { data: profile, error: lookupErr } = await supabase
               .from('profiles')
@@ -322,7 +385,7 @@ export const SupabaseService = {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('email', cleanEmail)
+        .ilike('email', cleanEmail)
         .limit(1);
 
       if (error || !data || data.length === 0) {

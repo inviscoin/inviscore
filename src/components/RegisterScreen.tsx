@@ -271,10 +271,18 @@ export const RegisterScreen: React.FC = () => {
     try {
       const fullPhone = `${ddi} ${ddd} ${phone}`;
       
-      const profileExists = await SupabaseService.checkProfileExists(email, fullPhone);
-      if (profileExists) {
-         setModalObj({ title: "VERIFICAÇÃO", message: "Conta já registrada com este E-mail ou Telefone.", type: "error" });
-         return;
+      const conflict = await SupabaseService.checkProfileConflict(email, fullPhone, nickname);
+      if (conflict.exists) {
+        let msg = "Já existe uma conta registrada com estes dados.";
+        if (conflict.field === 'email') {
+          msg = `O e-mail "${conflict.value}" já está registrado no ecossistema INVIS.`;
+        } else if (conflict.field === 'phone') {
+          msg = `O telefone "${conflict.value}" já está registrado no ecossistema INVIS.`;
+        } else if (conflict.field === 'nickname') {
+          msg = `O usuário "${conflict.value}" já está cobiçado e registrado por outro perfil.`;
+        }
+        setModalObj({ title: "CADASTRO DECLINADO", message: msg, type: "error" });
+        return;
       }
       
       const { data, error } = await SupabaseService.signUp(email, password, {

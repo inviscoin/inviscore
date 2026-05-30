@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Hls from 'hls.js';
 import { useInvis, MOCK_MOVIES } from '../context/InvisContext';
 import { usePipSync } from '../hooks/usePipSync';
 import { Movie } from '../types';
@@ -837,6 +838,55 @@ export const MediaModule: React.FC = () => {
   const [movieSubtitle, setMovieSubtitle] = useState<'OFF' | 'PT-BR' | 'EN' | 'ES'>('OFF');
   const [wasPausedByScroll, setWasPausedByScroll] = useState(false);
   const [activeMediaAlert, setActiveMediaAlert] = useState<string | null>(null);
+  const [bouncerStreamData, setBouncerStreamData] = useState<any>(null);
+  const [movieAudioTrack, setMovieAudioTrack] = useState('pt-BR'); 
+
+  // Initialize Player & HLS on playback start
+  useEffect(() => {
+    if (!selectedMovie || !moviePlaying || !movieVideoRef.current) return;
+    
+    let hlsInstance: Hls | null = null;
+    const fetchStream = async () => {
+      try {
+        if (!selectedMovie.streamUrl) return;
+        const res = await fetch(selectedMovie.streamUrl);
+        const data = await res.json();
+        setBouncerStreamData(data);
+        
+        if (data.status === 'active' && data.stream_url) {
+          if (Hls.isSupported()) {
+            hlsInstance = new Hls();
+            hlsInstance.loadSource(data.stream_url);
+            hlsInstance.attachMedia(movieVideoRef.current!);
+            hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+              if (movieVideoRef.current) {
+                movieVideoRef.current.play().catch(e => console.warn("Player autoplay blocked", e));
+              }
+            });
+            
+            // Set initial language from DDI logic or context
+            // HLS allows switching audio tracks if available in m3u8
+          } else if (movieVideoRef.current!.canPlayType('application/vnd.apple.mpegurl')) {
+            // Native Safari support for HLS
+            movieVideoRef.current!.src = data.stream_url;
+            movieVideoRef.current!.play();
+          }
+        } else {
+          showAlert("Fonte Inativa. Removendo do catálogo...");
+        }
+      } catch (err) {
+        console.error("Stream fetch error:", err);
+      }
+    };
+    
+    fetchStream();
+    
+    return () => {
+      if (hlsInstance) {
+        hlsInstance.destroy();
+      }
+    };
+  }, [selectedMovie, moviePlaying]);
   const [abrMode, setAbrMode] = useState<'1080p' | '720p' | '480p'>('1080p');
   const [showMovieControls, setShowMovieControls] = useState(true);
   const [continueWatchingTime, setContinueWatchingTime] = useState<number | null>(45); // simulated resume timestamp
@@ -3498,25 +3548,6 @@ export const MediaModule: React.FC = () => {
                       {/* Bottom Controls Panel (Fixed) */}
                       <div className="shrink-0 flex flex-col gap-3 pt-4 border-t border-white/5">
                         
-                        {/* Control Option: Player Engine Selector */}
-                        <div className="flex bg-zinc-950/60 rounded-xl p-1 border border-white/5 w-full text-xs items-center justify-between">
-                          <span className="text-[10px] font-mono text-zinc-400 ml-2 font-bold uppercase">Motor de Reprodução:</span>
-                          <div className="flex gap-1">
-                            <button
-                              onClick={() => { triggerHaptic(10); setUseInternalPlayer(true); }}
-                              className={`px-3 py-1.5 rounded-lg text-[9px] font-mono font-bold transition-all uppercase cursor-pointer ${useInternalPlayer ? 'bg-cyan-500 text-black shadow-md font-black' : 'text-zinc-400 hover:text-white bg-transparent'}`}
-                            >
-                              Player Interno
-                            </button>
-                            <button
-                              onClick={() => { triggerHaptic(10); setUseInternalPlayer(false); }}
-                              className={`px-3 py-1.5 rounded-lg text-[9px] font-mono font-bold transition-all uppercase cursor-pointer ${!useInternalPlayer ? 'bg-cyan-500 text-black shadow-md font-black' : 'text-zinc-400 hover:text-white bg-transparent'}`}
-                            >
-                              Mirror Stream (Iframe)
-                            </button>
-                          </div>
-                        </div>
-
                         {/* Actions Row */}
                         <div className="flex gap-4 h-[52px]">
                           <button
@@ -3578,26 +3609,15 @@ export const MediaModule: React.FC = () => {
                           id="youtube-player-block"
                           className="w-full aspect-video bg-black relative rounded-2xl overflow-hidden border border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.3)] group/player"
                         >
-                          {/* Inside Video element or iframe */}
-                          {selectedMovie?.streamUrl && !useInternalPlayer ? (
-                            <iframe
-                              src={selectedMovie.streamUrl}
-                              className="w-full h-full border-0 relative z-10"
-                              allowFullScreen
-                              allow="autoplay; encrypted-media"
-                              title="Player stream"
-                            />
-                          ) : (
-                            <video
-                              ref={movieVideoRef}
-                              src={getMovieVideoSrc(selectedMovie)}
-                              className="w-full h-full object-contain pointer-events-none relative z-10"
-                              onTimeUpdate={handleMovieTimeUpdate}
-                              onLoadedMetadata={handleMovieLoadedMetadata}
-                              onEnded={handleMovieEnded}
-                              autoPlay
-                            />
-                          )}
+                          {/* Inside Video element */}
+                          <video
+                            ref={movieVideoRef}
+                            className="w-full h-full object-contain pointer-events-none relative z-10"
+                            onTimeUpdate={handleMovieTimeUpdate}
+                            onLoadedMetadata={handleMovieLoadedMetadata}
+                            onEnded={handleMovieEnded}
+                            autoPlay
+                          />
 
                           {/* Top Center: Alert HUD Notification for player parameter changes */}
                           {activeMediaAlert && (
@@ -3607,15 +3627,15 @@ export const MediaModule: React.FC = () => {
                             </div>
                           )}
 
-                          {/* Center: Netflix-style persistent subtitler overlay synced with realcurrentTime */}
-                          {useInternalPlayer && movieSubtitle !== 'OFF' && getActiveSubtitleText() !== '' && (
+                          {/* Center: persistent subtitler overlay synced with realcurrentTime */}
+                          {movieSubtitle !== 'OFF' && getActiveSubtitleText() !== '' && (
                             <div className="absolute bottom-16 md:bottom-20 left-1/2 -translate-x-1/2 bg-black/85 border border-white/5 px-4 py-2 rounded-xl text-white font-sans text-xs md:text-sm font-semibold tracking-wide text-center z-50 select-none shadow-[0_4px_15px_rgba(0,0,0,0.8)] max-w-[85%] pointer-events-none animate-in fade-in duration-200">
                               {getActiveSubtitleText()}
                             </div>
                           )}
 
                           {/* Loading spinner overlay */}
-                          {useInternalPlayer && !duration && (
+                          {!duration && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-blackSpace z-50 select-none pointer-events-none">
                               <div className="w-10 h-10 border-2 border-cyan-500/30 border-t-cyan-400 anonymity-spin rounded-full animate-spin" />
                               <span className="text-[10px] font-mono text-cyan-300 tracking-widest animate-pulse font-bold mt-2">CONECTANDO CANAL HLS...</span>
@@ -3626,20 +3646,18 @@ export const MediaModule: React.FC = () => {
                           <div 
                             onClick={(e) => {
                               // Click on video toggles play/pause
-                              if (useInternalPlayer) {
-                                triggerHaptic(15);
-                                if (movieIsPlaying) {
-                                  if (movieVideoRef.current) movieVideoRef.current.pause();
-                                  setMovieIsPlaying(false);
-                                  showAlert('PAUSADO');
-                                } else {
-                                  if (movieVideoRef.current) movieVideoRef.current.play().catch(() => {});
-                                  setMovieIsPlaying(true);
-                                  showAlert('PLAY');
-                                }
+                              triggerHaptic(15);
+                              if (movieIsPlaying) {
+                                if (movieVideoRef.current) movieVideoRef.current.pause();
+                                setMovieIsPlaying(false);
+                                showAlert('PAUSADO');
+                              } else {
+                                if (movieVideoRef.current) movieVideoRef.current.play().catch(() => {});
+                                setMovieIsPlaying(true);
+                                showAlert('PLAY');
                               }
                             }}
-                            className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/50 opacity-0 group-hover/player:opacity-100 flex flex-col justify-between p-4 z-30 transition-opacity duration-300 ${(!movieIsPlaying && useInternalPlayer) || !useInternalPlayer ? 'opacity-100' : ''} ${!useInternalPlayer ? 'pointer-events-none bg-none' : ''}`}
+                            className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/50 opacity-0 group-hover/player:opacity-100 flex flex-col justify-between p-4 z-30 transition-opacity duration-300 ${!movieIsPlaying ? 'opacity-100' : ''}`}
                           >
                             {/* Player Header Info */}
                             <div className="flex justify-between items-start w-full pointer-events-auto">
@@ -3662,24 +3680,13 @@ export const MediaModule: React.FC = () => {
 
                               {/* Server & Pipeline status */}
                               <div className="flex items-center gap-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    triggerHaptic(20);
-                                    setUseInternalPlayer(!useInternalPlayer);
-                                    showAlert(useInternalPlayer ? "MIRROR DE TRANSMISSÃO TMDB" : "PLAYER INTERNO CANÔNICO");
-                                  }}
-                                  className="px-2.5 py-1 rounded border border-cyan-500/30 bg-black/80 hover:bg-black text-[8px] font-mono font-bold text-cyan-300 hover:text-white transition-colors cursor-pointer mr-1 uppercase"
-                                >
-                                  {useInternalPlayer ? "⚙️ Usar Mirror" : "⚙️ Player Interno"}
-                                </button>
-                                <span className="bg-[#E50914] text-white font-mono text-[8px] font-black tracking-widest uppercase px-2 py-0.5 rounded shadow-sm">NETFLIX</span>
+                                <span className="bg-red-700/80 border-rose-500 text-white font-mono text-[8px] font-black tracking-widest uppercase px-2 py-0.5 rounded shadow-sm">CINEMA VOD</span>
                                 <span className="bg-zinc-900/80 border border-cyan-500/30 text-cyan-400 font-mono text-[8px] font-bold px-2 py-0.5 rounded">{activeServer.toUpperCase()}</span>
                               </div>
                             </div>
 
                             {/* Centered Large Play Button Overlay when paused */}
-                            {!movieIsPlaying && useInternalPlayer && (
+                            {!movieIsPlaying && (
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -3697,32 +3704,29 @@ export const MediaModule: React.FC = () => {
                             {/* Bottom controls container */}
                             <div 
                               onClick={(e) => e.stopPropagation()}
-                              className={`w-full space-y-3 pointer-events-auto ${!useInternalPlayer ? 'opacity-0 hover:opacity-100 transition-opacity pointer-events-none' : ''}`}
+                              className={`w-full space-y-3 pointer-events-auto`}
                             >
                               {/* Timeline scrub bar */}
-                              {useInternalPlayer && (
-                                <div className="flex items-center gap-3 w-full">
-                                  <span className="text-[9px] font-mono font-bold text-zinc-300 w-8">{formatTime(currentTime)}</span>
+                              <div className="flex items-center gap-3 w-full">
+                                <span className="text-[9px] font-mono font-bold text-zinc-300 w-8">{formatTime(currentTime)}</span>
+                                <div 
+                                  onClick={handleMovieTimelineClick}
+                                  className="flex-1 h-1.5 relative bg-white/20 rounded-full cursor-pointer group/timeline flex items-center"
+                                >
                                   <div 
-                                    onClick={handleMovieTimelineClick}
-                                    className="flex-1 h-1.5 relative bg-white/20 rounded-full cursor-pointer group/timeline flex items-center"
-                                  >
-                                    <div 
-                                      className="absolute left-0 h-full bg-cyan-400 rounded-full"
-                                      style={{ width: `${movieProgress}%` }}
-                                    />
-                                    <div 
-                                      className="absolute w-3 h-3 bg-white rounded-full scale-0 group-hover/timeline:scale-100 transition-transform shadow-[0_0_8px_white]"
-                                      style={{ left: `calc(${movieProgress}% - 6px)` }}
-                                    />
-                                  </div>
-                                  <span className="text-[9px] font-mono font-bold text-zinc-500 w-8">{formatTime(duration)}</span>
+                                    className="absolute left-0 h-full bg-cyan-400 rounded-full"
+                                    style={{ width: `${movieProgress}%` }}
+                                  />
+                                  <div 
+                                    className="absolute w-3 h-3 bg-white rounded-full scale-0 group-hover/timeline:scale-100 transition-transform shadow-[0_0_8px_white]"
+                                    style={{ left: `calc(${movieProgress}% - 6px)` }}
+                                  />
                                 </div>
-                              )}
+                                <span className="text-[9px] font-mono font-bold text-zinc-500 w-8">{formatTime(duration)}</span>
+                              </div>
 
                               {/* Buttons toolbar row */}
-                              {useInternalPlayer && (
-                                <div className="flex items-center justify-between gap-2.5 flex-wrap pt-1 select-none">
+                              <div className="flex items-center justify-between gap-2.5 flex-wrap pt-1 select-none">
                                   {/* Left Side controls */}
                                   <div className="flex items-center gap-3">
                                     {/* Play/Pause */}
@@ -3965,7 +3969,6 @@ export const MediaModule: React.FC = () => {
 
                                   </div>
                                 </div>
-                              )}
                             </div>
 
                           </div>
@@ -3995,48 +3998,50 @@ export const MediaModule: React.FC = () => {
                       {/* EPISODES & RELATED CONTENT PANELS BELOW PLAYER */}
                       <div className="w-full max-w-4xl mx-auto space-y-8 select-none">
                          
-                        {/* Section A: Series Episodes list or Movies chapters based on type */}
-                        <div className="space-y-4">
-                          <h3 className="text-xs font-mono tracking-widest text-cyan-400 uppercase font-black flex items-center gap-2 text-left">
-                            <Tv className="w-4 h-4 text-cyan-400" />
-                            <span>{selectedMovie?.type === 'serie' ? 'Seleção de Episódios' : 'Seleção de Capítulos'}</span>
-                          </h3>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            {getDynamicEpisodesForSelectedMovie().map((ep) => (
-                              <div 
-                                key={ep.id}
-                                onClick={() => {
-                                  triggerHaptic(15);
-                                  showAlert(`Carregando ${ep.title}...`);
-                                  const video = movieVideoRef.current;
-                                  if (video) {
-                                    video.currentTime = ep.seekTime;
-                                    video.play().catch(() => {});
-                                    setMovieIsPlaying(true);
-                                  }
-                                }}
-                                className="group/ep bg-zinc-950/60 hover:bg-zinc-900/80 border border-white/5 hover:border-cyan-500/30 rounded-2xl p-3 flex flex-col space-y-2 cursor-pointer transition-all active:scale-98 text-left"
-                              >
-                                <div className="aspect-video w-full rounded-lg overflow-hidden relative bg-black/50">
-                                  <img 
-                                    src={episodeCovers[ep.id] || ep.defaultThumb} 
-                                    alt="" 
-                                    referrerPolicy="no-referrer" 
-                                    className="w-full h-full object-cover group-hover/ep:scale-105 transition-transform duration-300" 
-                                  />
-                                  <div className="absolute inset-0 bg-black/45 group-hover/ep:bg-black/15 transition-colors flex items-center justify-center">
-                                    <Play className="w-8 h-8 text-white opacity-0 group-hover/ep:opacity-100 transition-opacity bg-cyan-500/80 rounded-full p-2" />
+                        {/* Section A: Series Episodes list or Movies chapters based on type (Only visible when PAUSED) */}
+                        {!movieIsPlaying && (
+                          <div className="space-y-4 animate-in fade-in duration-300">
+                            <h3 className="text-xs font-mono tracking-widest text-cyan-400 uppercase font-black flex items-center gap-2 text-left">
+                              <Tv className="w-4 h-4 text-cyan-400" />
+                              <span>{selectedMovie?.type === 'serie' ? 'Seleção de Episódios' : 'Seleção de Capítulos'}</span>
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                              {getDynamicEpisodesForSelectedMovie().map((ep) => (
+                                <div 
+                                  key={ep.id}
+                                  onClick={() => {
+                                    triggerHaptic(15);
+                                    showAlert(`Carregando ${ep.title}...`);
+                                    const video = movieVideoRef.current;
+                                    if (video) {
+                                      video.currentTime = ep.seekTime;
+                                      video.play().catch(() => {});
+                                      setMovieIsPlaying(true);
+                                    }
+                                  }}
+                                  className="group/ep bg-zinc-950/60 hover:bg-zinc-900/80 border border-white/5 hover:border-cyan-500/30 rounded-2xl p-3 flex flex-col space-y-2 cursor-pointer transition-all active:scale-98 text-left"
+                                >
+                                  <div className="aspect-video w-full rounded-lg overflow-hidden relative bg-black/50">
+                                    <img 
+                                      src={episodeCovers[ep.id] || ep.defaultThumb} 
+                                      alt="" 
+                                      referrerPolicy="no-referrer" 
+                                      className="w-full h-full object-cover group-hover/ep:scale-105 transition-transform duration-300" 
+                                    />
+                                    <div className="absolute inset-0 bg-black/45 group-hover/ep:bg-black/15 transition-colors flex items-center justify-center">
+                                      <Play className="w-8 h-8 text-white opacity-0 group-hover/ep:opacity-100 transition-opacity bg-cyan-500/80 rounded-full p-2" />
+                                    </div>
+                                    <span className="absolute bottom-1 right-1 bg-black/80 px-1.5 py-0.5 rounded text-[9px] font-mono text-zinc-400">{ep.duration}</span>
                                   </div>
-                                  <span className="absolute bottom-1 right-1 bg-black/80 px-1.5 py-0.5 rounded text-[9px] font-mono text-zinc-400">{ep.duration}</span>
+                                  <div className="space-y-0.5">
+                                    <h4 className="text-[11px] font-bold text-white group-hover/ep:text-cyan-400 transition-colors leading-tight truncate">{ep.title}</h4>
+                                    <p className="text-[9px] text-zinc-500 line-clamp-2 leading-relaxed">{ep.desc}</p>
+                                  </div>
                                 </div>
-                                <div className="space-y-0.5">
-                                  <h4 className="text-[11px] font-bold text-white group-hover/ep:text-cyan-400 transition-colors leading-tight truncate">{ep.title}</h4>
-                                  <p className="text-[9px] text-zinc-500 line-clamp-2 leading-relaxed">{ep.desc}</p>
-                                </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        </div>
+                        )}
 
                         {/* Section B: Related Titles (Filmes Relacionados) */}
                         <div className="space-y-4">

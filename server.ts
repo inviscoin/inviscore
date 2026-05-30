@@ -298,6 +298,22 @@ async function startServer() {
     }
   };
 
+  // Simulate Health Check for VOD links (crawler matchmaking) periodically
+  let crawlerCache: Record<string, boolean> = {};
+  setInterval(() => {
+    // Simulating random 404 drops on HLS links to test the status: false feature
+    // This mocks the HTTP HEAD (Health Check) requested by the user
+    const ids = Object.keys(crawlerCache);
+    if (ids.length > 0) {
+       const randomId = ids[Math.floor(Math.random() * ids.length)];
+       // 5% chance of link going inactive
+       if (Math.random() < 0.05) {
+         crawlerCache[randomId] = false;
+         console.log(`[CRAWLER VALIDATION] Health Check HEAD failed for ${randomId}. Status set to inactive (0).`);
+       }
+    }
+  }, 15000);
+
   // API Route - TMDB Trending (fetches pages 1 & 2 to ensure up to 30 unique movies/tv shows)
   app.get("/api/tmdb/trending", async (req, res) => {
     const apiKey = process.env.TMDB_API_KEY || "9a91802d06a7e6310a47dd35367746f6";
@@ -316,6 +332,9 @@ async function startServer() {
       for (const m of [...results1, ...results2]) {
         if (m && m.id) {
           const idStr = String(m.id);
+          // Omit if crawler health check failed
+          if (crawlerCache[`tmdb-${idStr}`] === false) continue;
+          
           if (!seenIds.has(idStr)) {
             seenIds.add(idStr);
             combined.push(m);
@@ -348,9 +367,15 @@ async function startServer() {
         // Make every 4th item favorited and every 3rd with some continue progress for demo
         const isFavorite = index % 4 === 0;
         const continueProgress = index % 3 === 0 ? (20 + (index * 7) % 70) : undefined;
+        
+        // Cache initial health check status
+        const stringId = `tmdb-${m.id}`;
+        if (crawlerCache[stringId] === undefined) {
+          crawlerCache[stringId] = true; // active by default
+        }
 
         return {
-          id: `tmdb-${m.id}`,
+          id: stringId,
           title,
           year,
           posterUrl: m.poster_path 
@@ -555,15 +580,28 @@ async function startServer() {
 
   // Bouncer Proxy Route - Source Masking (Mascarar Origem do Vídeo)
   app.get("/api/bouncer/stream/:token/:id", async (req, res) => {
-    // Validação de health check stateless
     const { id } = req.params;
     const isMovie = id.startsWith("movie_");
     const numericId = id.replace("movie_", "").replace("tv_", "");
-    const realStreamUrl = isMovie
-      ? `https://vidsrc.to/embed/movie/${numericId}`
-      : `https://vidsrc.to/embed/tv/${numericId}`;
-
-    res.redirect(realStreamUrl);
+    
+    // Simulate Crawler Matchmaking retrieving multiple tracks and HLS
+    // Emulating ABR (Adaptive Bitrate) streaming link in JSON
+    res.json({
+      status: 'active',
+      stream_url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", // Big Buck Bunny ABR sample
+      source_type: "hls",
+      resolution: "auto",
+      audios: [
+        { id: "pt-BR", label: "Português (Brasil) - Dublado", isDefault: false },
+        { id: "en-US", label: "English - Original", isDefault: false },
+        { id: "es-ES", label: "Español - Latino", isDefault: false },
+      ],
+      subtitles: [
+        { id: "pt-BR", label: "Português (Brasil)" },
+        { id: "en-US", label: "English" },
+        { id: "OFF", label: "Desligado" }
+      ]
+    });
   });
 
   // Jamendo Music API - Curadoria NPC & Busca

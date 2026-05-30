@@ -19,6 +19,7 @@
     "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "hls.js": "^1.6.16",
     "jwt-decode": "^4.0.0",
     "livekit-client": "^2.19.0",
     "livekit-server-sdk": "^2.15.3",
