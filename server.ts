@@ -468,8 +468,8 @@ async function startServer() {
                overview: m.overview,
                posterUrl: 'https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=400',
                backdropUrl: 'https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=400',
-               streamUrl: "https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4",
-               videoUrl: "https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4",
+               streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+               videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
                duration: "5min"
              });
              continue;
@@ -643,7 +643,7 @@ async function startServer() {
     // Simulate Crawler Matchmaking retrieving multiple tracks
     // Using a Public Domain full-length MP4 (> 20 mins) to allow custom player UI (timeline jumping, pause detection)
     // Night of the Living Dead (1968) - 1 hour 35 minutes
-    const publicDomainMP4 = "https://archive.org/download/night_of_the_living_dead/night_of_the_living_dead_512kb.mp4";
+    const publicDomainMP4 = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4";
     
     res.json({
       status: 'active',

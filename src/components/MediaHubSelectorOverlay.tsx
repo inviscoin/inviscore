@@ -32,7 +32,7 @@ export const MediaHubSelectorOverlay: React.FC = () => {
   return (
     <div 
       id="media_hub_selector_overlay"
-      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#040406]/85 backdrop-blur-3xl px-4 select-none font-sans overflow-y-auto"
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#040406]/90 backdrop-blur-md px-4 select-none font-sans overflow-y-auto transform-gpu will-change-transform"
     >
       {/* Background Ambience Lines */}
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none overflow-hidden">
@@ -79,7 +79,7 @@ export const MediaHubSelectorOverlay: React.FC = () => {
           onMouseEnter={() => { setHoveredIndex(0); triggerHaptic(8); }}
           onMouseLeave={() => setHoveredIndex(null)}
           onClick={() => handleCardSelect('videotube')}
-          className={`relative w-full h-[125px] rounded-[28px] border bg-gradient-to-br from-white/[0.04] to-white/[0.08] backdrop-blur-2xl transition-transform transition-opacity duration-500 cursor-pointer flex items-center overflow-hidden p-1 transform-gpu ${
+          className={`relative w-full h-[125px] rounded-[28px] border bg-gradient-to-br from-white/[0.04] to-white/[0.08] backdrop-blur-sm transition-transform transition-opacity duration-300 cursor-pointer flex items-center overflow-hidden p-1 transform-gpu will-change-transform ${
             hoveredIndex === 0 
               ? 'border-red-500/70 shadow-[0_0_30px_rgba(239,68,68,0.45)] scale-[1.03]' 
               : hoveredIndex !== null
@@ -167,7 +167,7 @@ export const MediaHubSelectorOverlay: React.FC = () => {
           onMouseEnter={() => { setHoveredIndex(1); triggerHaptic(8); }}
           onMouseLeave={() => setHoveredIndex(null)}
           onClick={() => handleCardSelect('music')}
-          className={`relative w-full h-[125px] rounded-[28px] border bg-gradient-to-br from-white/[0.04] to-white/[0.08] backdrop-blur-2xl transition-transform transition-opacity duration-500 cursor-pointer flex items-center overflow-hidden p-1 transform-gpu ${
+          className={`relative w-full h-[125px] rounded-[28px] border bg-gradient-to-br from-white/[0.04] to-white/[0.08] backdrop-blur-sm transition-transform transition-opacity duration-300 cursor-pointer flex items-center overflow-hidden p-1 transform-gpu will-change-transform ${
             hoveredIndex === 1 
               ? 'border-purple-500/70 shadow-[0_0_30px_rgba(168,85,247,0.45)] scale-[1.03]' 
               : hoveredIndex !== null
@@ -253,7 +253,7 @@ export const MediaHubSelectorOverlay: React.FC = () => {
           onMouseEnter={() => { setHoveredIndex(2); triggerHaptic(8); }}
           onMouseLeave={() => setHoveredIndex(null)}
           onClick={() => handleCardSelect('movies')}
-          className={`relative w-full h-[125px] rounded-[28px] border bg-gradient-to-br from-white/[0.04] to-white/[0.08] backdrop-blur-2xl transition-transform transition-opacity duration-500 cursor-pointer flex items-center overflow-hidden p-1 transform-gpu ${
+          className={`relative w-full h-[125px] rounded-[28px] border bg-gradient-to-br from-white/[0.04] to-white/[0.08] backdrop-blur-sm transition-transform transition-opacity duration-300 cursor-pointer flex items-center overflow-hidden p-1 transform-gpu will-change-transform ${
             hoveredIndex === 2 
               ? 'border-cyan-400/80 shadow-[0_0_30px_rgba(6,182,212,0.45)] scale-[1.03]' 
               : hoveredIndex !== null

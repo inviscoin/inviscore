@@ -854,7 +854,7 @@ export const MediaModule: React.FC = () => {
           const abortController = new AbortController();
           const timeoutId = setTimeout(() => {
             abortController.abort();
-          }, 2000);
+          }, 5000);
           
           try {
             const res = await fetch(selectedMovie.streamUrl, { signal: abortController.signal });
@@ -870,7 +870,7 @@ export const MediaModule: React.FC = () => {
           fetchedData = {
              status: 'active',
              source_type: 'mp4',
-             stream_url: "https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+             stream_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           };
           setActiveServer('alternativo');
         } else {
@@ -1722,8 +1722,8 @@ export const MediaModule: React.FC = () => {
   };
 
   const getMovieVideoSrc = (movie: Movie | null) => {
-    if (!movie) return 'https://archive.org/download/night_of_the_living_dead/night_of_the_living_dead_512kb.mp4';
-    return "https://archive.org/download/night_of_the_living_dead/night_of_the_living_dead_512kb.mp4";
+    if (!movie) return 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4';
+    return "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4";
   };
 
   const formatTime = (timeInSeconds: number) => {
@@ -2978,7 +2978,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3071,7 +3071,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3141,7 +3141,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3222,7 +3222,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3281,7 +3281,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3351,7 +3351,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3406,7 +3406,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3472,7 +3472,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3537,7 +3537,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3610,7 +3610,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3673,7 +3673,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3746,7 +3746,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3809,7 +3809,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3882,7 +3882,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3945,7 +3945,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -4018,7 +4018,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -4081,7 +4081,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -4138,9 +4138,9 @@ export const MediaModule: React.FC = () => {
                 >
                   {!moviePlaying ? (
                     /* PREMIUM MOVIE DETAILS PANEL */
-                    <div className="w-full max-w-4xl flex flex-col rounded-[32px] bg-[#07080c]/98 border border-cyan-500/20 p-4 md:p-6 relative shadow-[0_0_50px_rgba(0,180,255,0.15)] text-left bg-gradient-to-b from-[#090b11] to-[#040508] h-[85vh] md:h-[60vh] overflow-hidden transform-gpu">
+                    <div className="w-full max-w-4xl flex flex-col rounded-[32px] bg-[#07080c]/98 border border-cyan-500/20 p-4 md:p-5 relative shadow-[0_0_50px_rgba(0,180,255,0.15)] text-left bg-gradient-to-b from-[#090b11] to-[#040508] h-[58vh] md:h-[45vh] overflow-hidden transform-gpu">
                       {/* Top bar */}
-                      <div className="flex justify-between items-center z-10 shrink-0 pb-3">
+                      <div className="flex justify-between items-center z-10 shrink-0 pb-2">
                         <span className="text-[10px] font-mono text-cyan-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                           SINAL CRIPTOGRAFADO TMDB
@@ -4148,13 +4148,13 @@ export const MediaModule: React.FC = () => {
                       </div>
 
                       {/* Content middle */}
-                      <div className="flex flex-col md:flex-row gap-6 items-stretch relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden md:overflow-hidden text-left mb-4 mt-2">
+                      <div className="flex flex-col md:flex-row gap-4 items-stretch relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden md:overflow-hidden text-left mb-2 mt-1">
                         {/* Blur Backdrop Effect */}
                         <div className="absolute -inset-10 bg-[#090b11]/20 opacity-20 pointer-events-none select-none blur-3xl transform-gpu" />
 
                         {/* Left: Poster (40%) */}
                         <div className="w-full md:w-[40%] shrink-0 flex flex-col items-center justify-start z-10">
-                          <div className="rounded-2xl overflow-hidden shadow-2xl border border-white/10 aspect-[2/3] w-3/4 md:w-full max-w-[200px] md:max-w-sm relative group animate-fade-in transform-gpu">
+                          <div className="rounded-2xl overflow-hidden shadow-2xl border border-white/10 aspect-[2/3] w-[140px] md:w-full md:max-w-[220px] relative group animate-fade-in transform-gpu">
                             <AnimatePresence>
                               {trailerMovieId === selectedMovie.id ? (
                                 <motion.video
@@ -4163,10 +4163,10 @@ export const MediaModule: React.FC = () => {
                                   animate={{ opacity: 1 }}
                                   exit={{ opacity: 0 }}
                                   transition={{ duration: 0.5 }}
-                                  src="https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4"
+                                  src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
                                   autoPlay
                                   muted
-                                  className="absolute inset-0 w-full h-full object-cover z-20"
+                                  className="absolute inset-0 w-full h-full object-cover z-20 transform-gpu"
                                 />
                               ) : (
                                 <motion.img 
@@ -4183,7 +4183,7 @@ export const MediaModule: React.FC = () => {
                               )}
                             </AnimatePresence>
                             {(selectedMovie as any).rating && (
-                              <span className="absolute bottom-3 right-3 px-2 py-1 rounded-lg bg-black/95 font-mono text-[10px] text-cyan-400 font-bold border border-cyan-400/30 backdrop-blur-md z-30">
+                              <span className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded-md bg-black/95 font-mono text-[9px] text-cyan-400 font-bold border border-cyan-400/30 backdrop-blur-md z-30">
                                 ★ {(selectedMovie as any).rating.toFixed(1)}
                               </span>
                             )}
@@ -4197,38 +4197,38 @@ export const MediaModule: React.FC = () => {
                                 setTrailerMovieId(cur => cur === selectedMovie.id ? null : cur);
                               }, 30000);
                             }}
-                            className="mt-3 w-3/4 md:w-full max-w-[200px] md:max-w-sm bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[10px] md:text-xs font-bold uppercase tracking-widest py-2 md:py-2.5 rounded-lg transition-colors shadow-sm z-10"
+                            className="mt-2 w-[140px] md:w-full md:max-w-[220px] bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[9px] md:text-[10px] font-bold uppercase tracking-widest py-1.5 md:py-2 rounded-lg transition-colors shadow-sm z-10 transform-gpu"
                           >
                             Trailer
                           </button>
                         </div>
 
                         {/* Right: Technical Info (60%) */}
-                        <div className="w-full md:w-[60%] flex flex-col justify-start z-10 md:overflow-y-auto no-scrollbar md:pr-3">
-                          <div className="space-y-4 mb-2">
+                        <div className="w-full md:w-[60%] flex flex-col justify-start z-10 md:overflow-y-auto no-scrollbar md:pr-2">
+                          <div className="space-y-3 mb-2">
                             <div className="space-y-1 pl-1 text-center md:text-left">
-                              <h2 className="text-xl md:text-3xl font-black text-white uppercase tracking-wide leading-tight">
+                              <h2 className="text-lg md:text-2xl font-black text-white uppercase tracking-wide leading-tight truncate">
                                 {selectedMovie.title}
                               </h2>
-                              <p className="text-[10px] md:text-[11px] font-mono text-cyan-400 font-bold uppercase tracking-widest">
+                              <p className="text-[9px] md:text-[10px] font-mono text-cyan-400 font-bold uppercase tracking-widest">
                                 {selectedMovie.type === 'serie' ? 'Série Oficial' : 'Filme Oficial'} • {(selectedMovie as any).category || 'Premium H.265'}
                               </p>
                             </div>
 
-                            <div className="flex flex-wrap gap-2 text-[10px] font-mono text-zinc-400 pl-1 justify-center md:justify-start">
-                              <span className="px-2 py-1 rounded-md bg-zinc-900 border border-white/5 font-black text-white">{selectedMovie.year}</span>
-                              <span className="px-2 py-1 rounded-md bg-zinc-900 border border-white/5">Duração: {selectedMovie.duration || selectedMovie.totalDuration || 'N/A'}</span>
-                              <span className="px-2 py-1 rounded-md bg-zinc-900 border border-white/5">Produtor: {selectedMovie.production || 'N/A'}</span>
+                            <div className="flex flex-wrap gap-1.5 text-[9px] font-mono text-zinc-400 pl-1 justify-center md:justify-start">
+                              <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5 font-black text-white">{selectedMovie.year}</span>
+                              <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5">Duração: {selectedMovie.duration || selectedMovie.totalDuration || 'N/A'}</span>
+                              <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5">Produtor: {selectedMovie.production || 'N/A'}</span>
                             </div>
 
-                            <div className="space-y-2 pb-4 pl-1">
-                              <h3 className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest border-b border-white/5 pb-1 mt-2">Sinopse</h3>
-                              <p className="text-xs md:text-[13px] leading-relaxed text-zinc-300 font-normal select-text">
+                            <div className="space-y-1.5 pb-2 pl-1">
+                              <h3 className="text-[9px] text-zinc-500 font-mono uppercase tracking-widest border-b border-white/5 pb-0.5 mt-1">Sinopse</h3>
+                              <p className="text-[10px] md:text-[11px] leading-relaxed text-zinc-300 font-normal select-text line-clamp-3 md:line-clamp-4">
                                 {selectedMovie.overview || 'Nenhuma sinopse disponível para este título no momento.'}
                               </p>
                               
-                              <h3 className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest border-b border-white/5 pb-1 mt-6">Elenco Principal</h3>
-                              <p className="text-[11px] md:text-xs font-mono text-zinc-400 leading-normal select-text">
+                              <h3 className="text-[9px] text-zinc-500 font-mono uppercase tracking-widest border-b border-white/5 pb-0.5 mt-2 md:mt-3">Elenco Principal</h3>
+                              <p className="text-[9px] md:text-[10px] font-mono text-zinc-400 leading-normal select-text line-clamp-1 md:line-clamp-2">
                                 {selectedMovie.actors || 'Indisponível.'}
                               </p>
                             </div>
@@ -4237,9 +4237,9 @@ export const MediaModule: React.FC = () => {
                       </div>
 
                       {/* Bottom Controls Panel - FIXED TO BOTTOM */}
-                      <div className="shrink-0 flex flex-col gap-2 md:gap-3 pt-3 md:pt-4 border-t border-white/5 mt-auto bg-black/40 backdrop-blur-md rounded-b-[32px] md:rounded-none z-20">
+                      <div className="shrink-0 flex flex-col gap-1.5 md:gap-2 pt-2 border-t border-white/5 mt-auto bg-black/40 backdrop-blur-md z-20 rounded-[inherit]">
                         {/* Actions Row */}
-                        <div className="flex gap-2 md:gap-4 h-[44px] md:h-[52px]">
+                        <div className="flex gap-1.5 md:gap-2 h-[38px] md:h-[44px]">
                           <button
                             onClick={() => {
                               triggerHaptic(35);
@@ -4249,37 +4249,37 @@ export const MediaModule: React.FC = () => {
                                 setMovieIsPlaying(true);
                               }, 100);
                             }}
-                            className="flex-[1.5] bg-gradient-to-r from-cyan-500 to-teal-500 hover:brightness-110 text-black font-black font-mono text-xs md:text-sm rounded-xl md:rounded-2xl uppercase tracking-wider flex items-center justify-center gap-1 md:gap-2 shadow-[0_0_20px_rgba(6,182,212,0.3)] active:scale-95 transition-all cursor-pointer transform-gpu"
+                            className="flex-[1.5] bg-gradient-to-r from-cyan-500 to-teal-500 hover:brightness-110 text-black font-black font-mono text-[10px] md:text-[11px] rounded-lg md:rounded-xl uppercase tracking-wider flex items-center justify-center gap-1 shadow-[0_0_15px_rgba(6,182,212,0.3)] active:scale-95 transition-all cursor-pointer transform-gpu"
                           >
-                            <Play className="w-4 h-4 md:w-5 md:h-5 fill-black shrink-0" />
+                            <Play className="w-3.5 h-3.5 md:w-4 md:h-4 fill-black shrink-0" />
                             <span>PLAY</span>
                           </button>
 
                           <button
                             onClick={() => toggleFavoriteMovie(selectedMovie.id)}
-                            className={`flex-1 rounded-xl md:rounded-2xl font-mono text-[9px] md:text-[11px] uppercase font-black tracking-wide border transition-all active:scale-95 flex items-center justify-center gap-1 md:gap-2 cursor-pointer transform-gpu ${
+                            className={`flex-1 rounded-lg md:rounded-xl font-mono text-[8px] md:text-[9px] uppercase font-black tracking-wide border transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer transform-gpu ${
                               (selectedMovie as any).isFavorite 
                                 ? 'bg-rose-950/30 text-rose-300 border-rose-500/30'
                                 : 'bg-zinc-900/40 text-zinc-400 border-white/5 hover:text-white'
                             }`}
                           >
-                            <Heart className={`w-3 h-3 md:w-4 md:h-4 shrink-0 ${(selectedMovie as any).isFavorite ? 'fill-rose-500 text-rose-500' : 'text-zinc-400'}`} />
+                            <Heart className={`w-3 h-3 shrink-0 ${(selectedMovie as any).isFavorite ? 'fill-rose-500 text-rose-500' : 'text-zinc-400'}`} />
                             <span className="hidden sm:inline">{(selectedMovie as any).isFavorite ? 'REMOVER' : 'FAVORITAR'}</span>
                           </button>
 
                           <button
                             onClick={() => likeMovie(selectedMovie.id)}
-                            className="flex-1 bg-zinc-900/40 hover:bg-zinc-800 text-zinc-300 font-mono text-[9px] md:text-[11px] rounded-xl md:rounded-2xl font-black uppercase tracking-wide border border-white/5 active:scale-95 transition-all flex items-center justify-center gap-1 md:gap-2 cursor-pointer transform-gpu"
+                            className="flex-[1] bg-zinc-900/40 hover:bg-zinc-800 text-zinc-300 font-mono text-[8px] md:text-[9px] rounded-lg md:rounded-xl font-black uppercase tracking-wide border border-white/5 active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer transform-gpu"
                           >
-                            <ThumbsUp className="w-3 h-3 md:w-4 md:h-4 text-cyan-400 shrink-0" />
+                            <ThumbsUp className="w-3 h-3 text-cyan-400 shrink-0" />
                             <span className="hidden sm:inline">CURTIR</span>
                           </button>
                         </div>
                         
-                        {/* Close Button Full Width bottom */}
+                        {/* Close Button */}
                         <button
                           onClick={() => { triggerHaptic(15); setSelectedMovie(null); }}
-                          className="w-full py-2.5 md:py-3.5 mt-1 rounded-xl md:rounded-2xl border border-white/5 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[10px] md:text-[11px] font-mono font-black tracking-widest uppercase cursor-pointer transition-all active:scale-95 transform-gpu"
+                          className="w-full py-1.5 md:py-2 rounded-lg md:rounded-xl border border-white/5 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[9px] md:text-[10px] font-mono font-black tracking-widest uppercase cursor-pointer transition-all active:scale-95 transform-gpu"
                         >
                           ✕ FECHAR ABA
                         </button>
