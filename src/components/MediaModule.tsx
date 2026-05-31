@@ -886,25 +886,26 @@ export const MediaModule: React.FC = () => {
           if (fetchedData.source_type === 'mp4' || fetchedData.stream_url.includes('.mp4')) {
             movieVideoRef.current.src = fetchedData.stream_url;
             movieVideoRef.current.load();
-            movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(e => { console.warn("Player autoplay blocked", e); setIsVideoBuffering(false); });
+            movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(e => { console.warn("Player autoplay blocked", e); setIsVideoBuffering(false); setMovieIsPlaying(false); });
           } else if (Hls.isSupported()) {
             hlsInstance = new Hls();
             hlsInstance.loadSource(fetchedData.stream_url);
             hlsInstance.attachMedia(movieVideoRef.current);
             hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
               if (movieVideoRef.current) {
-                movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(e => { console.warn("Player autoplay blocked", e); setIsVideoBuffering(false); });
+                movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(e => { console.warn("Player autoplay blocked", e); setIsVideoBuffering(false); setMovieIsPlaying(false); });
               }
             });
             hlsInstance.on(Hls.Events.ERROR, (event, data) => {
               if (data.fatal) {
                  setIsVideoBuffering(false);
+                 setMovieIsPlaying(false);
               }
             });
           } else if (movieVideoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
             movieVideoRef.current.src = fetchedData.stream_url;
             movieVideoRef.current.load();
-            movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(() => setIsVideoBuffering(false));
+            movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(() => { setIsVideoBuffering(false); setMovieIsPlaying(false); });
           }
         }
       } catch (err) {
@@ -4308,8 +4309,11 @@ export const MediaModule: React.FC = () => {
                             onWaiting={() => setIsVideoBuffering(true)}
                             onPlaying={() => setIsVideoBuffering(false)}
                             onCanPlay={() => setIsVideoBuffering(false)}
+                            onPlay={() => setMovieIsPlaying(true)}
+                            onPause={() => setMovieIsPlaying(false)}
                             autoPlay
                             playsInline
+                            crossOrigin="anonymous"
                             muted={movieVolume === 0}
                           />
 
