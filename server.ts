@@ -468,8 +468,8 @@ async function startServer() {
                overview: m.overview,
                posterUrl: 'https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=400',
                backdropUrl: 'https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=400',
-               streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-               videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+               streamUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+               videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
                duration: "5min"
              });
              continue;
@@ -643,7 +643,7 @@ async function startServer() {
     // Simulate Crawler Matchmaking retrieving multiple tracks
     // Using a Public Domain full-length MP4 (> 20 mins) to allow custom player UI (timeline jumping, pause detection)
     // Night of the Living Dead (1968) - 1 hour 35 minutes
-    const publicDomainMP4 = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4";
+    const publicDomainMP4 = "https://www.w3schools.com/html/mov_bbb.mp4";
     
     console.log(`[Bouncer] Requested stream for ${id}. Providing MP4 URL: ${publicDomainMP4}`);
 

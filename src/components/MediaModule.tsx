@@ -878,7 +878,7 @@ export const MediaModule: React.FC = () => {
           fetchedData = {
              status: 'active',
              source_type: 'mp4',
-             stream_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+             stream_url: "https://www.w3schools.com/html/mov_bbb.mp4"
           };
           setActiveServer('alternativo');
         } else {
@@ -1731,8 +1731,8 @@ export const MediaModule: React.FC = () => {
   };
 
   const getMovieVideoSrc = (movie: Movie | null) => {
-    if (!movie) return 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4';
-    return "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4";
+    if (!movie) return 'https://www.w3schools.com/html/mov_bbb.mp4';
+    return "https://www.w3schools.com/html/mov_bbb.mp4";
   };
 
   const formatTime = (timeInSeconds: number) => {
@@ -2987,7 +2987,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3080,7 +3080,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3150,7 +3150,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3231,7 +3231,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3290,7 +3290,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3360,7 +3360,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3415,7 +3415,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3481,7 +3481,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3546,7 +3546,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3619,7 +3619,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3682,7 +3682,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3755,7 +3755,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3818,7 +3818,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3891,7 +3891,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -3954,7 +3954,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -4027,7 +4027,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -4090,7 +4090,7 @@ export const MediaModule: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          src="https://www.w3schools.com/html/mov_bbb.mp4"
           autoPlay
           muted
           className="absolute inset-0 w-full h-full object-cover z-20"
@@ -4172,7 +4172,7 @@ export const MediaModule: React.FC = () => {
                                   animate={{ opacity: 1 }}
                                   exit={{ opacity: 0 }}
                                   transition={{ duration: 0.5 }}
-                                  src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                                  src="https://www.w3schools.com/html/mov_bbb.mp4"
                                   autoPlay
                                   muted
                                   className="absolute inset-0 w-full h-full object-cover z-20 transform-gpu"
@@ -4310,8 +4310,7 @@ export const MediaModule: React.FC = () => {
                           {/* Inside Video element */}
                           <video
                             ref={movieVideoRef}
-                            className="w-full h-full object-contain relative z-10"
-                            controls
+                            className="w-full h-full object-contain pointer-events-none relative z-10"
                             onTimeUpdate={handleMovieTimeUpdate}
                             onLoadedMetadata={handleMovieLoadedMetadata}
                             onEnded={handleMovieEnded}
