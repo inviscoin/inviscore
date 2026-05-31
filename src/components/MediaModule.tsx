@@ -843,7 +843,7 @@ export const MediaModule: React.FC = () => {
 
   // Initialize Player & HLS on playback start
   useEffect(() => {
-    if (!selectedMovie || !moviePlaying || !movieVideoRef.current) return;
+    if (!selectedMovie || !moviePlaying) return;
     
     let hlsInstance: Hls | null = null;
     const fetchStream = async () => {
@@ -851,17 +851,25 @@ export const MediaModule: React.FC = () => {
         let fetchedData = null;
         
         if (selectedMovie.streamUrl) {
-          const abortController = new AbortController();
-          const timeoutId = setTimeout(() => {
-            abortController.abort();
-          }, 5000);
-          
-          try {
-            const res = await fetch(selectedMovie.streamUrl, { signal: abortController.signal });
-            fetchedData = await res.json();
-            clearTimeout(timeoutId);
-          } catch (err) {
-            console.warn("Servidor primário lento ou inativo, alternando para servidor alternativo...");
+          if (selectedMovie.streamUrl.includes('.mp4')) {
+            fetchedData = {
+              status: 'active',
+              source_type: 'mp4',
+              stream_url: selectedMovie.streamUrl
+            };
+          } else {
+            const abortController = new AbortController();
+            const timeoutId = setTimeout(() => {
+              abortController.abort();
+            }, 5000);
+            
+            try {
+              const res = await fetch(selectedMovie.streamUrl, { signal: abortController.signal });
+              fetchedData = await res.json();
+              clearTimeout(timeoutId);
+            } catch (err) {
+              console.warn("Servidor primário lento ou inativo, alternando para servidor alternativo...");
+            }
           }
         }
 
@@ -4313,7 +4321,6 @@ export const MediaModule: React.FC = () => {
                             onPause={() => setMovieIsPlaying(false)}
                             autoPlay
                             playsInline
-                            crossOrigin="anonymous"
                             muted={movieVolume === 0}
                           />
 
