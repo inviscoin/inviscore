@@ -850,7 +850,8 @@ export const MediaModule: React.FC = () => {
       try {
         let fetchedData = null;
         
-        if (selectedMovie.streamUrl) {
+        // Skip direct API call if user forcefully selected a server (servers 1-4 are external iframes)
+        if (selectedMovie.streamUrl && selectedEmbedServer === 0) {
           if (selectedMovie.streamUrl.includes('.mp4')) {
             fetchedData = {
               status: 'active',
@@ -873,14 +874,39 @@ export const MediaModule: React.FC = () => {
           }
         }
 
-        // Fallback garantido
+        // Fallback garantido - use 5 different embed servers 
         if (!fetchedData || !fetchedData.stream_url || fetchedData.status !== 'active') {
           const numericId = selectedMovie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
           const isMovie = selectedMovie.id.startsWith("movie_") || (selectedMovie as any).totalDuration === '1 Temporada' === false;
+          
+          // Determine base audio language per DDI. DDI 55 (Brazil) -> PT-BR.
+          // Embeds usually auto-detect geography or have multi-audio if we use the right ones.
+          
+          let iframeUrl = '';
+          switch (selectedEmbedServer) {
+            case 0:
+              iframeUrl = isMovie ? `https://embed.su/embed/movie/${numericId}` : `https://embed.su/embed/tv/${numericId}`;
+              break;
+            case 1:
+              iframeUrl = isMovie ? `https://vidsrc.cc/v2/embed/movie/${numericId}` : `https://vidsrc.cc/v2/embed/tv/${numericId}`;
+              break;
+            case 2:
+              iframeUrl = isMovie ? `https://vidsrc.me/embed/movie?tmdb=${numericId}` : `https://vidsrc.me/embed/tv?tmdb=${numericId}`;
+              break;
+            case 3:
+              iframeUrl = isMovie ? `https://vidsrc.pro/embed/movie/${numericId}` : `https://vidsrc.pro/embed/tv/${numericId}`;
+              break;
+            case 4:
+              iframeUrl = isMovie ? `https://video.superflixapi.top/movie/${numericId}` : `https://video.superflixapi.top/tv/${numericId}`;
+              break;
+            default:
+              iframeUrl = isMovie ? `https://embed.su/embed/movie/${numericId}` : `https://embed.su/embed/tv/${numericId}`;
+          }
+
           fetchedData = {
              status: 'active',
              source_type: 'iframe',
-             stream_url: isMovie ? `https://vidsrc.me/embed/movie?tmdb=${numericId}` : `https://vidsrc.me/embed/tv?tmdb=${numericId}`
+             stream_url: iframeUrl
           };
           setActiveServer('alternativo');
         } else {
@@ -931,7 +957,7 @@ export const MediaModule: React.FC = () => {
         hlsInstance.destroy();
       }
     };
-  }, [selectedMovie, moviePlaying]);
+  }, [selectedMovie, moviePlaying, selectedEmbedServer]);
   const [abrMode, setAbrMode] = useState<'1080p' | '720p' | '480p'>('1080p');
   const [showMovieControls, setShowMovieControls] = useState(true);
   const [continueWatchingTime, setContinueWatchingTime] = useState<number | null>(45); // simulated resume timestamp
@@ -4305,17 +4331,47 @@ export const MediaModule: React.FC = () => {
                     >
                       {/* The standard YouTube-sized video block aspect-video (16:9 ratio) */}
                       <div className="w-full max-w-4xl mx-auto flex flex-col space-y-3 shrink-0">
+                        {/* SERVER SELECTOR HUD */}
+                        {(selectedMovie.type === 'filme' || selectedMovie.type === 'serie') && (
+                          <div className="flex flex-wrap gap-2 p-2 bg-zinc-900/60 rounded-xl justify-center items-center backdrop-blur-md border border-white/10 shadow-lg relative z-20">
+                            <span className="text-zinc-400 text-[10px] font-mono tracking-widest uppercase mr-1">Servidor (Áudio Nativo DDI):</span>
+                            {[0, 1, 2, 3, 4].map((idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => setSelectedEmbedServer(idx)}
+                                className={`px-3 py-1.5 rounded-lg font-mono text-[9px] sm:text-[10px] font-black uppercase transition-all shadow-md active:scale-95 ${selectedEmbedServer === idx ? 'bg-cyan-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.5)] border border-cyan-400' : 'bg-black/80 text-zinc-400 hover:text-white hover:bg-zinc-800 border border-white/5 hover:border-cyan-500/50'}`}
+                              >
+                                Server {idx + 1}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
                         <div 
                           id="youtube-player-block"
                           className="w-full aspect-video bg-black relative rounded-2xl overflow-hidden border border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.3)] group/player"
                         >
                           {bouncerStreamData?.source_type === 'iframe' ? (
-                            <iframe 
-                              src={bouncerStreamData?.stream_url} 
-                              className="w-full h-full border-none absolute inset-0 z-10"
-                              allow="autoplay; fullscreen; encrypted-media"
-                              allowFullScreen
-                            />
+                            <>
+                              <iframe 
+                                src={bouncerStreamData?.stream_url} 
+                                className="w-full h-full border-none absolute inset-0 z-10"
+                                allow="autoplay; fullscreen; encrypted-media"
+                                allowFullScreen
+                              />
+                              <div className="absolute top-4 left-4 z-50 pointer-events-auto">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerHaptic(15);
+                                    setMoviePlaying(false);
+                                  }}
+                                  className="w-10 h-10 rounded-full bg-black/80 hover:bg-zinc-800 border border-white/20 flex items-center justify-center text-white transition-all cursor-pointer shadow-lg"
+                                >
+                                  <ArrowLeft className="w-5 h-5 text-cyan-400" />
+                                </button>
+                              </div>
+                            </>
                           ) : (
                             <>
                               {/* Inside Video element */}
