@@ -645,6 +645,8 @@ async function startServer() {
     // Night of the Living Dead (1968) - 1 hour 35 minutes
     const publicDomainMP4 = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4";
     
+    console.log(`[Bouncer] Requested stream for ${id}. Providing MP4 URL: ${publicDomainMP4}`);
+
     res.json({
       status: 'active',
       stream_url: publicDomainMP4, 

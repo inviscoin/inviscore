@@ -894,14 +894,14 @@ export const MediaModule: React.FC = () => {
           if (fetchedData.source_type === 'mp4' || fetchedData.stream_url.includes('.mp4')) {
             movieVideoRef.current.src = fetchedData.stream_url;
             movieVideoRef.current.load();
-            movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(e => { console.warn("Player autoplay blocked", e); setIsVideoBuffering(false); setMovieIsPlaying(false); });
+            movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(e => { console.warn("Player autoplay blocked", e); setIsVideoBuffering(false); setMovieIsPlaying(false); setActiveMediaAlert("AUTOPLAY BLOQUEADO PELO NAVEGADOR - CLIQUE NO PLAY"); });
           } else if (Hls.isSupported()) {
             hlsInstance = new Hls();
             hlsInstance.loadSource(fetchedData.stream_url);
             hlsInstance.attachMedia(movieVideoRef.current);
             hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
               if (movieVideoRef.current) {
-                movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(e => { console.warn("Player autoplay blocked", e); setIsVideoBuffering(false); setMovieIsPlaying(false); });
+                movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(e => { console.warn("Player autoplay blocked", e); setIsVideoBuffering(false); setMovieIsPlaying(false); setActiveMediaAlert("AUTOPLAY BLOQUEADO PELO NAVEGADOR - CLIQUE NO PLAY"); });
               }
             });
             hlsInstance.on(Hls.Events.ERROR, (event, data) => {
@@ -2781,7 +2781,7 @@ export const MediaModule: React.FC = () => {
                                   <iframe
                                     src={playTestUrl}
                                     title="Pre-check Stream Player Preview"
-                                    className="w-full h-full border-none pointer-events-none"
+                                    className="w-full h-full border-none"
                                   />
                                   <div className="absolute top-1 left-1 bg-purple-500 text-black font-mono font-black text-[7px] px-1.5 py-0.5 rounded tracking-widest uppercase animate-pulse">
                                     LIVE MONITORING
@@ -4310,7 +4310,8 @@ export const MediaModule: React.FC = () => {
                           {/* Inside Video element */}
                           <video
                             ref={movieVideoRef}
-                            className="w-full h-full object-contain pointer-events-none relative z-10"
+                            className="w-full h-full object-contain relative z-10"
+                            controls
                             onTimeUpdate={handleMovieTimeUpdate}
                             onLoadedMetadata={handleMovieLoadedMetadata}
                             onEnded={handleMovieEnded}
@@ -4319,8 +4320,14 @@ export const MediaModule: React.FC = () => {
                             onCanPlay={() => setIsVideoBuffering(false)}
                             onPlay={() => setMovieIsPlaying(true)}
                             onPause={() => setMovieIsPlaying(false)}
-                            autoPlay
-                            playsInline
+                            onError={(e) => {
+                              console.error("Video Error:", e.currentTarget.error);
+                              setActiveMediaAlert(`MEDIA ERROR: ${e.currentTarget.error?.message || e.currentTarget.error?.code || 'Desconhecido'}`);
+                              setMovieIsPlaying(false);
+                            }}
+                            autoPlay={true}
+                            playsInline={true}
+                            preload="auto"
                             muted={movieVolume === 0}
                           />
 
