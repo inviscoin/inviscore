@@ -637,20 +637,19 @@ async function startServer() {
   // Bouncer Proxy Route - Source Masking (Mascarar Origem do Vídeo)
   app.get("/api/bouncer/stream/:token/:id", async (req, res) => {
     const { id, token } = req.params;
-    const isMovie = id.startsWith("movie_");
-    const numericId = id.replace("movie_", "").replace("tv_", "");
+    const isMovie = id.startsWith("movie_") || req.query.type !== 'serie';
+    const numericId = id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
     
     // Simulate Crawler Matchmaking retrieving multiple tracks
-    // Using a Public Domain full-length MP4 (> 20 mins) to allow custom player UI (timeline jumping, pause detection)
-    // Night of the Living Dead (1968) - 1 hour 35 minutes
-    const publicDomainMP4 = "https://www.w3schools.com/html/mov_bbb.mp4";
+    // Priority: Local language stream via simulated indexer
+    const streamUrl = isMovie ? `https://vidsrc.me/embed/movie?tmdb=${numericId}` : `https://vidsrc.me/embed/tv?tmdb=${numericId}`;
     
-    console.log(`[Bouncer] Requested stream for ${id}. Providing MP4 URL: ${publicDomainMP4}`);
+    console.log(`[Bouncer] Requested stream for ${id}. Providing IFRAME URL: ${streamUrl}`);
 
     res.json({
       status: 'active',
-      stream_url: publicDomainMP4, 
-      source_type: "mp4",
+      stream_url: streamUrl, 
+      source_type: "iframe",
       resolution: "1080p",
       audios: [
         { id: "pt-BR", label: "Português (Brasil) - Dublado", isDefault: true },

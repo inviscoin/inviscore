@@ -873,20 +873,22 @@ export const MediaModule: React.FC = () => {
           }
         }
 
-        // Fallback garantido (simulando dublado) em caso de falha de timeout
+        // Fallback garantido
         if (!fetchedData || !fetchedData.stream_url || fetchedData.status !== 'active') {
+          const numericId = selectedMovie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
+          const isMovie = selectedMovie.id.startsWith("movie_") || (selectedMovie as any).totalDuration === '1 Temporada' === false;
           fetchedData = {
              status: 'active',
-             source_type: 'mp4',
-             stream_url: "https://www.w3schools.com/html/mov_bbb.mp4"
+             source_type: 'iframe',
+             stream_url: isMovie ? `https://vidsrc.me/embed/movie?tmdb=${numericId}` : `https://vidsrc.me/embed/tv?tmdb=${numericId}`
           };
           setActiveServer('alternativo');
         } else {
-          setBouncerStreamData(fetchedData);
           setActiveServer('principal');
         }
+        setBouncerStreamData(fetchedData);
         
-        if (movieVideoRef.current) {
+        if (fetchedData.source_type !== 'iframe' && movieVideoRef.current) {
           setIsVideoBuffering(true);
           // Exibir loading enquanto carrega metadados
           setDuration(0);
@@ -1731,8 +1733,8 @@ export const MediaModule: React.FC = () => {
   };
 
   const getMovieVideoSrc = (movie: Movie | null) => {
-    if (!movie) return 'https://www.w3schools.com/html/mov_bbb.mp4';
-    return "https://www.w3schools.com/html/mov_bbb.mp4";
+    if (!movie) return '';
+    return "";
   };
 
   const formatTime = (timeInSeconds: number) => {
@@ -4307,71 +4309,80 @@ export const MediaModule: React.FC = () => {
                           id="youtube-player-block"
                           className="w-full aspect-video bg-black relative rounded-2xl overflow-hidden border border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.3)] group/player"
                         >
-                          {/* Inside Video element */}
-                          <video
-                            ref={movieVideoRef}
-                            className="w-full h-full object-contain pointer-events-none relative z-10"
-                            onTimeUpdate={handleMovieTimeUpdate}
-                            onLoadedMetadata={handleMovieLoadedMetadata}
-                            onEnded={handleMovieEnded}
-                            onWaiting={() => setIsVideoBuffering(true)}
-                            onPlaying={() => setIsVideoBuffering(false)}
-                            onCanPlay={() => setIsVideoBuffering(false)}
-                            onPlay={() => setMovieIsPlaying(true)}
-                            onPause={() => setMovieIsPlaying(false)}
-                            onError={(e) => {
-                              console.error("Video Error:", e.currentTarget.error);
-                              setActiveMediaAlert(`MEDIA ERROR: ${e.currentTarget.error?.message || e.currentTarget.error?.code || 'Desconhecido'}`);
-                              setMovieIsPlaying(false);
-                            }}
-                            autoPlay={true}
-                            playsInline={true}
-                            preload="auto"
-                            muted={movieVolume === 0}
-                          />
+                          {bouncerStreamData?.source_type === 'iframe' ? (
+                            <iframe 
+                              src={bouncerStreamData?.stream_url} 
+                              className="w-full h-full border-none absolute inset-0 z-10"
+                              allow="autoplay; fullscreen; encrypted-media"
+                              allowFullScreen
+                            />
+                          ) : (
+                            <>
+                              {/* Inside Video element */}
+                              <video
+                                ref={movieVideoRef}
+                                className="w-full h-full object-contain pointer-events-none relative z-10"
+                                onTimeUpdate={handleMovieTimeUpdate}
+                                onLoadedMetadata={handleMovieLoadedMetadata}
+                                onEnded={handleMovieEnded}
+                                onWaiting={() => setIsVideoBuffering(true)}
+                                onPlaying={() => setIsVideoBuffering(false)}
+                                onCanPlay={() => setIsVideoBuffering(false)}
+                                onPlay={() => setMovieIsPlaying(true)}
+                                onPause={() => setMovieIsPlaying(false)}
+                                onError={(e) => {
+                                  console.error("Video Error:", e.currentTarget.error);
+                                  setActiveMediaAlert(`MEDIA ERROR: ${e.currentTarget.error?.message || e.currentTarget.error?.code || 'Desconhecido'}`);
+                                  setMovieIsPlaying(false);
+                                }}
+                                autoPlay={true}
+                                playsInline={true}
+                                preload="auto"
+                                muted={movieVolume === 0}
+                              />
 
-                          {/* Top Center: Alert HUD Notification for player parameter changes */}
-                          {activeMediaAlert && (
-                            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-cyan-950/90 border border-cyan-400 text-cyan-300 font-mono text-[10px] font-bold px-4 py-1.5 rounded-full z-[100] shadow-lg flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-150">
-                              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-                              <span>{activeMediaAlert}</span>
-                            </div>
-                          )}
+                              {/* Top Center: Alert HUD Notification for player parameter changes */}
+                              {activeMediaAlert && (
+                                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-cyan-950/90 border border-cyan-400 text-cyan-300 font-mono text-[10px] font-bold px-4 py-1.5 rounded-full z-[100] shadow-lg flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-150">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+                                  <span>{activeMediaAlert}</span>
+                                </div>
+                              )}
 
-                          {/* Center: persistent subtitler overlay synced with realcurrentTime */}
-                          {movieSubtitle !== 'OFF' && getActiveSubtitleText() !== '' && (
-                            <div className="absolute bottom-16 md:bottom-20 left-1/2 -translate-x-1/2 bg-black/85 border border-white/5 px-4 py-2 rounded-xl text-white font-sans text-xs md:text-sm font-semibold tracking-wide text-center z-50 select-none shadow-[0_4px_15px_rgba(0,0,0,0.8)] max-w-[85%] pointer-events-none animate-in fade-in duration-200">
-                              {getActiveSubtitleText()}
-                            </div>
-                          )}
+                              {/* Center: persistent subtitler overlay synced with realcurrentTime */}
+                              {movieSubtitle !== 'OFF' && getActiveSubtitleText() !== '' && (
+                                <div className="absolute bottom-16 md:bottom-20 left-1/2 -translate-x-1/2 bg-black/85 border border-white/5 px-4 py-2 rounded-xl text-white font-sans text-xs md:text-sm font-semibold tracking-wide text-center z-50 select-none shadow-[0_4px_15px_rgba(0,0,0,0.8)] max-w-[85%] pointer-events-none animate-in fade-in duration-200">
+                                  {getActiveSubtitleText()}
+                                </div>
+                              )}
 
-                          {/* Loading spinner overlay */}
-                          {isVideoBuffering && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-blackSpace z-50 select-none pointer-events-none">
-                              <div className="w-10 h-10 border-2 border-cyan-500/30 border-t-cyan-400 anonymity-spin rounded-full animate-spin" />
-                              <span className="text-[10px] font-mono text-cyan-300 tracking-widest animate-pulse font-bold mt-2">CONECTANDO CANAL HLS...</span>
-                            </div>
-                          )}
+                              {/* Loading spinner overlay */}
+                              {isVideoBuffering && (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-blackSpace z-50 select-none pointer-events-none">
+                                  <div className="w-10 h-10 border-2 border-cyan-500/30 border-t-cyan-400 anonymity-spin rounded-full animate-spin" />
+                                  <span className="text-[10px] font-mono text-cyan-300 tracking-widest animate-pulse font-bold mt-2">CONECTANDO CANAL HLS...</span>
+                                </div>
+                              )}
 
-                          {/* Complete control Overlay bar. Hovering shows controls. If paused, controls are locked visible */}
-                          <div 
-                            onClick={(e) => {
-                              // Click on video toggles play/pause
-                              triggerHaptic(15);
-                              if (movieIsPlaying) {
-                                if (movieVideoRef.current) movieVideoRef.current.pause();
-                                setMovieIsPlaying(false);
-                                showAlert('PAUSADO');
-                              } else {
-                                if (movieVideoRef.current) movieVideoRef.current.play().catch(() => {});
-                                setMovieIsPlaying(true);
-                                showAlert('PLAY');
-                              }
-                            }}
-                            className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/50 opacity-0 group-hover/player:opacity-100 flex flex-col justify-between p-4 z-30 transition-opacity duration-300 ${!movieIsPlaying ? 'opacity-100' : ''}`}
-                          >
-                            {/* Player Header Info */}
-                            <div className="flex justify-between items-start w-full pointer-events-auto">
+                              {/* Complete control Overlay bar. Hovering shows controls. If paused, controls are locked visible */}
+                              <div 
+                                onClick={(e) => {
+                                  // Click on video toggles play/pause
+                                  triggerHaptic(15);
+                                  if (movieIsPlaying) {
+                                    if (movieVideoRef.current) movieVideoRef.current.pause();
+                                    setMovieIsPlaying(false);
+                                    showAlert('PAUSADO');
+                                  } else {
+                                    if (movieVideoRef.current) movieVideoRef.current.play().catch(() => {});
+                                    setMovieIsPlaying(true);
+                                    showAlert('PLAY');
+                                  }
+                                }}
+                                className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/50 opacity-0 group-hover/player:opacity-100 flex flex-col justify-between p-4 z-30 transition-opacity duration-300 ${!movieIsPlaying ? 'opacity-100' : ''}`}
+                              >
+                                {/* Player Header Info */}
+                                <div className="flex justify-between items-start w-full pointer-events-auto">
                               <div className="flex items-center gap-3">
                                 <button
                                   onClick={(e) => {
@@ -4681,12 +4692,12 @@ export const MediaModule: React.FC = () => {
                                   </div>
                                 </div>
                             </div>
-
                           </div>
+                      </>
+                    )}
+                  </div>
 
-                        </div>
-
-                        {/* Title & Metadata row like YouTube detail layer */}
+                  {/* Title & Metadata row like YouTube detail layer */}
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 bg-zinc-950/40 rounded-2xl border border-white/5">
                           <div className="space-y-1 text-left">
                             <h2 className="text-base font-black text-white">{selectedMovie?.title}</h2>
