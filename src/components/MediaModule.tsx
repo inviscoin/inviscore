@@ -128,6 +128,7 @@ const MOCK_SONGS: Song[] = [
 export const MediaModule: React.FC = () => {
   const { currentUser, closeBlock, addTransaction, mediaSubTab, setMediaHubSelectorOpen, addBlock, activeBlocks, mediaResumeTrigger, swapBlocks, setMediaIsPlaying } = useInvis();
   const { isMediaPipMode, togglePipMode, isTransitioning, showPipModal, setShowPipModal } = usePipSync();
+  const [selectedEmbedServer, setSelectedEmbedServer] = useState<number>(0);
 
   // Watch for global media resume trigger (e.g. returning from pip selector modal)
   useEffect(() => {
