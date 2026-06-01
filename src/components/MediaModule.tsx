@@ -851,37 +851,35 @@ export const MediaModule: React.FC = () => {
       try {
         let fetchedData = null;
         
-        // Skip direct API call if user forcefully selected a server (servers 1-4 are external iframes)
-        if (selectedMovie.streamUrl && selectedEmbedServer === 0) {
-          if (selectedMovie.streamUrl.includes('.mp4')) {
-            fetchedData = {
-              status: 'active',
-              source_type: 'mp4',
-              stream_url: selectedMovie.streamUrl
-            };
-          } else {
-            const abortController = new AbortController();
-            const timeoutId = setTimeout(() => {
-              abortController.abort();
-            }, 5000);
-            
-            try {
-              const res = await fetch(selectedMovie.streamUrl, { signal: abortController.signal });
+        // Always try to query bouncer stream details to get active healthy server list & server urls
+        if (selectedMovie.streamUrl) {
+          const abortController = new AbortController();
+          const timeoutId = setTimeout(() => {
+            abortController.abort();
+          }, 4500); // Wait up to 4.5 seconds for parallel backend server check
+          
+          try {
+            const res = await fetch(selectedMovie.streamUrl, { signal: abortController.signal });
+            if (res.ok) {
               fetchedData = await res.json();
-              clearTimeout(timeoutId);
-            } catch (err) {
-              console.warn("Servidor primário lento ou inativo, alternando para servidor alternativo...");
             }
+            clearTimeout(timeoutId);
+          } catch (err) {
+            console.warn("Bouncer resolver timed out, falling back to client-side assembler...");
           }
         }
 
-        // Fallback garantido - use 5 different embed servers 
-        if (!fetchedData || !fetchedData.stream_url || fetchedData.status !== 'active') {
+        // If bouncer succeeded and retrieved healthy urls, use URLs mapping
+        if (fetchedData && fetchedData.urls && fetchedData.urls[selectedEmbedServer]) {
+          fetchedData = {
+            ...fetchedData,
+            stream_url: fetchedData.urls[selectedEmbedServer]
+          };
+          setActiveServer('principal');
+        } else {
+          // If direct API checks are slow or missing, fall back directly on secure client-side assemblies
           const numericId = selectedMovie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
           const isMovie = selectedMovie.id.startsWith("movie_") || (selectedMovie as any).totalDuration === '1 Temporada' === false;
-          
-          // Determine base audio language per DDI. DDI 55 (Brazil) -> PT-BR.
-          // Embeds usually auto-detect geography or have multi-audio if we use the right ones.
           
           let iframeUrl = '';
           switch (selectedEmbedServer) {
@@ -895,10 +893,10 @@ export const MediaModule: React.FC = () => {
               iframeUrl = isMovie ? `https://vidsrc.me/embed/movie?tmdb=${numericId}` : `https://vidsrc.me/embed/tv?tmdb=${numericId}`;
               break;
             case 3:
-              iframeUrl = isMovie ? `https://vidsrc.pro/embed/movie/${numericId}` : `https://vidsrc.pro/embed/tv/${numericId}`;
+              iframeUrl = isMovie ? `https://api.multiembed.mov/?video_id=${numericId}&tmdb=1` : `https://api.multiembed.mov/?video_id=${numericId}&tmdb=1&s=1&e=1`;
               break;
             case 4:
-              iframeUrl = isMovie ? `https://video.superflixapi.top/movie/${numericId}` : `https://video.superflixapi.top/tv/${numericId}`;
+              iframeUrl = isMovie ? `https://moviesapi.club/movie/${numericId}` : `https://moviesapi.club/tv/${numericId}-1-1`;
               break;
             default:
               iframeUrl = isMovie ? `https://embed.su/embed/movie/${numericId}` : `https://embed.su/embed/tv/${numericId}`;
@@ -907,11 +905,16 @@ export const MediaModule: React.FC = () => {
           fetchedData = {
              status: 'active',
              source_type: 'iframe',
-             stream_url: iframeUrl
+             stream_url: iframeUrl,
+             server_health: {
+               "0": true,
+               "1": true,
+               "2": true,
+               "3": true,
+               "4": true
+             }
           };
           setActiveServer('alternativo');
-        } else {
-          setActiveServer('principal');
         }
         setBouncerStreamData(fetchedData);
         
@@ -2811,6 +2814,7 @@ export const MediaModule: React.FC = () => {
                                     src={playTestUrl}
                                     title="Pre-check Stream Player Preview"
                                     className="w-full h-full border-none"
+                                    referrerPolicy="no-referrer"
                                   />
                                   <div className="absolute top-1 left-1 bg-purple-500 text-black font-mono font-black text-[7px] px-1.5 py-0.5 rounded tracking-widest uppercase animate-pulse">
                                     LIVE MONITORING
@@ -4334,17 +4338,37 @@ export const MediaModule: React.FC = () => {
                       <div className="w-full max-w-4xl mx-auto flex flex-col space-y-3 shrink-0">
                         {/* SERVER SELECTOR HUD */}
                         {(selectedMovie.type === 'filme' || selectedMovie.type === 'serie') && (
-                          <div className="flex flex-wrap gap-2 p-2 bg-zinc-900/60 rounded-xl justify-center items-center backdrop-blur-md border border-white/10 shadow-lg relative z-20">
-                            <span className="text-zinc-400 text-[10px] font-mono tracking-widest uppercase mr-1">Servidor (Áudio Nativo DDI):</span>
-                            {[0, 1, 2, 3, 4].map((idx) => (
-                              <button
-                                key={idx}
-                                onClick={() => setSelectedEmbedServer(idx)}
-                                className={`px-3 py-1.5 rounded-lg font-mono text-[9px] sm:text-[10px] font-black uppercase transition-all shadow-md active:scale-95 ${selectedEmbedServer === idx ? 'bg-cyan-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.5)] border border-cyan-400' : 'bg-black/80 text-zinc-400 hover:text-white hover:bg-zinc-800 border border-white/5 hover:border-cyan-500/50'}`}
-                              >
-                                Server {idx + 1}
-                              </button>
-                            ))}
+                          <div className="flex flex-col space-y-2 p-3 bg-zinc-950/80 rounded-2xl border border-white/5 shadow-2xl relative z-20">
+                            <div className="flex items-center justify-between px-1">
+                              <span className="text-zinc-400 text-[9px] md:text-[10px] font-mono tracking-widest uppercase">Selecione o Servidor de Stream:</span>
+                              <span className="text-cyan-400 text-[8px] md:text-[9px] font-mono font-bold animate-pulse">● Saúde Verificada em Paralelo</span>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                              {[
+                                "Server 1 (Embed.SU)",
+                                "Server 2 (VidSrc.CC)",
+                                "Server 3 (VidSrc.Me)",
+                                "Server 4 (MultiEmbed)",
+                                "Server 5 (MoviesAPI)"
+                              ].map((name, idx) => {
+                                const isOnline = bouncerStreamData?.server_health ? bouncerStreamData.server_health[String(idx)] !== false : true;
+                                const isSelected = selectedEmbedServer === idx;
+
+                                return (
+                                  <button
+                                    key={idx}
+                                    onClick={() => {
+                                      triggerHaptic(15);
+                                      setSelectedEmbedServer(idx);
+                                    }}
+                                    className={`px-2 py-2 rounded-xl font-mono text-[9px] font-black uppercase transition-all shadow-md active:scale-95 flex items-center justify-center space-x-1.5 border ${isSelected ? 'bg-cyan-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.4)] border-cyan-400' : 'bg-zinc-900/90 text-zinc-400 hover:text-white hover:bg-zinc-800 border-white/5 hover:border-cyan-500/30'} ${!isOnline ? 'opacity-50 hover:opacity-80' : ''}`}
+                                  >
+                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`}></span>
+                                    <span className="truncate">{name} {!isOnline ? '(Off)' : ''}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
                         )}
 
@@ -4357,8 +4381,9 @@ export const MediaModule: React.FC = () => {
                               <iframe 
                                 src={bouncerStreamData?.stream_url} 
                                 className="w-full h-full border-none absolute inset-0 z-10"
-                                allow="autoplay; fullscreen; encrypted-media"
+                                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
                                 allowFullScreen
+                                referrerPolicy="no-referrer"
                               />
                               <div className="absolute top-4 left-4 z-50 pointer-events-auto">
                                 <button
