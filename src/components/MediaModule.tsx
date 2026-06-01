@@ -841,6 +841,8 @@ export const MediaModule: React.FC = () => {
   const [activeMediaAlert, setActiveMediaAlert] = useState<string | null>(null);
   const [bouncerStreamData, setBouncerStreamData] = useState<any>(null);
   const [movieAudioTrack, setMovieAudioTrack] = useState('pt-BR'); 
+  const [selectedSeason, setSelectedSeason] = useState(1);
+  const [selectedEpisode, setSelectedEpisode] = useState(1);
 
   // Initialize Player & HLS on playback start
   useEffect(() => {
@@ -851,49 +853,6 @@ export const MediaModule: React.FC = () => {
       try {
         let fetchedData = null;
         
-        // ID Mapping Dictionary for Cinema Roster default string IDs to actual numerical TMDB IDs
-        const ID_TMDB_MAP: Record<string, string> = {
-          // Trailers/Filmes
-          'tf_br2049': '335984',      // Blade Runner 2049
-          'tf_interstellar': '157336',  // Interstellar
-          'tf_matrix': '574060',        // The Matrix Resurrections
-          'tf_dune2': '693134',         // Dune: Part Two
-          'tf_maverick': '361743',      // Top Gun: Maverick
-          'tf_edgerunners': '136283',   // Cyberpunk: Edgerunners (TV Series, 136283 on TMDB)
-          
-          // Netflix
-          'nft_stranger': '66732',       // Stranger Things
-          'nft_blackmirror': '42009',    // Black Mirror
-          'nft_dark': '70523',           // Dark
-          'nft_cyber_run': '574060',     // Fallback to Matrix for Cyberpunk Run (since mock film)
-          'nft_mindhunter': '70541',     // Mindhunter
-          
-          // Disney
-          'dis_mandalorian': '82856',    // The Mandalorian
-          'dis_loki': '84958',           // Loki
-          'dis_andor': '136315',         // Andor
-          'dis_walle': '10681',          // WALL-E
-          'dis_avatar2': '76600',        // Avatar: O Caminho da Água
-          
-          // HBO
-          'hbo_lastofus': '100088',      // The Last of Us
-          'hbo_house_dragon': '94997',   // A Casa do Dragão
-          'hbo_game_thrones': '1399',    // Game of Thrones
-          'hbo_succession': '76331',     // Succession
-          'hbo_joker': '475554',         // Coringa
-          
-          // Prime
-          'prm_theboys': '76479',        // The Boys
-          'prm_fallout': '126308',       // Fallout
-          'prm_invincible': '95557',     // Invincible
-          'prm_reach': '119483',         // Reacher
-          
-          // Globoplay
-          'glo_justica': '114352',       // Justiça
-          'glo_compadecida': '37165',    // O Auto da Compadecida
-          'glo_cidadedeus': '598'         // Cidade de Deus
-        };
-
         // Always try to query bouncer stream details to get active healthy server list & server urls
         if (selectedMovie.streamUrl) {
           const abortController = new AbortController();
@@ -902,7 +861,8 @@ export const MediaModule: React.FC = () => {
           }, 4500); // Wait up to 4.5 seconds for parallel backend server check
           
           try {
-            const res = await fetch(selectedMovie.streamUrl, { signal: abortController.signal });
+            const bouncerQueryUrl = `${selectedMovie.streamUrl}?type=${selectedMovie.type || 'movie'}&season=${selectedSeason}&episode=${selectedEpisode}`;
+            const res = await fetch(bouncerQueryUrl, { signal: abortController.signal });
             if (res.ok) {
               fetchedData = await res.json();
             }
@@ -921,30 +881,40 @@ export const MediaModule: React.FC = () => {
           setActiveServer('principal');
         } else {
           // If direct API checks are slow or missing, fall back directly on secure client-side assemblies
-          const rawId = selectedMovie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
-          const mappedId = ID_TMDB_MAP[rawId] || rawId;
-          const numericId = mappedId;
-          const isMovie = selectedMovie.id.startsWith("movie_") || (selectedMovie as any).totalDuration === '1 Temporada' === false;
+          const numericId = selectedMovie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
+          const isMovie = selectedMovie.type !== 'serie';
           
           let iframeUrl = '';
           switch (selectedEmbedServer) {
             case 0:
-              iframeUrl = isMovie ? `https://embed.su/embed/movie/${numericId}` : `https://embed.su/embed/tv/${numericId}/1/1`;
+              iframeUrl = isMovie 
+                ? `https://vidsrc-embed.su/embed/movie?tmdb=${numericId}` 
+                : `https://vidsrc-embed.su/embed/tv?tmdb=${numericId}&season=${selectedSeason}&episode=${selectedEpisode}`;
               break;
             case 1:
-              iframeUrl = isMovie ? `https://vidsrc.cc/v2/embed/movie/${numericId}` : `https://vidsrc.cc/v2/embed/tv/${numericId}/1/1`;
+              iframeUrl = isMovie 
+                ? `https://vidsrcme.su/embed/movie?tmdb=${numericId}` 
+                : `https://vidsrcme.su/embed/tv?tmdb=${numericId}&season=${selectedSeason}&episode=${selectedEpisode}`;
               break;
             case 2:
-              iframeUrl = isMovie ? `https://vidsrc.me/embed/movie?tmdb=${numericId}` : `https://vidsrc.me/embed/tv?tmdb=${numericId}&season=1&episode=1`;
+              iframeUrl = isMovie 
+                ? `https://vsrc.su/embed/movie/${numericId}` 
+                : `https://vsrc.su/embed/tv/${numericId}/${selectedSeason}/${selectedEpisode}`;
               break;
             case 3:
-              iframeUrl = isMovie ? `https://embed.warezcdn.link/filme/${numericId}` : `https://embed.warezcdn.link/serie/${numericId}/1/1`;
+              iframeUrl = isMovie 
+                ? `https://api.multiembed.mov/?video_id=${numericId}&tmdb=1` 
+                : `https://api.multiembed.mov/?video_id=${numericId}&tmdb=1&s=${selectedSeason}&e=${selectedEpisode}`;
               break;
             case 4:
-              iframeUrl = isMovie ? `https://vidsrc.xyz/embed/movie/${numericId}` : `https://vidsrc.xyz/embed/tv?tmdb=${numericId}&season=1&episode=1`;
+              iframeUrl = isMovie 
+                ? `https://autoembed.to/movie/tmdb/${numericId}` 
+                : `https://autoembed.to/tv/tmdb/${numericId}-${selectedSeason}-${selectedEpisode}`;
               break;
             default:
-              iframeUrl = isMovie ? `https://embed.su/embed/movie/${numericId}` : `https://embed.su/embed/tv/${numericId}/1/1`;
+              iframeUrl = isMovie 
+                ? `https://vidsrc-embed.su/embed/movie?tmdb=${numericId}` 
+                : `https://vidsrc-embed.su/embed/tv?tmdb=${numericId}&season=${selectedSeason}&episode=${selectedEpisode}`;
           }
 
           fetchedData = {
@@ -1006,7 +976,7 @@ export const MediaModule: React.FC = () => {
         hlsInstance.destroy();
       }
     };
-  }, [selectedMovie, moviePlaying, selectedEmbedServer]);
+  }, [selectedMovie, moviePlaying, selectedEmbedServer, selectedSeason, selectedEpisode]);
   const [abrMode, setAbrMode] = useState<'1080p' | '720p' | '480p'>('1080p');
   const [showMovieControls, setShowMovieControls] = useState(true);
   const [continueWatchingTime, setContinueWatchingTime] = useState<number | null>(45); // simulated resume timestamp
@@ -4390,11 +4360,11 @@ export const MediaModule: React.FC = () => {
                             </div>
                             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                               {[
-                                "Server 1 (Embed.SU)",
-                                "Server 2 (VidSrc.CC)",
-                                "Server 3 (VidSrc.Me)",
-                                "Server 4 (WarezCDN)",
-                                "Server 5 (VidSrc.XYZ)"
+                                "Server 1 (VidSrc Embed)",
+                                "Server 2 (VidSrc Me)",
+                                "Server 3 (VSrc.SU)",
+                                "Server 4 (MultiEmbed)",
+                                "Server 5 (AutoEmbed)"
                               ].map((name, idx) => {
                                 const isOnline = bouncerStreamData?.server_health ? bouncerStreamData.server_health[String(idx)] !== false : true;
                                 const isSelected = selectedEmbedServer === idx;
@@ -4855,39 +4825,52 @@ export const MediaModule: React.FC = () => {
                               <span>{selectedMovie?.type === 'serie' ? 'Seleção de Episódios' : 'Seleção de Capítulos'}</span>
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                              {getDynamicEpisodesForSelectedMovie().map((ep) => (
-                                <div 
-                                  key={ep.id}
-                                  onClick={() => {
-                                    triggerHaptic(15);
-                                    showAlert(`Carregando ${ep.title}...`);
-                                    const video = movieVideoRef.current;
-                                    if (video) {
-                                      video.currentTime = ep.seekTime;
-                                      video.play().catch(() => {});
-                                      setMovieIsPlaying(true);
-                                    }
-                                  }}
-                                  className="group/ep bg-zinc-950/60 hover:bg-zinc-900/80 border border-white/5 hover:border-cyan-500/30 rounded-2xl p-3 flex flex-col space-y-2 cursor-pointer transition-all active:scale-98 text-left"
-                                >
-                                  <div className="aspect-video w-full rounded-lg overflow-hidden relative bg-black/50">
-                                    <img 
-                                      src={episodeCovers[ep.id] || ep.defaultThumb} 
-                                      alt="" 
-                                      referrerPolicy="no-referrer" 
-                                      className="w-full h-full object-cover group-hover/ep:scale-105 transition-transform duration-300" 
-                                    />
-                                    <div className="absolute inset-0 bg-black/45 group-hover/ep:bg-black/15 transition-colors flex items-center justify-center">
-                                      <Play className="w-8 h-8 text-white opacity-0 group-hover/ep:opacity-100 transition-opacity bg-cyan-500/80 rounded-full p-2" />
+                              {getDynamicEpisodesForSelectedMovie().map((ep, epIdx) => {
+                                const isCurrentEp = selectedMovie?.type === 'serie' ? selectedEpisode === epIdx + 1 : false;
+                                return (
+                                  <div 
+                                    key={ep.id}
+                                    onClick={() => {
+                                      triggerHaptic(15);
+                                      showAlert(`Carregando ${ep.title}...`);
+                                      if (selectedMovie?.type === 'serie') {
+                                        setSelectedSeason(1);
+                                        setSelectedEpisode(epIdx + 1);
+                                        setMovieIsPlaying(true);
+                                      } else {
+                                        const video = movieVideoRef.current;
+                                        if (video) {
+                                          video.currentTime = ep.seekTime;
+                                          video.play().catch(() => {});
+                                          setMovieIsPlaying(true);
+                                        }
+                                      }
+                                    }}
+                                    className={`group/ep border p-3 flex flex-col space-y-2 cursor-pointer transition-all active:scale-98 text-left rounded-2xl ${
+                                      isCurrentEp 
+                                        ? 'bg-cyan-500/10 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.2)]' 
+                                        : 'bg-zinc-950/60 hover:bg-zinc-900/80 border-white/5 hover:border-cyan-500/30'
+                                    }`}
+                                  >
+                                    <div className="aspect-video w-full rounded-lg overflow-hidden relative bg-black/50">
+                                      <img 
+                                        src={episodeCovers[ep.id] || ep.defaultThumb} 
+                                        alt="" 
+                                        referrerPolicy="no-referrer" 
+                                        className="w-full h-full object-cover group-hover/ep:scale-105 transition-transform duration-300" 
+                                      />
+                                      <div className="absolute inset-0 bg-black/45 group-hover/ep:bg-black/15 transition-colors flex items-center justify-center">
+                                        <Play className={`w-8 h-8 text-white transition-all bg-cyan-500/80 rounded-full p-2 ${isCurrentEp ? 'opacity-100 scale-110 shadow-[0_0_10px_rgba(6,182,212,0.6)]' : 'opacity-0 group-hover/ep:opacity-100'}`} />
+                                      </div>
+                                      <span className="absolute bottom-1 right-1 bg-black/80 px-1.5 py-0.5 rounded text-[9px] font-mono text-zinc-400">{ep.duration}</span>
                                     </div>
-                                    <span className="absolute bottom-1 right-1 bg-black/80 px-1.5 py-0.5 rounded text-[9px] font-mono text-zinc-400">{ep.duration}</span>
+                                    <div className="space-y-0.5">
+                                      <h4 className={`text-[11px] font-bold group-hover/ep:text-cyan-400 transition-colors leading-tight truncate ${isCurrentEp ? 'text-cyan-400' : 'text-white'}`}>{ep.title}</h4>
+                                      <p className="text-[9px] text-zinc-500 line-clamp-2 leading-relaxed">{ep.desc}</p>
+                                    </div>
                                   </div>
-                                  <div className="space-y-0.5">
-                                    <h4 className="text-[11px] font-bold text-white group-hover/ep:text-cyan-400 transition-colors leading-tight truncate">{ep.title}</h4>
-                                    <p className="text-[9px] text-zinc-500 line-clamp-2 leading-relaxed">{ep.desc}</p>
-                                  </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         )}
