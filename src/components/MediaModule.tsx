@@ -851,6 +851,49 @@ export const MediaModule: React.FC = () => {
       try {
         let fetchedData = null;
         
+        // ID Mapping Dictionary for Cinema Roster default string IDs to actual numerical TMDB IDs
+        const ID_TMDB_MAP: Record<string, string> = {
+          // Trailers/Filmes
+          'tf_br2049': '335984',      // Blade Runner 2049
+          'tf_interstellar': '157336',  // Interstellar
+          'tf_matrix': '574060',        // The Matrix Resurrections
+          'tf_dune2': '693134',         // Dune: Part Two
+          'tf_maverick': '361743',      // Top Gun: Maverick
+          'tf_edgerunners': '136283',   // Cyberpunk: Edgerunners (TV Series, 136283 on TMDB)
+          
+          // Netflix
+          'nft_stranger': '66732',       // Stranger Things
+          'nft_blackmirror': '42009',    // Black Mirror
+          'nft_dark': '70523',           // Dark
+          'nft_cyber_run': '574060',     // Fallback to Matrix for Cyberpunk Run (since mock film)
+          'nft_mindhunter': '70541',     // Mindhunter
+          
+          // Disney
+          'dis_mandalorian': '82856',    // The Mandalorian
+          'dis_loki': '84958',           // Loki
+          'dis_andor': '136315',         // Andor
+          'dis_walle': '10681',          // WALL-E
+          'dis_avatar2': '76600',        // Avatar: O Caminho da Água
+          
+          // HBO
+          'hbo_lastofus': '100088',      // The Last of Us
+          'hbo_house_dragon': '94997',   // A Casa do Dragão
+          'hbo_game_thrones': '1399',    // Game of Thrones
+          'hbo_succession': '76331',     // Succession
+          'hbo_joker': '475554',         // Coringa
+          
+          // Prime
+          'prm_theboys': '76479',        // The Boys
+          'prm_fallout': '126308',       // Fallout
+          'prm_invincible': '95557',     // Invincible
+          'prm_reach': '119483',         // Reacher
+          
+          // Globoplay
+          'glo_justica': '114352',       // Justiça
+          'glo_compadecida': '37165',    // O Auto da Compadecida
+          'glo_cidadedeus': '598'         // Cidade de Deus
+        };
+
         // Always try to query bouncer stream details to get active healthy server list & server urls
         if (selectedMovie.streamUrl) {
           const abortController = new AbortController();
@@ -878,28 +921,30 @@ export const MediaModule: React.FC = () => {
           setActiveServer('principal');
         } else {
           // If direct API checks are slow or missing, fall back directly on secure client-side assemblies
-          const numericId = selectedMovie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
+          const rawId = selectedMovie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
+          const mappedId = ID_TMDB_MAP[rawId] || rawId;
+          const numericId = mappedId;
           const isMovie = selectedMovie.id.startsWith("movie_") || (selectedMovie as any).totalDuration === '1 Temporada' === false;
           
           let iframeUrl = '';
           switch (selectedEmbedServer) {
             case 0:
-              iframeUrl = isMovie ? `https://embed.su/embed/movie/${numericId}` : `https://embed.su/embed/tv/${numericId}`;
+              iframeUrl = isMovie ? `https://embed.su/embed/movie/${numericId}` : `https://embed.su/embed/tv/${numericId}/1/1`;
               break;
             case 1:
-              iframeUrl = isMovie ? `https://vidsrc.cc/v2/embed/movie/${numericId}` : `https://vidsrc.cc/v2/embed/tv/${numericId}`;
+              iframeUrl = isMovie ? `https://vidsrc.cc/v2/embed/movie/${numericId}` : `https://vidsrc.cc/v2/embed/tv/${numericId}/1/1`;
               break;
             case 2:
-              iframeUrl = isMovie ? `https://vidsrc.me/embed/movie?tmdb=${numericId}` : `https://vidsrc.me/embed/tv?tmdb=${numericId}`;
+              iframeUrl = isMovie ? `https://vidsrc.me/embed/movie?tmdb=${numericId}` : `https://vidsrc.me/embed/tv?tmdb=${numericId}&season=1&episode=1`;
               break;
             case 3:
-              iframeUrl = isMovie ? `https://api.multiembed.mov/?video_id=${numericId}&tmdb=1` : `https://api.multiembed.mov/?video_id=${numericId}&tmdb=1&s=1&e=1`;
+              iframeUrl = isMovie ? `https://embed.warezcdn.link/filme/${numericId}` : `https://embed.warezcdn.link/serie/${numericId}/1/1`;
               break;
             case 4:
-              iframeUrl = isMovie ? `https://moviesapi.club/movie/${numericId}` : `https://moviesapi.club/tv/${numericId}-1-1`;
+              iframeUrl = isMovie ? `https://vidsrc.xyz/embed/movie/${numericId}` : `https://vidsrc.xyz/embed/tv?tmdb=${numericId}&season=1&episode=1`;
               break;
             default:
-              iframeUrl = isMovie ? `https://embed.su/embed/movie/${numericId}` : `https://embed.su/embed/tv/${numericId}`;
+              iframeUrl = isMovie ? `https://embed.su/embed/movie/${numericId}` : `https://embed.su/embed/tv/${numericId}/1/1`;
           }
 
           fetchedData = {
@@ -4348,8 +4393,8 @@ export const MediaModule: React.FC = () => {
                                 "Server 1 (Embed.SU)",
                                 "Server 2 (VidSrc.CC)",
                                 "Server 3 (VidSrc.Me)",
-                                "Server 4 (MultiEmbed)",
-                                "Server 5 (MoviesAPI)"
+                                "Server 4 (WarezCDN)",
+                                "Server 5 (VidSrc.XYZ)"
                               ].map((name, idx) => {
                                 const isOnline = bouncerStreamData?.server_health ? bouncerStreamData.server_health[String(idx)] !== false : true;
                                 const isSelected = selectedEmbedServer === idx;
@@ -4383,7 +4428,7 @@ export const MediaModule: React.FC = () => {
                                 className="w-full h-full border-none absolute inset-0 z-10"
                                 allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
                                 allowFullScreen
-                                referrerPolicy="no-referrer"
+                                referrerPolicy="strict-origin-when-cross-origin"
                               />
                               <div className="absolute top-4 left-4 z-50 pointer-events-auto">
                                 <button
