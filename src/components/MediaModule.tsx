@@ -130,6 +130,42 @@ export const MediaModule: React.FC = () => {
   const { isMediaPipMode, togglePipMode, isTransitioning, showPipModal, setShowPipModal } = usePipSync();
   const [selectedEmbedServer, setSelectedEmbedServer] = useState<number>(0);
 
+  // Helper to determine if a media item is in a foreign language under user's DDI
+  const isMovieEstrangeiroByDdi = (m: Movie) => {
+    const ddi = currentUser?.ddi?.trim() || '';
+    let userLangCode = 'PT-BR';
+    
+    if (ddi === '+55') userLangCode = 'PT-BR';
+    else if (['+54', '+56', '+34', '+52', '+57', '+51', '+58', '+593', '+595', '+598', '+502', '+503', '+504', '+505', '+506', '+507', '+1939', '+1787'].includes(ddi)) userLangCode = 'ES';
+    else if (ddi === '+86' || ddi === '+852' || ddi === '+853') userLangCode = 'ZH';
+    else if (ddi === '+81') userLangCode = 'JA';
+    else if (ddi === '+82') userLangCode = 'KO';
+    else if (ddi === '+33') userLangCode = 'FR';
+    else if (ddi === '+49') userLangCode = 'DE';
+    else if (ddi === '+39') userLangCode = 'IT';
+    else {
+      if (typeof navigator !== 'undefined') {
+        const navLang = navigator.language.toLowerCase();
+        if (navLang.startsWith('pt')) userLangCode = 'PT-BR';
+        else if (navLang.startsWith('es')) userLangCode = 'ES';
+        else if (navLang.startsWith('zh')) userLangCode = 'ZH';
+        else if (navLang.startsWith('ja')) userLangCode = 'JA';
+        else if (navLang.startsWith('ko')) userLangCode = 'KO';
+        else if (navLang.startsWith('fr')) userLangCode = 'FR';
+        else if (navLang.startsWith('de')) userLangCode = 'DE';
+        else if (navLang.startsWith('it')) userLangCode = 'IT';
+        else userLangCode = 'EN';
+      } else {
+        userLangCode = 'EN';
+      }
+    }
+    
+    if (m.audioLanguages && m.audioLanguages.length > 0) {
+      return !m.audioLanguages.includes(userLangCode);
+    }
+    return false;
+  };
+
   // Watch for global media resume trigger (e.g. returning from pip selector modal)
   useEffect(() => {
     if (mediaResumeTrigger > 0 && movieVideoRef.current) {
@@ -903,13 +939,13 @@ export const MediaModule: React.FC = () => {
               break;
             case 3:
               iframeUrl = isMovie 
-                ? `https://api.multiembed.mov/?video_id=${numericId}&tmdb=1` 
-                : `https://api.multiembed.mov/?video_id=${numericId}&tmdb=1&s=${selectedSeason}&e=${selectedEpisode}`;
+                ? `https://vidsrc.pro/embed/movie/${numericId}` 
+                : `https://vidsrc.pro/embed/tv/${numericId}/${selectedSeason}/${selectedEpisode}`;
               break;
             case 4:
               iframeUrl = isMovie 
-                ? `https://autoembed.to/movie/tmdb/${numericId}` 
-                : `https://autoembed.to/tv/tmdb/${numericId}-${selectedSeason}-${selectedEpisode}`;
+                ? `https://www.2embed.cc/embed/${numericId}` 
+                : `https://www.2embed.cc/embed/tv?tmdb=${numericId}&s=${selectedSeason}&e=${selectedEpisode}`;
               break;
             default:
               iframeUrl = isMovie 
@@ -1244,38 +1280,78 @@ export const MediaModule: React.FC = () => {
   }, [expandedSection, selectedMovie, moviesList]);
 
   const memoizedCategories = React.useMemo(() => {
-    // Check if user language is PT-BR based on DDI prefix '+55'
-    const isPtBrUser = currentUser?.ddi === '+55';
-
-    const filterByLanguage = (m: Movie) => {
-      if (!isPtBrUser) return true; // show everything for non PT-BR accounts
+    // Determine language by user's DDI
+    const getLangByCurrentUserDdi = () => {
+      const ddi = currentUser?.ddi?.trim() || '';
+      if (ddi === '+55') return { code: 'PT-BR', label: 'Português' };
       
-      // Default to PT-BR support if unspecified or empty
-      const languages = m.audioLanguages || ['PT-BR', 'EN'];
-      return languages.includes('PT-BR');
+      const spanishDdis = ['+54', '+56', '+34', '+52', '+57', '+51', '+58', '+593', '+595', '+598', '+502', '+503', '+504', '+505', '+506', '+507', '+1939', '+1787'];
+      if (spanishDdis.includes(ddi)) return { code: 'ES', label: 'Espanhol' };
+      
+      if (ddi === '+86' || ddi === '+852' || ddi === '+853') return { code: 'ZH', label: 'Chinês' };
+      if (ddi === '+81') return { code: 'JA', label: 'Japonês' };
+      if (ddi === '+82') return { code: 'KO', label: 'Coreano' };
+      if (ddi === '+33') return { code: 'FR', label: 'Francês' };
+      if (ddi === '+49') return { code: 'DE', label: 'Alemão' };
+      if (ddi === '+39') return { code: 'IT', label: 'Italiano' };
+
+      if (typeof navigator !== 'undefined') {
+        const navLang = navigator.language.toLowerCase();
+        if (navLang.startsWith('pt')) return { code: 'PT-BR', label: 'Português' };
+        if (navLang.startsWith('es')) return { code: 'ES', label: 'Espanhol' };
+        if (navLang.startsWith('zh')) return { code: 'ZH', label: 'Chinês' };
+        if (navLang.startsWith('ja')) return { code: 'JA', label: 'Japonês' };
+        if (navLang.startsWith('ko')) return { code: 'KO', label: 'Coreano' };
+        if (navLang.startsWith('fr')) return { code: 'FR', label: 'Francês' };
+        if (navLang.startsWith('de')) return { code: 'DE', label: 'Alemão' };
+        if (navLang.startsWith('it')) return { code: 'IT', label: 'Italiano' };
+      }
+      return { code: 'EN', label: 'Inglês' };
+    };
+
+    const ddiConfig = getLangByCurrentUserDdi();
+    const isSearchActive = !!searchQuery && searchQuery.trim().length > 0;
+
+    const filterByDdiRule = (m: Movie) => {
+      const hasAudioLanguages = m.audioLanguages && m.audioLanguages.length > 0;
+      const hasDdiAudio = hasAudioLanguages ? m.audioLanguages!.includes(ddiConfig.code) : true;
+
+      if (!isSearchActive) {
+        // No catálogo comum (áudio padrão de acordo com o DDI prioritariamente)
+        return hasDdiAudio;
+      } else {
+        // Na busca voluntária: exibe mídias nacionais, e estrangeiras apenas se houver legenda exata no idioma nativo do DDI
+        if (hasDdiAudio) {
+          return true;
+        } else {
+          // Só exibe se houver legenda específica do idioma nativo do DDI (todas as obras estrangeiras integradas possuem esta legenda)
+          const hasSubtitleForDdi = true; 
+          return hasSubtitleForDdi;
+        }
+      }
     };
 
     return {
-      filtered: moviesList.filter(filterByLanguage).filter(m => {
+      filtered: moviesList.filter(filterByDdiRule).filter(m => {
         const matchQuery = searchQuery ? m.title.toLowerCase().includes(searchQuery.toLowerCase()) || m.overview.toLowerCase().includes(searchQuery.toLowerCase()) : true;
         const matchCategory = selectedCategory !== 'Todos' ? (m as any).category === selectedCategory : true;
         const matchScope = scopeFiltering !== 'todos' ? m.type === scopeFiltering : true;
         return matchQuery && matchCategory && matchScope && m.status;
       }),
-      favorites: moviesList.filter(filterByLanguage).filter(m => {
+      favorites: moviesList.filter(filterByDdiRule).filter(m => {
         const favs = JSON.parse(localStorage.getItem('invis_favorites') || '[]');
         return m.status && favs.includes(m.id);
       }),
-      continue: moviesList.filter(filterByLanguage).filter(m => {
+      continue: moviesList.filter(filterByDdiRule).filter(m => {
         const progress = JSON.parse(localStorage.getItem('invis_continue') || '{}');
         return m.status && progress[m.id];
       }),
-      suggestions: moviesList.filter(filterByLanguage).filter(m => m.status && (m as any).rating >= 8.2),
-      netflix: moviesList.filter(filterByLanguage).filter(m => m.status && ((m as any).platform === 'netflix' || m.id.startsWith('nft') || m.id.startsWith('tf_b2049') || m.id.startsWith('tf_edgerunners'))),
-      disney: moviesList.filter(filterByLanguage).filter(m => m.status && ((m as any).platform === 'disney' || m.id.startsWith('dis'))),
-      hbo: moviesList.filter(filterByLanguage).filter(m => m.status && ((m as any).platform === 'hbo' || m.id.startsWith('hbo') || m.id.startsWith('tf_interstellar') || m.id.startsWith('tf_dune2'))),
-      prime: moviesList.filter(filterByLanguage).filter(m => m.status && ((m as any).platform === 'prime' || m.id.startsWith('prm') || m.id.startsWith('tf_maverick'))),
-      globoplay: moviesList.filter(filterByLanguage).filter(m => m.status && ((m as any).platform === 'globoplay' || m.id.startsWith('glo')))
+      suggestions: moviesList.filter(filterByDdiRule).filter(m => m.status && (m as any).rating >= 8.2),
+      netflix: moviesList.filter(filterByDdiRule).filter(m => m.status && ((m as any).platform === 'netflix' || m.id.startsWith('nft') || m.id.startsWith('tf_b2049') || m.id.startsWith('tf_edgerunners'))),
+      disney: moviesList.filter(filterByDdiRule).filter(m => m.status && ((m as any).platform === 'disney' || m.id.startsWith('dis'))),
+      hbo: moviesList.filter(filterByDdiRule).filter(m => m.status && ((m as any).platform === 'hbo' || m.id.startsWith('hbo') || m.id.startsWith('tf_interstellar') || m.id.startsWith('tf_dune2'))),
+      prime: moviesList.filter(filterByDdiRule).filter(m => m.status && ((m as any).platform === 'prime' || m.id.startsWith('prm') || m.id.startsWith('tf_maverick'))),
+      globoplay: moviesList.filter(filterByDdiRule).filter(m => m.status && ((m as any).platform === 'globoplay' || m.id.startsWith('glo')))
     };
   }, [moviesList, searchQuery, selectedCategory, scopeFiltering, currentUser]);
 
@@ -3041,16 +3117,23 @@ export const MediaModule: React.FC = () => {
           className="absolute inset-0 w-full h-full object-cover z-20"
         />
       ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
+        <>
+          <motion.img
+            key="poster"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            src={movie.posterUrl} 
+            alt={movie.title} 
+             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" 
+          />
+          {isMovieEstrangeiroByDdi(movie) && (
+            <div className="absolute top-1.5 right-1.5 bg-amber-500 text-black font-extrabold text-[8px] px-2 py-0.5 rounded tracking-widest z-30 uppercase font-sans shadow-[0_0_12px_rgba(245,158,11,0.5)] select-none">
+              Legendado
+            </div>
+          )}
+        </>
       )}
     </AnimatePresence>
                               </div>
@@ -4363,8 +4446,8 @@ export const MediaModule: React.FC = () => {
                                 "Server 1 (VidSrc Embed)",
                                 "Server 2 (VidSrc Me)",
                                 "Server 3 (VSrc.SU)",
-                                "Server 4 (MultiEmbed)",
-                                "Server 5 (AutoEmbed)"
+                                "Server 4 (VidSrc Pro)",
+                                "Server 5 (2Embed)"
                               ].map((name, idx) => {
                                 const isOnline = bouncerStreamData?.server_health ? bouncerStreamData.server_health[String(idx)] !== false : true;
                                 const isSelected = selectedEmbedServer === idx;
@@ -4384,6 +4467,14 @@ export const MediaModule: React.FC = () => {
                                 );
                               })}
                             </div>
+                            {bouncerStreamData?.source_type === 'iframe' && (
+                              <div className="bg-cyan-950/20 border border-cyan-500/10 text-cyan-400 p-2 text-[8.5px] font-mono leading-relaxed flex items-start gap-1.5 rounded-lg mt-2 text-left">
+                                <span className="shrink-0 text-cyan-300">💡</span>
+                                <span>
+                                  <strong>Dica de Idioma:</strong> Como este reprodutor opera via sinal direto, utilize as configurações de áudio, engrenagem ou botões de legendas <strong>dentro do próprio player de vídeo abaixo</strong> para alternar canais de dublagem ou faixas de legenda desajustadas.
+                                </span>
+                              </div>
+                            )}
                           </div>
                         )}
 

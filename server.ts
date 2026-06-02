@@ -707,11 +707,11 @@ async function startServer() {
         ? `https://vsrc.su/embed/movie/${numericId}` 
         : `https://vsrc.su/embed/tv/${numericId}/${season}/${episode}`,
       isMovie 
-        ? `https://api.multiembed.mov/?video_id=${numericId}&tmdb=1` 
-        : `https://api.multiembed.mov/?video_id=${numericId}&tmdb=1&s=${season}&e=${episode}`,
+        ? `https://vidsrc.pro/embed/movie/${numericId}` 
+        : `https://vidsrc.pro/embed/tv/${numericId}/${season}/${episode}`,
       isMovie 
-        ? `https://autoembed.to/movie/tmdb/${numericId}` 
-        : `https://autoembed.to/tv/tmdb/${numericId}-${season}-${episode}`
+        ? `https://www.2embed.cc/embed/${numericId}` 
+        : `https://www.2embed.cc/embed/tv?tmdb=${numericId}&s=${season}&e=${episode}`
     ];
 
     // Select the best active streaming URL among checked servers (Server 1, 2, or 3)
