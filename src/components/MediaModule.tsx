@@ -166,6 +166,19 @@ export const MediaModule: React.FC = () => {
     return false;
   };
 
+  const renderAudioBadge = (m: Movie) => {
+    if (m.type === 'trailer') return null;
+    return isMovieEstrangeiroByDdi(m) ? (
+      <div className="absolute top-1.5 right-1.5 bg-amber-500/95 text-black border border-amber-400/20 font-black text-[7.5px] px-1.5 py-0.5 rounded z-30 uppercase font-sans shadow-[0_0_12px_rgba(245,158,11,0.5)] select-none tracking-widest">
+        Legendado
+      </div>
+    ) : (
+      <div className="absolute top-1.5 right-1.5 bg-emerald-500/95 text-white border border-emerald-400/20 font-black text-[7.5px] px-1.5 py-0.5 rounded z-30 uppercase font-sans shadow-[0_0_12px_rgba(16,185,129,0.5)] select-none tracking-widest">
+        Dublado
+      </div>
+    );
+  };
+
   // Watch for global media resume trigger (e.g. returning from pip selector modal)
   useEffect(() => {
     if (mediaResumeTrigger > 0 && movieVideoRef.current) {
@@ -925,13 +938,13 @@ export const MediaModule: React.FC = () => {
     switch (serverIndex) {
       case 0:
         baseUrl = isMovie 
-          ? `https://vidsrc-embed.su/embed/movie?tmdb=${numericId}` 
-          : `https://vidsrc-embed.su/embed/tv?tmdb=${numericId}&season=${season}&episode=${episode}`;
+          ? `https://vidsrc.xyz/embed/movie/${numericId}` 
+          : `https://vidsrc.xyz/embed/tv/${numericId}/${season}/${episode}`;
         break;
       case 1:
         baseUrl = isMovie 
-          ? `https://vidsrcme.su/embed/movie?tmdb=${numericId}` 
-          : `https://vidsrcme.su/embed/tv?tmdb=${numericId}&season=${season}&episode=${episode}`;
+          ? `https://vidsrc.in/embed/movie/${numericId}` 
+          : `https://vidsrc.in/embed/tv/${numericId}/${season}/${episode}`;
         break;
       case 2:
         baseUrl = isMovie 
@@ -940,18 +953,18 @@ export const MediaModule: React.FC = () => {
         break;
       case 3:
         baseUrl = isMovie 
-          ? `https://vidsrc.to/embed/movie/${numericId}` 
-          : `https://vidsrc.to/embed/tv/${numericId}/${season}/${episode}`;
+          ? `https://vidsrc.pm/embed/movie/${numericId}` 
+          : `https://vidsrc.pm/embed/tv/${numericId}/${season}/${episode}`;
         break;
       case 4:
         baseUrl = isMovie 
-          ? `https://www.2embed.cc/embed/${numericId}` 
-          : `https://www.2embed.cc/embed/tv?tmdb=${numericId}&s=${season}&e=${episode}`;
+          ? `https://multiembed.mov/?video_id=${numericId}&tmdb=1` 
+          : `https://multiembed.mov/?video_id=${numericId}&tmdb=1&s=${season}&e=${episode}`;
         break;
       default:
         baseUrl = isMovie 
-          ? `https://vidsrc-embed.su/embed/movie?tmdb=${numericId}` 
-          : `https://vidsrc-embed.su/embed/tv?tmdb=${numericId}&season=${season}&episode=${episode}`;
+          ? `https://vidsrc.xyz/embed/movie/${numericId}` 
+          : `https://vidsrc.xyz/embed/tv/${numericId}/${season}/${episode}`;
     }
 
     const params: string[] = [];
@@ -1076,16 +1089,37 @@ export const MediaModule: React.FC = () => {
   useEffect(() => {
     if (!selectedMovie || !moviePlaying) return;
 
-    // Set synchronous initial bouncer stream state to prevent React from rendering <video> and then swapping to <iframe> as this destroys device focus / autoplay on first clicks
     const initialLang = getDefaultLanguageByDdi(currentUser?.ddi);
+    const movieAudioLangs = selectedMovie.audioLanguages || [];
+    const supportsNativeAudio = movieAudioLangs.length === 0 || movieAudioLangs.includes(initialLang);
+
+    const targetAudio = supportsNativeAudio ? initialLang : (movieAudioLangs[0] || 'EN');
+    const targetSub = supportsNativeAudio ? 'OFF' : initialLang;
+
+    // Set synchronous initial bouncer stream state to prevent React from rendering <video> and then swapping to <iframe> as this destroys device focus / autoplay on first clicks
     const defaultUrl = getEmbedUrlForMovie(
       selectedMovie,
       selectedEmbedServer,
-      initialLang,
-      movieSubtitle,
+      targetAudio,
+      targetSub,
       selectedSeason,
       selectedEpisode
     );
+
+    // If we're playing on any of the 5 iframe servers, initialize and return early!
+    // This allows the iframe to mount exactly ONCE with perfect parameters and play instantly without duplicate async reloads or interruption!
+    const isIframeServer = selectedEmbedServer >= 0 && selectedEmbedServer <= 4;
+    if (isIframeServer) {
+      setBouncerStreamData({
+        status: 'active',
+        source_type: 'iframe',
+        stream_url: defaultUrl,
+        server_health: { "0": true, "1": true, "2": true, "3": true, "4": true }
+      });
+      setIsVideoBuffering(false);
+      return;
+    }
+    
     setBouncerStreamData({
       status: 'active',
       source_type: 'iframe',
@@ -1530,14 +1564,25 @@ export const MediaModule: React.FC = () => {
     };
 
     const filterByDdiRule = (m: Movie) => {
-      const match = userDdiMatch(m);
-      if (!isSearchActive) {
-        // Catalogo comum: apenas titulos compativeis com o ddi (estrangeiros sem suporte vao para estado search-only)
-        return match;
-      } else {
-        // No estado de busca: traz o catalogo completo (incluindo estrangeiros)
+      if (m.type === 'trailer') return true;
+      const nativeLang = ddiConfig.code;
+      const langs = m.audioLanguages || [];
+
+      // Safe fallback for items without explicit configuration
+      if (langs.length === 0) return true;
+
+      // Rule A: If it contains user's native DDI audio - allow (Dublado)
+      if (langs.includes(nativeLang)) {
         return true;
       }
+
+      // Rule B: If no native audio, it must support dual-audio (>=2) to be shown as "Legendado"
+      if (langs.length >= 2) {
+        return true;
+      }
+
+      // Rule C: Otherwise, omit titles that lack both native audio and dual-audio support
+      return false;
     };
 
     return {
@@ -3337,11 +3382,7 @@ export const MediaModule: React.FC = () => {
             alt={movie.title} 
              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" 
           />
-          {isMovieEstrangeiroByDdi(movie) && (
-            <div className="absolute top-1.5 right-1.5 bg-amber-500 text-black font-extrabold text-[8px] px-2 py-0.5 rounded tracking-widest z-30 uppercase font-sans shadow-[0_0_12px_rgba(245,158,11,0.5)] select-none">
-              Legendado
-            </div>
-          )}
+          {renderAudioBadge(movie)}
         </>
       )}
     </AnimatePresence>
@@ -3438,6 +3479,7 @@ export const MediaModule: React.FC = () => {
         />
       )}
     </AnimatePresence>
+                                {renderAudioBadge(movie)}
                                 <div className="absolute top-1.5 left-1.5 bg-black/60 border border-red-500/30 px-1 py-0.5 rounded text-[6.5px] font-sans text-red-400 flex items-center gap-0.5 font-bold">
                                   <Heart className="w-2 h-2 fill-red-500 text-red-500" /> FAV
                                 </div>
@@ -4695,14 +4737,11 @@ export const MediaModule: React.FC = () => {
                             <div className="absolute inset-0 w-full h-full z-10 transition-all duration-300">
                               <iframe 
                                 src={bouncerStreamData?.stream_url} 
-                                className={`w-full h-full border-none transition-all duration-500 ${!movieIsPlaying ? 'opacity-35 blur-xl scale-95' : 'opacity-100 scale-100'}`}
+                                className="w-full h-full border-none opacity-100 scale-100"
                                 allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
                                 allowFullScreen
                                 referrerPolicy="strict-origin-when-cross-origin"
-                                sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                               />
-                              {/* Transparent Security Shield that blocks standard iframe ad popups, redirects, and captures all drag/click gestures */}
-                              <div className="absolute inset-0 bg-transparent z-20 pointer-events-auto" />
                             </div>
                           ) : (
                             <video
@@ -4753,14 +4792,14 @@ export const MediaModule: React.FC = () => {
 
                           {/* Complete control Overlay bar. Hovering shows controls. If paused, controls are locked visible */}
                           <div 
-                            onClick={(e) => {
+                            onClick={bouncerStreamData?.source_type === 'iframe' ? undefined : (e) => {
                               // Click on video toggles play/pause
                               triggerHaptic(15);
                               const nextState = !movieIsPlaying;
                               setMovieIsPlaying(nextState);
                               showAlert(nextState ? 'PLAY' : 'PAUSADO');
 
-                              if (bouncerStreamData?.source_type !== 'iframe' && movieVideoRef.current) {
+                              if (movieVideoRef.current) {
                                 if (nextState) {
                                   movieVideoRef.current.play().catch(() => {});
                                 } else {
@@ -4768,7 +4807,9 @@ export const MediaModule: React.FC = () => {
                                 }
                               }
                             }}
-                            className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/50 opacity-0 group-hover/player:opacity-100 flex flex-col justify-between p-4 z-30 transition-opacity duration-300 ${!movieIsPlaying ? 'opacity-100' : ''}`}
+                            className={bouncerStreamData?.source_type === 'iframe'
+                              ? "absolute inset-0 z-30 pointer-events-none flex flex-col justify-between p-4 bg-transparent"
+                              : `absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/50 opacity-0 group-hover/player:opacity-100 flex flex-col justify-between p-4 z-30 transition-opacity duration-300 ${!movieIsPlaying ? 'opacity-100' : ''}`}
                           >
                             {/* Player Header Info */}
                             <div className="flex justify-between items-start w-full pointer-events-auto">
@@ -4797,7 +4838,7 @@ export const MediaModule: React.FC = () => {
                             </div>
 
                             {/* Centered Large Play Button Overlay when paused */}
-                            {!movieIsPlaying && (
+                            {!movieIsPlaying && bouncerStreamData?.source_type !== 'iframe' && (
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -4817,7 +4858,7 @@ export const MediaModule: React.FC = () => {
                             {/* Bottom controls container */}
                             <div 
                               onClick={(e) => e.stopPropagation()}
-                              className={`w-full space-y-3 pointer-events-auto`}
+                              className={`w-full space-y-3 pointer-events-auto ${bouncerStreamData?.source_type === 'iframe' ? 'hidden' : ''}`}
                             >
                               {/* Timeline scrub bar */}
                               <div className="flex items-center gap-3 w-full">

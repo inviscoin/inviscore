@@ -630,8 +630,8 @@ async function startServer() {
 
       // Embed stream movie template
       const streamUrl = apiType === "movie"
-        ? `https://vidsrc.to/embed/movie/${numericId}`
-        : `https://vidsrc.to/embed/tv/${numericId}`;
+        ? `https://vidsrc.pm/embed/movie/${numericId}`
+        : `https://vidsrc.pm/embed/tv/${numericId}`;
 
       // Bouncer Source Masking - Burlar origem real do stream
       const temporaryVirtualUrl = `/api/bouncer/stream/jwt_token_fake/${apiType}_${numericId}`;
@@ -704,28 +704,28 @@ async function startServer() {
 
     // Parallel check of upgraded, unblocked servers 1, 2, and 3
     const [is1Healthy, is2Healthy, is3Healthy] = await Promise.all([
-      checkHostHealthy("https://vidsrc-embed.su"),
-      checkHostHealthy("https://vidsrcme.su"),
+      checkHostHealthy("https://vidsrc.xyz"),
+      checkHostHealthy("https://vidsrc.in"),
       checkHostHealthy("https://vsrc.su")
     ]);
 
     // Construct Server URLs and options using active, unblocked domains and correct tv path configurations
     const urls = [
       isMovie 
-        ? `https://vidsrc-embed.su/embed/movie?tmdb=${numericId}` 
-        : `https://vidsrc-embed.su/embed/tv?tmdb=${numericId}&season=${season}&episode=${episode}`,
+        ? `https://vidsrc.xyz/embed/movie/${numericId}` 
+        : `https://vidsrc.xyz/embed/tv/${numericId}/${season}/${episode}`,
       isMovie 
-        ? `https://vidsrcme.su/embed/movie?tmdb=${numericId}` 
-        : `https://vidsrcme.su/embed/tv?tmdb=${numericId}&season=${season}&episode=${episode}`,
+        ? `https://vidsrc.in/embed/movie/${numericId}` 
+        : `https://vidsrc.in/embed/tv/${numericId}/${season}/${episode}`,
       isMovie 
         ? `https://vsrc.su/embed/movie/${numericId}` 
         : `https://vsrc.su/embed/tv/${numericId}/${season}/${episode}`,
       isMovie 
-        ? `https://vidsrc.to/embed/movie/${numericId}` 
-        : `https://vidsrc.to/embed/tv/${numericId}/${season}/${episode}`,
+        ? `https://vidsrc.pm/embed/movie/${numericId}` 
+        : `https://vidsrc.pm/embed/tv/${numericId}/${season}/${episode}`,
       isMovie 
-        ? `https://www.2embed.cc/embed/${numericId}` 
-        : `https://www.2embed.cc/embed/tv?tmdb=${numericId}&s=${season}&e=${episode}`
+        ? `https://multiembed.mov/?video_id=${numericId}&tmdb=1` 
+        : `https://multiembed.mov/?video_id=${numericId}&tmdb=1&s=${season}&e=${episode}`
     ];
 
     // Select the best active streaming URL among checked servers (Server 1, 2, or 3)
