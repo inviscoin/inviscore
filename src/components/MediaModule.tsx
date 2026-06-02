@@ -954,6 +954,24 @@ export const MediaModule: React.FC = () => {
   };
 
   const [moviesList, setMoviesList] = useState<Movie[]>(CINEMA_ROSTER);
+  const [indexedDbCatalog, setIndexedDbCatalog] = useState<any[]>([]);
+
+  // Busca os títulos reais no banco ao montar o componente
+  useEffect(() => {
+    async function fetchIndexedCatalog() {
+      try {
+        const res = await fetch('/api/media/catalog/active');
+        const data = await res.json();
+        if (data.success && data.active_titles) {
+          setIndexedDbCatalog(data.active_titles);
+        }
+      } catch (err) {
+        console.error("Falha ao sincronizar catálogo do INVIS:", err);
+      }
+    }
+    fetchIndexedCatalog();
+  }, []);
+
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [moviePlaying, setMoviePlaying] = useState(false);
@@ -1121,7 +1139,9 @@ export const MediaModule: React.FC = () => {
       } catch (err: any) {
         console.error("Erro na busca de stream:", err);
         setIsVideoBuffering(false);
-        setActiveMediaAlert(err.message || "Mídia não indexada no Supabase");
+        setMovieIsPlaying(false);
+        // Remove mensagens de erro 404 da tela do usuário
+        setActiveMediaAlert("SINAL TEMPORARIAMENTE INDISPONÍVEL");
       }
     };
     
@@ -1401,103 +1421,66 @@ export const MediaModule: React.FC = () => {
   }, [expandedSection, selectedMovie, moviesList]);
 
   const memoizedCategories = React.useMemo(() => {
-    // Determine language by user's DDI
-    const getLangByCurrentUserDdi = () => {
-      const ddi = currentUser?.ddi?.trim() || '';
-      if (ddi === '+55') return { code: 'PT-BR', label: 'Português' };
+    const ddiConfig = getDefaultLanguageByDdi(currentUser?.ddi); // 'PT-BR', 'EN', etc.
+    const userDdi = currentUser?.ddi?.trim() || '';
+
+    const filterByDbExistenceAndDdi = (m: Movie) => {
+      if (m.type === 'trailer') return true; // Mantém os trailers promocionais
+
+      // 1. REGRA DE EXISTÊNCIA: O filme existe no Supabase?
+      const numericId = m.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
+      const dbMatch = indexedDbCatalog.find((dbItem) => dbItem.title_id === numericId);
       
-      const spanishDdis = ['+54', '+56', '+34', '+52', '+57', '+51', '+58', '+593', '+595', '+598', '+502', '+503', '+504', '+505', '+506', '+507', '+1939', '+1787'];
-      if (spanishDdis.includes(ddi)) return { code: 'ES', label: 'Espanhol' };
-      
-      if (ddi === '+86' || ddi === '+852' || ddi === '+853') return { code: 'ZH', label: 'Chinês' };
-      if (ddi === '+81') return { code: 'JA', label: 'Japonês' };
-      if (ddi === '+82') return { code: 'KO', label: 'Coreano' };
-      if (ddi === '+33') return { code: 'FR', label: 'Francês' };
-      if (ddi === '+49') return { code: 'DE', label: 'Alemão' };
-      if (ddi === '+39') return { code: 'IT', label: 'Italiano' };
+      if (!dbMatch) return false; // Se não está no banco, some da interface.
 
-      if (typeof navigator !== 'undefined') {
-        const navLang = navigator.language.toLowerCase();
-        if (navLang.startsWith('pt')) return { code: 'PT-BR', label: 'Português' };
-        if (navLang.startsWith('es')) return { code: 'ES', label: 'Espanhol' };
-        if (navLang.startsWith('zh')) return { code: 'ZH', label: 'Chinês' };
-        if (navLang.startsWith('ja')) return { code: 'JA', label: 'Japonês' };
-        if (navLang.startsWith('ko')) return { code: 'KO', label: 'Coreano' };
-        if (navLang.startsWith('fr')) return { code: 'FR', label: 'Francês' };
-        if (navLang.startsWith('de')) return { code: 'DE', label: 'Alemão' };
-        if (navLang.startsWith('it')) return { code: 'IT', label: 'Italiano' };
-      }
-      return { code: 'EN', label: 'Inglês' };
-    };
+      // 2. REGRA DE DDI: O filme atende ao idioma do usuário?
+      const dbAudioLangs = dbMatch.tracks_data?.audio_languages || ['en-US'];
+      const dbHasPtBr = dbAudioLangs.some((lang: string) => lang.toLowerCase().includes('pt'));
+      const dbHasEnglish = dbAudioLangs.some((lang: string) => lang.toLowerCase().includes('en'));
 
-    const ddiConfig = getLangByCurrentUserDdi();
-    const isSearchActive = !!searchQuery && searchQuery.trim().length > 0;
-
-    const userDdiMatch = (m: Movie) => {
-      const hasAudioLanguages = m.audioLanguages && m.audioLanguages.length > 0;
-      if (!hasAudioLanguages) return true;
-      return m.audioLanguages!.includes(ddiConfig.code);
-    };
-
-    const filterByDdiRule = (m: Movie) => {
-      if (m.type === 'trailer') return true;
-      const userDdi = currentUser?.ddi?.trim() || '';
-      const nativeLang = ddiConfig.code;
-      const langs = m.audioLanguages || [];
-
-      // Pipeline de Filtragem do Catálogo na API de Origem (Regra de Omissão Automática)
-      // Se um título só possuir áudio em inglês (EN) e o DDI do usuário for do Brasil (+55), 
-      // e o título não oferecer uma trilha dublada correspondente no banco ou suporte a áudio duplo mapeado, 
-      // esse ID deve ser removido sumariamente do feed do usuário.
       if (userDdi === '+55') {
-        const hasOnlyEnglish = langs.length === 1 && langs[0] === 'EN';
-        const supportsPortuguese = langs.includes('PT-BR') || langs.includes('PT');
-        if (hasOnlyEnglish && !supportsPortuguese && langs.length < 2) {
-          console.log(`[Filtragem DDI] Omitindo título do catálogo principal: #${m.id} (${m.title}) por incompatibilidade de idioma (Dublagem não cadastrada para DDI +55).`);
+        // Se o usuário é do Brasil e o banco só tem áudio em inglês (sem dual audio), oculta o filme.
+        if (dbHasEnglish && !dbHasPtBr && dbAudioLangs.length < 2) {
+          return false;
+        }
+      } else {
+        // Se o usuário for estrangeiro, e o filme não tiver o idioma dele nem inglês, oculta.
+        const userLangCode = ddiConfig.toLowerCase().split('-')[0];
+        const hasUserLang = dbAudioLangs.some((lang: string) => lang.toLowerCase().includes(userLangCode));
+        if (!hasUserLang && !dbHasEnglish) {
           return false;
         }
       }
 
-      // Safe fallback for items without explicit configuration
-      if (langs.length === 0) return true;
-
-      // Rule A: If it contains user's native DDI audio - allow (Dublado)
-      if (langs.includes(nativeLang)) {
-        return true;
-      }
-
-      // Rule B: If no native audio, it must support dual-audio (>=2) to be shown as "Legendado"
-      if (langs.length >= 2) {
-        return true;
-      }
-
-      // Rule C: Otherwise, omit titles that lack both native audio and dual-audio support
-      return false;
+      return true;
     };
 
+    // Aplica o filtro mestre antes de dividir nas categorias
+    const strictCatalog = moviesList.filter(filterByDbExistenceAndDdi);
+
     return {
-      filtered: moviesList.filter(filterByDdiRule).filter(m => {
+      filtered: strictCatalog.filter(m => {
         const matchQuery = searchQuery ? m.title.toLowerCase().includes(searchQuery.toLowerCase()) || m.overview.toLowerCase().includes(searchQuery.toLowerCase()) : true;
         const matchCategory = selectedCategory !== 'Todos' ? (m as any).category === selectedCategory : true;
         const matchScope = scopeFiltering !== 'todos' ? m.type === scopeFiltering : true;
         return matchQuery && matchCategory && matchScope && m.status;
       }),
-      favorites: moviesList.filter(filterByDdiRule).filter(m => {
+      favorites: strictCatalog.filter(m => {
         const favs = JSON.parse(localStorage.getItem('invis_favorites') || '[]');
         return m.status && favs.includes(m.id);
       }),
-      continue: moviesList.filter(filterByDdiRule).filter(m => {
+      continue: strictCatalog.filter(m => {
         const progress = JSON.parse(localStorage.getItem('invis_continue') || '{}');
         return m.status && progress[m.id];
       }),
-      suggestions: moviesList.filter(filterByDdiRule).filter(m => m.status && (m as any).rating >= 8.2),
-      netflix: moviesList.filter(filterByDdiRule).filter(m => m.status && (m as any).platform === 'netflix'),
-      disney: moviesList.filter(filterByDdiRule).filter(m => m.status && (m as any).platform === 'disney'),
-      hbo: moviesList.filter(filterByDdiRule).filter(m => m.status && (m as any).platform === 'hbo'),
-      prime: moviesList.filter(filterByDdiRule).filter(m => m.status && (m as any).platform === 'prime'),
-      globoplay: moviesList.filter(filterByDdiRule).filter(m => m.status && (m as any).platform === 'globoplay')
+      suggestions: strictCatalog.filter(m => m.status && (m as any).rating >= 8.2),
+      netflix: strictCatalog.filter(m => m.status && (m as any).platform === 'netflix'),
+      disney: strictCatalog.filter(m => m.status && (m as any).platform === 'disney'),
+      hbo: strictCatalog.filter(m => m.status && (m as any).platform === 'hbo'),
+      prime: strictCatalog.filter(m => m.status && (m as any).platform === 'prime'),
+      globoplay: strictCatalog.filter(m => m.status && (m as any).platform === 'globoplay')
     };
-  }, [moviesList, searchQuery, selectedCategory, scopeFiltering, currentUser]);
+  }, [moviesList, indexedDbCatalog, searchQuery, selectedCategory, scopeFiltering, currentUser]);
 
   // Return titles straight from backend which supports batching naturally ~50
   const getExpandedTitlesForCategory = (category: string) => {

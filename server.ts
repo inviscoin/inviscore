@@ -1068,6 +1068,57 @@ async function startServer() {
     }
   });
 
+  // Endpoint para o frontend sincronizar apenas o que existe no banco
+  app.get("/api/media/catalog/active", async (req, res) => {
+    if (!supabase) return res.status(500).json({ error: "Supabase client não configurado" });
+    try {
+      const { data: catalogData, error: catalogError } = await supabase
+        .from("media_catalog")
+        .select("title_id, media_type, tracks_data");
+
+      if (catalogError) throw catalogError;
+
+      const { data: sourcesData, error: sourcesError } = await supabase
+        .from("invis_media_sources")
+        .select("media_id, media_type, audio_languages, subtitles");
+
+      const mergedMap = new Map<string, { title_id: string; media_type: string; tracks_data: any }>();
+
+      if (catalogData) {
+        for (const item of catalogData) {
+          const type = item.media_type === 'serie' ? 'tv' : item.media_type;
+          const key = `${type}_${item.title_id}`;
+          mergedMap.set(key, {
+            title_id: item.title_id,
+            media_type: type,
+            tracks_data: item.tracks_data || { audio_languages: ['pt-BR', 'en-US'], subtitles: [] }
+          });
+        }
+      }
+
+      if (sourcesData) {
+        for (const item of sourcesData) {
+          const type = item.media_type === 'serie' ? 'tv' : (item.media_type?.includes('movie') ? 'movie' : 'movie');
+          const key = `${type}_${item.media_id}`;
+          if (!mergedMap.has(key)) {
+            mergedMap.set(key, {
+              title_id: item.media_id,
+              media_type: type,
+              tracks_data: {
+                audio_languages: item.audio_languages || ['pt-BR', 'en-US'],
+                subtitles: item.subtitles || []
+              }
+            });
+          }
+        }
+      }
+
+      return res.json({ success: true, active_titles: Array.from(mergedMap.values()) });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
   // API DE PING DE SERVIDORES (ORQUESTRADOR CENTRAL INVIS)
   app.get("/api/bouncer/ping-servers", async (req, res) => {
     res.json({
