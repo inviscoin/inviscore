@@ -917,39 +917,30 @@ export const MediaModule: React.FC = () => {
     return 'EN';
   };
 
-  // SPEC ATUALIZADA: Forçar roteamento interno. NUNCA usar iframes.
-  const getEmbedUrlForMovie = (
+  // DETERMINISTICO: Conexão direta com CDN própria no Supabase
+  const getDirectMediaUrl = (
     movie: Movie,
-    serverIndex: number,
-    audio: string,
-    subtitle: string,
     season: number,
     episode: number,
-    timeInSecs?: number
+    audio: string,
+    subtitle: string
   ) => {
     const numericId = movie.id?.replace("movie_", "").replace("tv_", "").replace("tmdb-", "") || "0";
-    const isMovie = movie.type !== 'serie';
-    
-    // Mapeamento de idioma real para envio ao backend
-    const audioCode = audio.toLowerCase().split('-')[0];
-    const subCode = subtitle === 'OFF' ? '' : subtitle.toLowerCase().split('-')[0];
-
-    // O backend (Vercel/Cloudflare) fará o scraping silencioso e retornará o .m3u8 ou .mp4 correspondente
-    const baseUrl = `/api/bouncer/extract/${isMovie ? 'movie' : 'tv'}/${numericId}`;
+    const typePath = movie.type === 'serie' ? 'tv' : 'movie';
     const params = new URLSearchParams();
-
-    params.append('server', serverIndex.toString());
     
-    if (!isMovie) {
+    if (movie.type === 'serie') {
       params.append('s', season.toString());
       params.append('e', episode.toString());
     }
     
+    const audioCode = audio.toLowerCase().split('-')[0];
+    const subCode = subtitle === 'OFF' ? '' : subtitle.toLowerCase().split('-')[0];
+    
     if (audioCode) params.append('audio', audioCode);
     if (subCode) params.append('sub', subCode);
-    if (timeInSecs) params.append('start', timeInSecs.toString());
 
-    return `${baseUrl}?${params.toString()}`;
+    return `/api/media/${typePath}/${numericId}?${params.toString()}`;
   };
 
   const [moviesList, setMoviesList] = useState<Movie[]>(CINEMA_ROSTER);
@@ -974,28 +965,7 @@ export const MediaModule: React.FC = () => {
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
 
-  // Dynamic Latency check to select the fastest server (1-5) on-demand
-  const testServerLatencies = async () => {
-    console.log("[Latency Test] Avaliando extratores no backend INVIS...");
-    try {
-      // Ping na SUA api, não no site externo. O Vercel/Cloudflare testa a conexão e devolve o mais rápido.
-      const response = await fetch('/api/bouncer/ping-servers', { method: 'GET' });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.bestServerId !== undefined) {
-          setSelectedEmbedServer(data.bestServerId);
-          showAlert(`CONEXÃO OTIMIZADA: Rota ${data.bestServerId} estabelecida`);
-        }
-      } else {
-        setSelectedEmbedServer(0);
-      }
-    } catch (e) {
-      console.warn("[Latency Test] Falha ao contatar orquestrador, usando Rota 0");
-      setSelectedEmbedServer(0);
-    }
-  };
-
-  // Run dynamic latency test whenever selected movie changes (start of movie play)
+  // Configura idiomas iniciais baseados no DDI do usuário ao trocar de mídia
   useEffect(() => {
     if (selectedMovie) {
       const initialLang = getDefaultLanguageByDdi(currentUser?.ddi);
@@ -1004,43 +974,24 @@ export const MediaModule: React.FC = () => {
 
       if (supportsNativeAudio) {
         setMovieAudioLang(initialLang);
-        setMovieSubtitle('OFF'); // Native language audio, no subtitle is needed
+        setMovieSubtitle('OFF');
       } else {
-        // Fall back to first available or EN audio, and set subtitle matching the native DDI language to translate
         const fallbackAudio = movieAudioLangs[0] || 'EN';
         setMovieAudioLang(fallbackAudio);
         setMovieSubtitle(initialLang as any);
       }
-      testServerLatencies();
     }
   }, [selectedMovie, currentUser?.ddi]);
 
-  // Initialize Player & HLS on playback start - 100% native client consuming direct streams.
+  // Inicialização do reprodutor através do orquestrador de mídia direta
   useEffect(() => {
     if (!selectedMovie || !moviePlaying) return;
-
-    const initialLang = getDefaultLanguageByDdi(currentUser?.ddi);
-    const movieAudioLangs = selectedMovie.audioLanguages || [];
-    const supportsNativeAudio = movieAudioLangs.length === 0 || movieAudioLangs.includes(initialLang);
-
-    const targetAudio = supportsNativeAudio ? initialLang : (movieAudioLangs[0] || 'EN');
-    const targetSub = supportsNativeAudio ? 'OFF' : initialLang;
-
-    // Set synchronous initial state for clean native loading
-    const defaultUrl = getEmbedUrlForMovie(
-      selectedMovie,
-      selectedEmbedServer,
-      targetAudio,
-      targetSub,
-      selectedSeason,
-      selectedEpisode
-    );
 
     setBouncerStreamData({
       status: 'active',
       source_type: 'video',
-      stream_url: defaultUrl,
-      server_health: { "0": true, "1": true, "2": true, "3": true, "4": true, "5": true }
+      stream_url: '',
+      server_health: { "0": true }
     });
     
     let hlsInstance: Hls | null = null;
@@ -1049,27 +1000,24 @@ export const MediaModule: React.FC = () => {
         setIsVideoBuffering(true);
         setDuration(0);
         
-        // 1. Gera a URL apontando para a sua API extratora
-        const extractionUrl = getEmbedUrlForMovie(
+        // Solicita ao bouncer / banco de dados Supabase na rota de mídia direta
+        const extractionUrl = getDirectMediaUrl(
           selectedMovie,
-          selectedEmbedServer,
-          movieAudioLang,
-          movieSubtitle,
           selectedSeason,
-          selectedEpisode
+          selectedEpisode,
+          movieAudioLang,
+          movieSubtitle
         );
 
-        // 2. O backend processa e devolve o manifesto puro
         const res = await fetch(extractionUrl);
         if (!res.ok) {
-          throw new Error(`Sinal indisponível: Status ${res.status}`);
+          throw new Error(`Mídia Não Indexada: Status ${res.status}`);
         }
         
         const fetchedData = await res.json();
 
-        // Se o servidor atual falhar, pula para o próximo automaticamente
-        if (!fetchedData.stream_url) {
-          throw new Error("Sinal de vídeo vazio ou inválido.");
+        if (!fetchedData || !fetchedData.stream_url) {
+          throw new Error("Link da mídia não encontrado no banco de dados.");
         }
 
         setBouncerStreamData(fetchedData);
@@ -1093,10 +1041,10 @@ export const MediaModule: React.FC = () => {
               hlsInstance.destroy();
             }
             hlsInstance = new Hls({
-              maxBufferSize: 60 * 1022 * 1022, // Buffer maior para reprodução contínua e sem travamentos
+              maxBufferSize: 60 * 1022 * 1022, // Buffer de 60MB para estabilidade absoluta
               maxBufferLength: 60,
               enableWorker: true,
-              lowLatencyMode: false, // Desativado para manter estabilidade em conexões médias/baixas
+              lowLatencyMode: false,
               abrEwmaDefaultEstimate: 5000000,
               capLevelToPlayerSize: true,
             });
@@ -1105,7 +1053,7 @@ export const MediaModule: React.FC = () => {
             hlsInstance.attachMedia(movieVideoRef.current);
             
             hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-              // FORÇAR DUBLAGEM: Seleciona se houver faixa local em português
+              // Ajusta trilha de áudio se disponível no manifesto HLS
               if (hlsInstance && hlsInstance.audioTracks.length > 1) {
                 const targetLanguageLower = movieAudioLang.toLowerCase().split('-')[0];
                 const targetAudioIndex = hlsInstance.audioTracks.findIndex(track => 
@@ -1127,16 +1075,15 @@ export const MediaModule: React.FC = () => {
                 });
             });
 
-            // FALLBACK AUTOMÁTICO SE DER ERRO NO STREAM: Alterna para o próximo servidor em caso de falha física
             hlsInstance.on(Hls.Events.ERROR, (event, data) => {
               if (data.fatal) {
-                console.warn("[Media Player] HLS Erro Fatal. Tentando rota redundante...", data);
+                console.error("[Media Player] HLS Erro Fatal:", data);
                 setIsVideoBuffering(false);
-                setSelectedEmbedServer(prev => (prev + 1) % 6); // Cicla entre os servidores 0, 1, 2, 3, 4, 5
+                setActiveMediaAlert("SINAL INDISPONÍVEL EM NOSSA CDN");
               }
             });
           } else if (movieVideoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-            // Suporte Safari Nativo
+            // Safari nativo
             movieVideoRef.current.src = fetchedData.stream_url;
             movieVideoRef.current.load();
             movieVideoRef.current.play()
@@ -1144,11 +1091,10 @@ export const MediaModule: React.FC = () => {
               .catch(() => { setIsVideoBuffering(false); });
           }
         }
-      } catch (err) {
-        console.error("Erro na busca de stream, ativando contingência:", err);
+      } catch (err: any) {
+        console.error("Erro na busca de stream:", err);
         setIsVideoBuffering(false);
-        // Cicla automaticamente para a próxima rota se der erro de requisição física
-        setSelectedEmbedServer(prev => (prev + 1) % 6);
+        setActiveMediaAlert(err.message || "Mídia não indexada no Supabase");
       }
     };
     
@@ -1159,7 +1105,7 @@ export const MediaModule: React.FC = () => {
         hlsInstance.destroy();
       }
     };
-  }, [selectedMovie, moviePlaying, selectedEmbedServer, selectedSeason, selectedEpisode, movieAudioLang, movieSubtitle]);
+  }, [selectedMovie, moviePlaying, selectedSeason, selectedEpisode, movieAudioLang, movieSubtitle]);
   const [abrMode, setAbrMode] = useState<'1080p' | '720p' | '480p'>('1080p');
   const [showMovieControls, setShowMovieControls] = useState(true);
   const [continueWatchingTime, setContinueWatchingTime] = useState<number | null>(45); // simulated resume timestamp
@@ -4626,48 +4572,14 @@ export const MediaModule: React.FC = () => {
                     >
                       {/* The standard YouTube-sized video block aspect-video (16:9 ratio) */}
                       <div className="w-full max-w-4xl mx-auto flex flex-col space-y-3 shrink-0">
-                        {/* SERVER SELECTOR HUD */}
+                        {/* REPRODUTOR DE STREAM DIRETO HUD */}
                         {(selectedMovie.type === 'filme' || selectedMovie.type === 'serie') && (
-                          <div className="flex flex-col space-y-2 p-3 bg-zinc-950/80 rounded-2xl border border-white/5 shadow-2xl relative z-20">
-                            <div className="flex items-center justify-between px-1">
-                              <span className="text-zinc-400 text-[9px] md:text-[10px] font-mono tracking-widest uppercase">Selecione o Servidor de Stream:</span>
-                              <span className="text-cyan-400 text-[8px] md:text-[9px] font-mono font-bold animate-pulse">● Saúde Verificada em Paralelo</span>
+                          <div className="flex items-center justify-between p-3 bg-zinc-950/80 rounded-2xl border border-white/5 shadow-2xl relative z-20">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                              <span className="text-zinc-300 text-[10px] font-mono font-bold tracking-wider uppercase">SINAL INTEGRAL DE ALTA DEFINIÇÃO CDN</span>
                             </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                              {[
-                                "Server 1 (INVIS HLS Premium)",
-                                "Server 2 (VidSrc Embed)",
-                                "Server 3 (VidSrc Me)",
-                                "Server 4 (VSrc.SU)",
-                                "Server 5 (VidSrc Pro)",
-                                "Server 6 (2Embed)"
-                              ].map((name, idx) => {
-                                const isOnline = bouncerStreamData?.server_health ? bouncerStreamData.server_health[String(idx)] !== false : true;
-                                const isSelected = selectedEmbedServer === idx;
-
-                                return (
-                                  <button
-                                    key={idx}
-                                    onClick={() => {
-                                      triggerHaptic(15);
-                                      setSelectedEmbedServer(idx);
-                                    }}
-                                    className={`px-2 py-2 rounded-xl font-mono text-[9px] font-black uppercase transition-all shadow-md active:scale-95 flex items-center justify-center space-x-1.5 border ${isSelected ? 'bg-cyan-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.4)] border-cyan-400' : 'bg-zinc-900/90 text-zinc-400 hover:text-white hover:bg-zinc-800 border-white/5 hover:border-cyan-500/30'} ${!isOnline ? 'opacity-50 hover:opacity-80' : ''}`}
-                                  >
-                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`}></span>
-                                    <span className="truncate">{name} {!isOnline ? '(Off)' : ''}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            {bouncerStreamData?.source_type === 'iframe' && (
-                              <div className="bg-cyan-950/20 border border-cyan-500/10 text-cyan-400 p-2 text-[8.5px] font-mono leading-relaxed flex items-start gap-1.5 rounded-lg mt-2 text-left">
-                                <span className="shrink-0 text-cyan-300">💡</span>
-                                <span>
-                                  <strong>Dica de Idioma:</strong> Como este reprodutor opera via sinal direto, utilize as configurações de áudio, engrenagem ou botões de legendas <strong>dentro do próprio player de vídeo abaixo</strong> para alternar canais de dublagem ou faixas de legenda desajustadas.
-                                </span>
-                              </div>
-                            )}
+                            <span className="text-cyan-400 text-[9px] font-mono font-bold">● CONEXÃO DETERMINÍSTICA ESTÁVEL</span>
                           </div>
                         )}
 
@@ -4675,40 +4587,27 @@ export const MediaModule: React.FC = () => {
                           id="youtube-player-block"
                           className="w-full aspect-video bg-black relative rounded-2xl overflow-hidden border border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.3)] group/player"
                         >
-                          {bouncerStreamData?.source_type === 'iframe' ? (
-                            <div className="absolute inset-0 w-full h-full z-10 overflow-hidden bg-black transition-all duration-300">
-                              {/* Overlapping Absolute Iframe container calculated to crop external player watermarks and controllers */}
-                              <iframe 
-                                src={bouncerStreamData?.stream_url} 
-                                className="absolute w-[100%] h-[108%] -top-[4%] left-0 border-none opacity-100 scale-100"
-                                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                                allowFullScreen
-                                referrerPolicy="strict-origin-when-cross-origin"
-                              />
-                            </div>
-                          ) : (
-                            <video
-                              ref={movieVideoRef}
-                              className="w-full h-full object-contain pointer-events-none relative z-10"
-                              onTimeUpdate={handleMovieTimeUpdate}
-                              onLoadedMetadata={handleMovieLoadedMetadata}
-                              onEnded={handleMovieEnded}
-                              onWaiting={() => setIsVideoBuffering(true)}
-                              onPlaying={() => setIsVideoBuffering(false)}
-                              onCanPlay={() => setIsVideoBuffering(false)}
-                              onPlay={() => setMovieIsPlaying(true)}
-                              onPause={() => setMovieIsPlaying(false)}
-                              onError={(e) => {
-                                console.error("Video Error:", e.currentTarget.error);
-                                setActiveMediaAlert(`MEDIA ERROR: ${e.currentTarget.error?.message || e.currentTarget.error?.code || 'Desconhecido'}`);
-                                setMovieIsPlaying(false);
-                              }}
-                              autoPlay={true}
-                              playsInline={true}
-                              preload="auto"
-                              muted={movieVolume === 0}
-                            />
-                          )}
+                          <video
+                            ref={movieVideoRef}
+                            className="w-full h-full object-contain pointer-events-none relative z-10"
+                            onTimeUpdate={handleMovieTimeUpdate}
+                            onLoadedMetadata={handleMovieLoadedMetadata}
+                            onEnded={handleMovieEnded}
+                            onWaiting={() => setIsVideoBuffering(true)}
+                            onPlaying={() => setIsVideoBuffering(false)}
+                            onCanPlay={() => setIsVideoBuffering(false)}
+                            onPlay={() => setMovieIsPlaying(true)}
+                            onPause={() => setMovieIsPlaying(false)}
+                            onError={(e) => {
+                              console.error("Video Error:", e.currentTarget.error);
+                              setActiveMediaAlert(`MEDIA ERROR: ${e.currentTarget.error?.message || e.currentTarget.error?.code || 'Desconhecido'}`);
+                              setMovieIsPlaying(false);
+                            }}
+                            autoPlay={true}
+                            playsInline={true}
+                            preload="auto"
+                            muted={movieVolume === 0}
+                          />
 
                           {/* Top Center: Alert HUD Notification for player parameter changes */}
                           {activeMediaAlert && (
@@ -4726,7 +4625,7 @@ export const MediaModule: React.FC = () => {
                           )}
 
                           {/* Loading spinner overlay */}
-                          {isVideoBuffering && bouncerStreamData?.source_type !== 'iframe' && (
+                          {isVideoBuffering && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-blackSpace z-50 select-none pointer-events-none">
                               <div className="w-10 h-10 border-2 border-cyan-500/30 border-t-cyan-400 anonymity-spin rounded-full animate-spin" />
                               <span className="text-[10px] font-mono text-cyan-300 tracking-widest animate-pulse font-bold mt-2">CONECTANDO CANAL HLS...</span>
@@ -4735,15 +4634,15 @@ export const MediaModule: React.FC = () => {
 
                           {/* Complete control Overlay bar. Hovering shows controls. If paused, controls are locked visible */}
                           <div 
-                            onClick={bouncerStreamData?.source_type === 'iframe' ? undefined : (e) => {
+                            onClick={(e) => {
                               // Click on video toggles play/pause
                               triggerHaptic(15);
-                              if (e.target !== e.currentTarget) return; // avoid trigger on child buttons
+                              if (e.target !== e.currentTarget) return; // avoid trigger on child elements
                               const nextState = !movieIsPlaying;
                               setMovieIsPlaying(nextState);
                               showAlert(nextState ? 'PLAY' : 'PAUSADO');
 
-                              if (movieVideoRef.current && bouncerStreamData?.source_type !== 'iframe') {
+                              if (movieVideoRef.current) {
                                 if (nextState) {
                                   movieVideoRef.current.play().catch(() => {});
                                 } else {
@@ -4753,18 +4652,6 @@ export const MediaModule: React.FC = () => {
                             }}
                             className={`absolute inset-0 bg-gradient-to-t from-black/95 via-black/10 to-black/50 opacity-0 group-hover/player:opacity-100 flex flex-col justify-between p-4 z-30 transition-opacity duration-300 pointer-events-none ${!movieIsPlaying ? 'opacity-100' : ''}`}
                           >
-                            {/* Click shield for iframe when paused to prevent direct interactions with external ads */}
-                            {!movieIsPlaying && bouncerStreamData?.source_type === 'iframe' && (
-                              <div 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  triggerHaptic(15);
-                                  setMovieIsPlaying(true);
-                                  showAlert('PLAY');
-                                }}
-                                className="absolute inset-0 bg-black/60 z-20 pointer-events-auto cursor-pointer" 
-                              />
-                            )}
 
                             {/* Player Header Info */}
                             <div className="flex justify-between items-start w-full pointer-events-auto">
@@ -4800,7 +4687,7 @@ export const MediaModule: React.FC = () => {
                                   triggerHaptic(30);
                                   setMovieIsPlaying(true);
                                   showAlert('PLAY');
-                                  if (bouncerStreamData?.source_type !== 'iframe' && movieVideoRef.current) {
+                                  if (movieVideoRef.current) {
                                     movieVideoRef.current.play().catch(() => {});
                                   }
                                 }}
@@ -4816,33 +4703,23 @@ export const MediaModule: React.FC = () => {
                               className="w-full space-y-3 pointer-events-auto"
                             >
                               {/* Timeline scrub bar or Encrypted Bouncer connection HUD */}
-                              {bouncerStreamData?.source_type !== 'iframe' ? (
-                                <div className="flex items-center gap-3 w-full">
-                                  <span className="text-[9px] font-mono font-bold text-zinc-300 w-8">{formatTime(currentTime)}</span>
+                              <div className="flex items-center gap-3 w-full">
+                                <span className="text-[9px] font-mono font-bold text-zinc-300 w-8">{formatTime(currentTime)}</span>
+                                <div 
+                                  onClick={handleMovieTimelineClick}
+                                  className="flex-1 h-1.5 relative bg-white/20 rounded-full cursor-pointer group/timeline flex items-center"
+                                >
                                   <div 
-                                    onClick={handleMovieTimelineClick}
-                                    className="flex-1 h-1.5 relative bg-white/20 rounded-full cursor-pointer group/timeline flex items-center"
-                                  >
-                                    <div 
-                                      className="absolute left-0 h-full bg-cyan-400 rounded-full"
-                                      style={{ width: `${movieProgress}%` }}
-                                    />
-                                    <div 
-                                      className="absolute w-3 h-3 bg-white rounded-full scale-0 group-hover/timeline:scale-100 transition-transform shadow-[0_0_8px_white]"
-                                      style={{ left: `calc(${movieProgress}% - 6px)` }}
-                                    />
-                                  </div>
-                                  <span className="text-[9px] font-mono font-bold text-zinc-500 w-8">{formatTime(duration)}</span>
+                                    className="absolute left-0 h-full bg-cyan-400 rounded-full"
+                                    style={{ width: `${movieProgress}%` }}
+                                  />
+                                  <div 
+                                    className="absolute w-3 h-3 bg-white rounded-full scale-0 group-hover/timeline:scale-100 transition-transform shadow-[0_0_8px_white]"
+                                    style={{ left: `calc(${movieProgress}% - 6px)` }}
+                                  />
                                 </div>
-                              ) : (
-                                <div className="flex items-center justify-between gap-3 w-full pb-1 border-b border-white/5 select-none">
-                                  <div className="flex items-center gap-1.5 font-mono">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse shadow-[0_0_6px_#06b6d4]"></span>
-                                    <span className="text-[9px] font-black text-cyan-400 tracking-wider">CONEXÃO SEGURA CANAL BOUNCER</span>
-                                  </div>
-                                  <span className="text-[9px] font-mono text-zinc-400">RESOLVER DIGITAL DE SINAL (1080P)</span>
-                                </div>
-                              )}
+                                <span className="text-[9px] font-mono font-bold text-zinc-500 w-8">{formatTime(duration)}</span>
+                              </div>
 
                               {/* Buttons toolbar row */}
                               <div className="flex items-center justify-between gap-2.5 flex-wrap pt-1 select-none">

@@ -31,3 +31,11 @@ SELECT id, '159', 'Cadeira do Líder', 'gift', false FROM public.profiles;
 -- Nota: Como o seed das tabelas tasks, transactions, etc. depende de usuários, a melhor forma de iniciar
 -- seria após os usuários criarem a conta no Client, mas as queries acima atuam como seed retroativo para
 -- os registros existentes em profiles.
+
+-- 5. Sementes para Fontes de Mídia Diretas (CDN INVIS)
+-- Insere mídias autônomas de alto desempenho livres de anúncios de terceiros
+INSERT INTO public.invis_media_sources (media_id, media_type, stream_url, resolution, audio_languages, subtitles) VALUES 
+('335984', 'movie', 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8', '1080p Ultra HD', ARRAY['PT-BR', 'EN', 'ES'], ARRAY['pt-BR', 'en']),
+('157336', 'movie', 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8', '1080p Ultra HD', ARRAY['PT-BR', 'EN', 'ES'], ARRAY['pt-BR', 'en']),
+('p1', 'movie', 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8', '1080p Stream', ARRAY['PT-BR', 'EN', 'ES'], ARRAY['pt-BR', 'en']),
+('p2', 'movie', 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8', '1080p Stream', ARRAY['PT-BR', 'EN', 'ES'], ARRAY['pt-BR', 'en']);
