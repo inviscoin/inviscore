@@ -476,6 +476,20 @@ async function startServer() {
              continue;
           }
 
+          const releaseDate = m.release_date || m.first_air_date || "";
+          if (releaseDate) {
+            const releaseYear = new Date(releaseDate).getFullYear();
+            const currentYear = new Date().getFullYear();
+            if (releaseYear > currentYear) {
+              // Future unreleased film, skip it!
+              continue;
+            }
+          }
+          if (m.vote_count === 0 || (m.popularity && m.popularity < 0.8)) {
+            // Unpopular/obscure or unverified candidate with highly questionable stream files
+            continue;
+          }
+
           const cacheKey = `tmdb-${idStr}`;
           
           if (crawlerCache[cacheKey] === undefined) {
@@ -707,8 +721,8 @@ async function startServer() {
         ? `https://vsrc.su/embed/movie/${numericId}` 
         : `https://vsrc.su/embed/tv/${numericId}/${season}/${episode}`,
       isMovie 
-        ? `https://vidsrc.pro/embed/movie/${numericId}` 
-        : `https://vidsrc.pro/embed/tv/${numericId}/${season}/${episode}`,
+        ? `https://vidsrc.to/embed/movie/${numericId}` 
+        : `https://vidsrc.to/embed/tv/${numericId}/${season}/${episode}`,
       isMovie 
         ? `https://www.2embed.cc/embed/${numericId}` 
         : `https://www.2embed.cc/embed/tv?tmdb=${numericId}&s=${season}&e=${episode}`
