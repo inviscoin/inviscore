@@ -1882,34 +1882,59 @@ export const MediaModule: React.FC = () => {
   };
 
   // Health Check Live Validator (Bloco 4: HTTP HEAD requests verifying if active -> status=1, dead -> status=0)
-  const runHealthCheck = () => {
+  const runHealthCheck = async () => {
     setIsHealthChecking(true);
     setHealthCheckProgress(0);
     setHealthCheckLogs([]);
     triggerHaptic(50);
 
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 20;
-      setHealthCheckProgress(progress);
+    setHealthCheckLogs(prev => [...prev, `[HEALTH CHECK INICIADO] Conectando com o bouncer backend para auditoria com o Cloud Worker remoto...`]);
+    setHealthCheckProgress(25);
 
-      if (progress === 20) {
-        setHealthCheckLogs(prev => [...prev, `[HEALTH CHECK COMPLETO] Enviando requisições HTTP HEAD em tempo real contra todas as fontes...`]);
-      } else if (progress === 40) {
-        setHealthCheckLogs(prev => [...prev, `[OK] HEAD 'm1' - Cosmic Journey (2026) -> Retornou HTTP 200 OK. Fonte Ativa.`]);
-      } else if (progress === 60) {
-        // We set m2 (The Silent Sea) to inactive (status = false). Hides automatically from shelves!
-        setHealthCheckLogs(prev => [...prev, `[FALHA DETECTADA] HEAD 'm2' - The Silent Sea (2025) -> Retornou HTTP 404 NOT FOUND (Inativo!).`, `[SQL ACTION] Definindo status = 0 (inativo), ocultando o título imediatamente da vitrine HUD.`]);
-        setMoviesList(prev => prev.map(m => m.id === 'm2' ? { ...m, status: false } : m));
-      } else if (progress === 80) {
-        setHealthCheckLogs(prev => [...prev, `[OK] HEAD 'm3' - Cyberpunk Neon Matrix (2026) -> Retornou HTTP 200 OK. Fonte Ativa.`]);
-      } else if (progress === 100) {
-        setHealthCheckLogs(prev => [...prev, `[CONCLUÍDO] Fim da checagem. Estatísticas de resiliência sincronizadas. 1 de 3 títulos marcados como inativos.`]);
-        clearInterval(interval);
+    try {
+      const response = await fetch("/api/bouncer/validate-all", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+      const data = await response.json();
+      setHealthCheckProgress(75);
+
+      if (data && data.success) {
+        // Exibe cada linha de logs retornado pelo Cloud Node
+        if (data.logs && data.logs.length > 0) {
+          data.logs.forEach((log: string, idx: number) => {
+            setTimeout(() => {
+              setHealthCheckLogs(prev => [...prev, log]);
+            }, idx * 150);
+          });
+        }
+
+        // Atualiza a prateleira local de filmes no HUD dinamicamente em tempo real (Fase 2: Data Vault Status sync)
+        if (data.updatedMovies && data.updatedMovies.length > 0) {
+          setMoviesList(prev => {
+            return prev.map(movie => {
+              const matchesMatch = data.updatedMovies.find((um: any) => um.id === movie.id);
+              if (matchesMatch) {
+                return { ...movie, status: matchesMatch.status };
+              }
+              return movie;
+            });
+          });
+        }
+      } else {
+        setHealthCheckLogs(prev => [...prev, `[ERRO] Falha ao processar requisição no resolvedor central.`]);
+      }
+    } catch (err: any) {
+      setHealthCheckLogs(prev => [...prev, `[ERRO DE CONEXÃO] Falha no handshake: ${err.message}`]);
+    } finally {
+      setTimeout(() => {
+        setHealthCheckProgress(100);
         setIsHealthChecking(false);
         triggerHaptic(60);
-      }
-    }, 600);
+      }, 1500);
+    }
   };
 
   // Hide movie controls after 3 seconds of inactiveness
