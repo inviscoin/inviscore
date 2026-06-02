@@ -972,13 +972,15 @@ async function startServer() {
   app.get("/api/media/:type/:id", async (req, res) => {
     try {
       const { type, id } = req.params;
-      const isMovie = type === 'movie';
       const numericId = id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
       
       const season = req.query.s ? parseInt(String(req.query.s)) : null;
       const episode = req.query.e ? parseInt(String(req.query.e)) : null;
 
-      console.log(`[Media Database Resolve] Resolvendo ID #${numericId} (${type}) direto no Supabase...`);
+      // NORMALIZAÇÃO DE DICIONÁRIO FRONT -> DB
+      const isMovie = type === 'filme' || type === 'movie' || type === 'trailer';
+      const catalogType = isMovie ? 'movie' : 'tv'; // Para media_catalog
+      const sourcesType = isMovie ? 'movie' : 'serie'; // Para invis_media_sources
 
       if (!supabase) {
         return res.status(500).json({ error: "Supabase client não configurado no servidor" });
@@ -986,13 +988,13 @@ async function startServer() {
 
       let mediaSource = null;
 
-      // 1. Tenta buscar pela tabela 'media_catalog' (conforme especificação dinâmica enviada)
+      // 1. Busca em media_catalog
       try {
         const { data, error } = await supabase
           .from("media_catalog")
           .select("stream_url, tracks_data")
           .eq("title_id", numericId)
-          .eq("media_type", type)
+          .eq("media_type", catalogType)
           .maybeSingle();
 
         if (!error && data && data.stream_url) {
@@ -1004,17 +1006,17 @@ async function startServer() {
           };
         }
       } catch (e: any) {
-        console.warn("[Media Database] Erro ao consultar tabela 'media_catalog':", e.message);
+        console.warn("[Media Database] Erro tabela media_catalog:", e.message);
       }
 
-      // 2. Se não encontrou, tenta buscar pela tabela original 'invis_media_sources'
+      // 2. Busca em invis_media_sources
       if (!mediaSource) {
         try {
           let query = supabase
             .from("invis_media_sources")
             .select("*")
             .eq("media_id", numericId)
-            .eq("media_type", isMovie ? "movie" : "serie");
+            .eq("media_type", sourcesType);
 
           if (!isMovie) {
             if (season !== null) query = query.eq("season", season);
@@ -1026,17 +1028,12 @@ async function startServer() {
             mediaSource = data;
           }
         } catch (e: any) {
-          console.warn("[Media Database] Erro ao consultar tabela 'invis_media_sources':", e.message);
+          console.warn("[Media Database] Erro tabela invis_media_sources:", e.message);
         }
       }
 
-      // 3. Sem fallbacks forçados para Tears of Steel para mídia não cadastrada (Retorna 404 limpo)
-      // "NENHUM fallback para Tears of Steel deve existir aqui. Se o link ainda não foi indexado, retorna 404 limpo."
       if (!mediaSource || !mediaSource.stream_url) {
-        return res.status(404).json({ 
-          success: false, 
-          error: "Este título ainda não foi indexado de forma válida pelo motor INVIS." 
-        });
+        return res.status(404).json({ success: false, error: "Este título ainda não foi indexado de forma válida pelo motor INVIS." });
       }
 
       const isMp4 = mediaSource.stream_url.includes(".mp4");

@@ -1029,10 +1029,9 @@ export const MediaModule: React.FC = () => {
         setAvailableAudioTracks([]); // Reseta faixas de áudios mapeadas para o novo vídeo
         
         const numericId = selectedMovie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
-        const type = selectedMovie.type || 'movie';
+        const typePath = (selectedMovie.type === 'serie' || selectedMovie.type === 'tv') ? 'tv' : 'movie';
         
-        // Bate no endpoint novo, passando o ID e o Tipo corretos dinamicamente
-        let extractionUrl = `/api/media/${type}/${numericId}`;
+        let extractionUrl = `/api/media/${typePath}/${numericId}`;
         const params = new URLSearchParams();
         if (selectedMovie.type === 'serie' || selectedMovie.type === 'tv') {
           params.append('s', selectedSeason.toString());
@@ -1515,23 +1514,6 @@ export const MediaModule: React.FC = () => {
 
       if (visiblePostersCount < totalMatch) {
          setVisiblePostersCount(prev => Math.min(totalMatch, prev + 60));
-      } else {
-        if (scrollCountRef.current % 3 === 0) {
-          // Expand the main catalog by fabricating 60 new titles dynamically!
-          const newItems: Movie[] = [];
-          const currentCount = moviesList.length;
-          for (let i = 0; i < 60; i++) {
-            const baseItem = CINEMA_ROSTER[i % CINEMA_ROSTER.length];
-            newItems.push({
-              ...baseItem,
-              id: `gen-${Date.now()}-${currentCount + i}`,
-              title: `${baseItem.title} - Expansão ${currentCount + i}`,
-              year: baseItem.year + Math.floor(Math.random() * 5),
-            });
-          }
-          setMoviesList(prev => [...prev, ...newItems]);
-          setVisiblePostersCount(prev => prev + 60);
-        }
       }
       triggerHaptic(10);
     }
@@ -3157,7 +3139,8 @@ export const MediaModule: React.FC = () => {
                         dragConstraints={{ left: 0, right: 0 }}
                         onDragEnd={(e, info) => {
                           const threshold = 50;
-                          if (info.offset.x < -threshold && activeTrailerIndex < Math.min(10, moviesList.length) - 1) {
+                          const activeLength = memoizedCategories.filtered.length;
+                          if (info.offset.x < -threshold && activeTrailerIndex < Math.min(10, activeLength) - 1) {
                             setActiveTrailerIndex(prev => prev + 1);
                           } else if (info.offset.x > threshold && activeTrailerIndex > 0) {
                             setActiveTrailerIndex(prev => prev - 1);
@@ -3165,7 +3148,7 @@ export const MediaModule: React.FC = () => {
                         }}
                         className="absolute inset-0 flex items-center justify-center cursor-grab active:cursor-grabbing z-20"
                       >
-                        {moviesList.slice(0, 10).map((movie, idx) => {
+                        {memoizedCategories.filtered.slice(0, 10).map((movie, idx) => {
                           const isActive = idx === activeTrailerIndex;
                           const offset = idx - activeTrailerIndex;
                           const absOffset = Math.abs(offset);
