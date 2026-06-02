@@ -417,9 +417,6 @@ export const MediaModule: React.FC = () => {
   // =========================================================================
   // --- SUBMODULE C: HUD DE FILMES (NETFLIX PREMIUM FLUID SATELLITE) ---
   // =========================================================================
-  // =========================================================================
-  // --- SUBMODULE C: HUD DE FILMES (NETFLIX PREMIUM FLUID SATELLITE) ---
-  // =========================================================================
   // Expanded Cinema Roster Database for maximum visual and functional fidelity
   const CINEMA_ROSTER: (Movie & {
     platform?: 'netflix' | 'disney' | 'hbo' | 'prime' | 'globoplay';
@@ -428,10 +425,11 @@ export const MediaModule: React.FC = () => {
     isFavorite?: boolean;
     continueProgress?: number;
     totalDuration?: string;
+    audioLanguages?: string[];
   })[] = [
     // 6 Real Trailers for auto selection playing
     {
-      id: 'tf_br2049',
+      id: '335984',
       title: 'Blade Runner 2049',
       year: 2017,
       posterUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=80',
@@ -445,10 +443,10 @@ export const MediaModule: React.FC = () => {
       isFavorite: true,
       continueProgress: 45,
       totalDuration: '164m',
-      audioLanguages: ['PT-BR', 'EN']
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'tf_interstellar',
+      id: '157336',
       title: 'Interstellar',
       year: 2014,
       posterUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=500&auto=format&fit=crop&q=80',
@@ -462,10 +460,10 @@ export const MediaModule: React.FC = () => {
       isFavorite: true,
       continueProgress: 75,
       totalDuration: '169m',
-      audioLanguages: ['PT-BR', 'EN']
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'tf_matrix',
+      id: '574974',
       title: 'The Matrix Resurrections',
       year: 2021,
       posterUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&auto=format&fit=crop&q=80',
@@ -482,7 +480,7 @@ export const MediaModule: React.FC = () => {
       audioLanguages: ['EN']
     },
     {
-      id: 'tf_dune2',
+      id: '693134',
       title: 'Dune: Part Two',
       year: 2024,
       posterUrl: 'https://images.unsplash.com/photo-1547483238-f400e65ccd56?w=500&auto=format&fit=crop&q=80',
@@ -496,10 +494,10 @@ export const MediaModule: React.FC = () => {
       isFavorite: true,
       continueProgress: 10,
       totalDuration: '166m',
-      audioLanguages: ['PT-BR']
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'tf_maverick',
+      id: '361743',
       title: 'Top Gun: Maverick',
       year: 2022,
       posterUrl: 'https://images.unsplash.com/photo-1519074002996-a69e7ac46a42?w=500&auto=format&fit=crop&q=80',
@@ -513,10 +511,10 @@ export const MediaModule: React.FC = () => {
       isFavorite: false,
       continueProgress: 90,
       totalDuration: '130m',
-      audioLanguages: ['PT-BR', 'EN']
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'tf_edgerunners',
+      id: '105248',
       title: 'Cyberpunk: Edgerunners',
       year: 2022,
       posterUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&auto=format&fit=crop&q=80',
@@ -530,12 +528,12 @@ export const MediaModule: React.FC = () => {
       isFavorite: true,
       continueProgress: 55,
       totalDuration: '10 eps',
-      audioLanguages: ['PT-BR', 'EN']
+      audioLanguages: ['JA', 'PT-BR', 'EN']
     },
  
     // Netflix Blockbuster Shelf
     {
-      id: 'nft_stranger',
+      id: '66732',
       title: 'Stranger Things',
       year: 2022,
       posterUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&auto=format&fit=crop&q=80',
@@ -547,10 +545,10 @@ export const MediaModule: React.FC = () => {
       category: 'Sci-Fi',
       rating: 8.7,
       isFavorite: true,
-      audioLanguages: ['PT-BR', 'EN']
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'nft_blackmirror',
+      id: '42009',
       title: 'Black Mirror',
       year: 2023,
       posterUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=500&auto=format&fit=crop&q=80',
@@ -561,10 +559,11 @@ export const MediaModule: React.FC = () => {
       platform: 'netflix',
       category: 'Sci-Fi',
       rating: 8.8,
-      isFavorite: true
+      isFavorite: true,
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'nft_dark',
+      id: '70523',
       title: 'Dark',
       year: 2020,
       posterUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&auto=format&fit=crop&q=80',
@@ -576,10 +575,11 @@ export const MediaModule: React.FC = () => {
       category: 'Sci-Fi',
       rating: 8.8,
       isFavorite: false,
-      continueProgress: 40
+      continueProgress: 40,
+      audioLanguages: ['DE', 'PT-BR', 'EN']
     },
     {
-      id: 'nft_cyber_run',
+      id: '1901',
       title: 'Cyberpunk Run',
       year: 2025,
       posterUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=80',
@@ -590,10 +590,11 @@ export const MediaModule: React.FC = () => {
       platform: 'netflix',
       category: 'Cyberpunk',
       rating: 7.9,
-      isFavorite: true
+      isFavorite: true,
+      audioLanguages: ['EN', 'PT-BR']
     },
     {
-      id: 'nft_mindhunter',
+      id: '74204',
       title: 'Mindhunter',
       year: 2019,
       posterUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500&auto=format&fit=crop&q=80',
@@ -604,12 +605,13 @@ export const MediaModule: React.FC = () => {
       platform: 'netflix',
       category: 'Suspense',
       rating: 8.6,
-      isFavorite: false
+      isFavorite: false,
+      audioLanguages: ['EN']
     },
 
     // Disney+ Roster
     {
-      id: 'dis_mandalorian',
+      id: '82856',
       title: 'The Mandalorian',
       year: 2023,
       posterUrl: 'https://images.unsplash.com/photo-1593085512500-5d55148d6f0d?w=500&auto=format&fit=crop&q=80',
@@ -621,10 +623,11 @@ export const MediaModule: React.FC = () => {
       category: 'Sci-Fi',
       rating: 8.7,
       isFavorite: true,
-      continueProgress: 88
+      continueProgress: 88,
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'dis_loki',
+      id: '84958',
       title: 'Loki',
       year: 2023,
       posterUrl: 'https://images.unsplash.com/photo-1601987177651-8edfe6c20009?w=500&auto=format&fit=crop&q=80',
@@ -635,10 +638,11 @@ export const MediaModule: React.FC = () => {
       platform: 'disney',
       category: 'Aventura',
       rating: 8.2,
-      isFavorite: false
+      isFavorite: false,
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'dis_andor',
+      id: '83867',
       title: 'Andor',
       year: 2022,
       posterUrl: 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=500&auto=format&fit=crop&q=80',
@@ -649,10 +653,11 @@ export const MediaModule: React.FC = () => {
       platform: 'disney',
       category: 'Sci-Fi',
       rating: 8.4,
-      isFavorite: false
+      isFavorite: false,
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'dis_walle',
+      id: '10681',
       title: 'WALL-E',
       year: 2008,
       posterUrl: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=500&auto=format&fit=crop&q=80',
@@ -663,26 +668,28 @@ export const MediaModule: React.FC = () => {
       platform: 'disney',
       category: 'Animes',
       rating: 8.4,
-      isFavorite: true
+      isFavorite: true,
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'dis_avatar2',
+      id: '76600',
       title: 'Avatar: O Caminho da Água',
       year: 2022,
       posterUrl: 'https://images.unsplash.com/photo-1500627869374-13cd993b1115?w=500&auto=format&fit=crop&q=80',
-      overview: 'Jake Sully vive com sua família em Pandora. Quando uma ameaça familiar retorna, ele deve trabalhar com o exército Na\'vi para proteger seu planeta.',
+      overview: "Jake Sully vive com sua família em Pandora. Quando uma ameaça familiar retorna, ele deve trabalhar com o exército Na'vi para proteger seu planeta.",
       videoUrl: 'https://www.youtube.com/embed/d9MyW72ELq0',
       type: 'filme',
       status: true,
       platform: 'disney',
       category: 'Aventura',
       rating: 7.6,
-      isFavorite: false
+      isFavorite: false,
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
 
     // HBO Max Roster
     {
-      id: 'hbo_lastofus',
+      id: '100088',
       title: 'The Last of Us',
       year: 2023,
       posterUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&auto=format&fit=crop&q=80',
@@ -694,10 +701,11 @@ export const MediaModule: React.FC = () => {
       category: 'Drama',
       rating: 8.8,
       isFavorite: true,
-      continueProgress: 35
+      continueProgress: 35,
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'hbo_house_dragon',
+      id: '94997',
       title: 'A Casa do Dragão',
       year: 2022,
       posterUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=80',
@@ -708,10 +716,11 @@ export const MediaModule: React.FC = () => {
       platform: 'hbo',
       category: 'Aventura',
       rating: 8.4,
-      isFavorite: false
+      isFavorite: false,
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'hbo_game_thrones',
+      id: '1399',
       title: 'Game of Thrones',
       year: 2011,
       posterUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&auto=format&fit=crop&q=80',
@@ -722,10 +731,11 @@ export const MediaModule: React.FC = () => {
       platform: 'hbo',
       category: 'Drama',
       rating: 9.2,
-      isFavorite: true
+      isFavorite: true,
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'hbo_succession',
+      id: '76331',
       title: 'Succession',
       year: 2023,
       posterUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=500&auto=format&fit=crop&q=80',
@@ -736,10 +746,11 @@ export const MediaModule: React.FC = () => {
       platform: 'hbo',
       category: 'Drama',
       rating: 8.9,
-      isFavorite: false
+      isFavorite: false,
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'hbo_joker',
+      id: '475557',
       title: 'Coringa',
       year: 2019,
       posterUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&auto=format&fit=crop&q=80',
@@ -750,12 +761,13 @@ export const MediaModule: React.FC = () => {
       platform: 'hbo',
       category: 'Drama',
       rating: 8.4,
-      isFavorite: false
+      isFavorite: false,
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
 
     // Prime Video Roster
     {
-      id: 'prm_theboys',
+      id: '76479',
       title: 'The Boys',
       year: 2024,
       posterUrl: 'https://images.unsplash.com/photo-1569003339405-ea396a5a8a90?w=500&auto=format&fit=crop&q=80',
@@ -767,10 +779,11 @@ export const MediaModule: React.FC = () => {
       category: 'Ação',
       rating: 8.7,
       isFavorite: true,
-      continueProgress: 65
+      continueProgress: 65,
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'prm_fallout',
+      id: '126308',
       title: 'Fallout',
       year: 2024,
       posterUrl: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=500&auto=format&fit=crop&q=80',
@@ -781,10 +794,11 @@ export const MediaModule: React.FC = () => {
       platform: 'prime',
       category: 'Sci-Fi',
       rating: 8.5,
-      isFavorite: true
+      isFavorite: true,
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'prm_invincible',
+      id: '95557',
       title: 'Invincible',
       year: 2023,
       posterUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&auto=format&fit=crop&q=80',
@@ -795,10 +809,11 @@ export const MediaModule: React.FC = () => {
       platform: 'prime',
       category: 'Animes',
       rating: 8.7,
-      isFavorite: false
+      isFavorite: false,
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
     {
-      id: 'prm_reach',
+      id: '119416',
       title: 'Reacher',
       year: 2023,
       posterUrl: 'https://images.unsplash.com/photo-1519074002996-a69e7ac46a42?w=500&auto=format&fit=crop&q=80',
@@ -809,12 +824,13 @@ export const MediaModule: React.FC = () => {
       platform: 'prime',
       category: 'Ação',
       rating: 8.1,
-      isFavorite: false
+      isFavorite: false,
+      audioLanguages: ['PT-BR', 'EN', 'ES']
     },
 
     // Globoplay Roster
     {
-      id: 'glo_justica',
+      id: '111812',
       title: 'Justiça',
       year: 2024,
       posterUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500&auto=format&fit=crop&q=80',
@@ -826,24 +842,26 @@ export const MediaModule: React.FC = () => {
       category: 'Drama',
       rating: 8.4,
       isFavorite: true,
-      continueProgress: 50
+      continueProgress: 50,
+      audioLanguages: ['PT-BR']
     },
     {
-      id: 'glo_compadecida',
+      id: '35894',
       title: 'O Auto da Compadecida',
       year: 2000,
       posterUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&auto=format&fit=crop&q=80',
-      overview: 'As engenhosas trapaças e mentiras de João Grilo e Chicó para sobreviver no sertão nordestino culminam em um julgamento divino impagável.',
+      overview: 'As engenhosas trapaças e mentiras de João Grilo e Chicó para sobrevivir no sertão nordestino culminam em um julgamento divino impagável.',
       videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
       type: 'filme',
       status: true,
       platform: 'globoplay',
       category: 'Aventura',
       rating: 8.8,
-      isFavorite: true
+      isFavorite: true,
+      audioLanguages: ['PT-BR']
     },
     {
-      id: 'glo_cidadedeus',
+      id: '598',
       title: 'Cidade de Deus',
       year: 2002,
       posterUrl: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=500&auto=format&fit=crop&q=80',
@@ -854,9 +872,106 @@ export const MediaModule: React.FC = () => {
       platform: 'globoplay',
       category: 'Drama',
       rating: 8.6,
-      isFavorite: false
+      isFavorite: false,
+      audioLanguages: ['PT-BR']
     }
   ];
+
+  // Helper utility to get the preferred language according to user DDI
+  const getDefaultLanguageByDdi = (ddi?: string) => {
+    const d = ddi?.trim() || '';
+    if (d === '+55') return 'PT-BR';
+    const spanishDdis = ['+54', '+56', '+34', '+52', '+57', '+51', '+58', '+593', '+595', '+598', '+502', '+503', '+504', '+505', '+506', '+507', '+1939', '+1787'];
+    if (spanishDdis.includes(d)) return 'ES';
+    if (d === '+86' || d === '+852' || d === '+853') return 'ZH';
+    if (d === '+81') return 'JA';
+    if (d === '+82') return 'KO';
+    if (d === '+33') return 'FR';
+    if (d === '+49') return 'DE';
+    if (d === '+39') return 'IT';
+
+    if (typeof navigator !== 'undefined') {
+      const navLang = navigator.language.toLowerCase();
+      if (navLang.startsWith('pt')) return 'PT-BR';
+      if (navLang.startsWith('es')) return 'ES';
+      if (navLang.startsWith('zh')) return 'ZH';
+      if (navLang.startsWith('ja')) return 'JA';
+      if (navLang.startsWith('ko')) return 'KO';
+      if (navLang.startsWith('fr')) return 'FR';
+      if (navLang.startsWith('de')) return 'DE';
+      if (navLang.startsWith('it')) return 'IT';
+    }
+    return 'EN';
+  };
+
+  // Build unmasked dynamic player URLs incorporating selected configuration
+  const getEmbedUrlForMovie = (
+    movie: Movie,
+    serverIndex: number,
+    audio: string,
+    subtitle: string,
+    season: number,
+    episode: number
+  ) => {
+    const numericId = movie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
+    const isMovie = movie.type !== 'serie';
+
+    // Map audio and subtitle code properties to standard query params
+    const audioCode = audio.toLowerCase().split('-')[0];
+    const subCode = subtitle === 'OFF' ? '' : subtitle.toLowerCase().split('-')[0];
+
+    let baseUrl = '';
+    switch (serverIndex) {
+      case 0:
+        baseUrl = isMovie 
+          ? `https://vidsrc-embed.su/embed/movie?tmdb=${numericId}` 
+          : `https://vidsrc-embed.su/embed/tv?tmdb=${numericId}&season=${season}&episode=${episode}`;
+        break;
+      case 1:
+        baseUrl = isMovie 
+          ? `https://vidsrcme.su/embed/movie?tmdb=${numericId}` 
+          : `https://vidsrcme.su/embed/tv?tmdb=${numericId}&season=${season}&episode=${episode}`;
+        break;
+      case 2:
+        baseUrl = isMovie 
+          ? `https://vsrc.su/embed/movie/${numericId}` 
+          : `https://vsrc.su/embed/tv/${numericId}/${season}/${episode}`;
+        break;
+      case 3:
+        baseUrl = isMovie 
+          ? `https://vidsrc.pro/embed/movie/${numericId}` 
+          : `https://vidsrc.pro/embed/tv/${numericId}/${season}/${episode}`;
+        break;
+      case 4:
+        baseUrl = isMovie 
+          ? `https://www.2embed.cc/embed/${numericId}` 
+          : `https://www.2embed.cc/embed/tv?tmdb=${numericId}&s=${season}&e=${episode}`;
+        break;
+      default:
+        baseUrl = isMovie 
+          ? `https://vidsrc-embed.su/embed/movie?tmdb=${numericId}` 
+          : `https://vidsrc-embed.su/embed/tv?tmdb=${numericId}&season=${season}&episode=${episode}`;
+    }
+
+    const params: string[] = [];
+    if (audioCode) {
+      params.push(`lang=${audioCode}`);
+      params.push(`audio=${audioCode}`);
+      params.push(`primary_audio=${audioCode}`);
+      params.push(`locale=${audioCode}`);
+    }
+    if (subCode) {
+      params.push(`sub=${subCode}`);
+      params.push(`subtitle=${subCode}`);
+      params.push(`sub_lang=${subCode}`);
+    } else if (subtitle === 'OFF') {
+      params.push(`sub=0`);
+      params.push(`subtitle=0`);
+    }
+
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    return params.length > 0 ? `${baseUrl}${separator}${params.join('&')}` : baseUrl;
+  };
 
   const [moviesList, setMoviesList] = useState<Movie[]>(CINEMA_ROSTER);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
@@ -871,7 +986,7 @@ export const MediaModule: React.FC = () => {
   const [movieProgress, setMovieProgress] = useState(35);
   const [movieVolume, setMovieVolume] = useState(85);
   const [movieSpeed, setMovieSpeed] = useState<number>(1);
-  const [movieAudioLang, setMovieAudioLang] = useState<'PT-BR' | 'EN'>('PT-BR');
+  const [movieAudioLang, setMovieAudioLang] = useState<string>('PT-BR');
   const [movieSubtitle, setMovieSubtitle] = useState<'OFF' | 'PT-BR' | 'EN' | 'ES'>('OFF');
   const [wasPausedByScroll, setWasPausedByScroll] = useState(false);
   const [activeMediaAlert, setActiveMediaAlert] = useState<string | null>(null);
@@ -879,6 +994,66 @@ export const MediaModule: React.FC = () => {
   const [movieAudioTrack, setMovieAudioTrack] = useState('pt-BR'); 
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
+
+  // Dynamic Latency check to select the fastest server (1-5) on-demand
+  const testServerLatencies = async () => {
+    const servers = [
+      { id: 0, url: "https://vidsrc-embed.su" },
+      { id: 1, url: "https://vidsrcme.su" },
+      { id: 2, url: "https://vsrc.su" },
+      { id: 3, url: "https://vidsrc.pro" },
+      { id: 4, url: "https://www.2embed.cc" }
+    ];
+
+    console.log("[Latency Test] Starting parallel server probe...");
+    try {
+      const latencyResults = await Promise.all(
+        servers.map(async (server) => {
+          const start = performance.now();
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 1200);
+            
+            // HEAD request keeps probes extremely lightweight
+            await fetch(server.url, { 
+              method: 'HEAD', 
+              mode: 'no-cors', 
+              signal: controller.signal 
+            });
+            
+            clearTimeout(timeoutId);
+            return { id: server.id, latency: performance.now() - start };
+          } catch {
+            return { id: server.id, latency: 9999 };
+          }
+        })
+      );
+
+      const validServers = latencyResults.filter(s => s.latency < 9999);
+      if (validServers.length > 0) {
+        validServers.sort((a, b) => a.latency - b.latency);
+        const best = validServers[0];
+        console.log(`[Latency Test] Fastest server detected: Server ${best.id + 1} with ${best.latency.toFixed(1)}ms`);
+        setSelectedEmbedServer(best.id);
+        showAlert(`CONEXÃO OTIMIZADA: Servidor ${best.id + 1} (${best.latency.toFixed(0)}ms)`);
+      } else {
+        console.warn("[Latency Test] All probes timed out, defaulting to Server 1");
+        setSelectedEmbedServer(0);
+      }
+    } catch (e) {
+      console.error("[Latency Test] Error probing servers:", e);
+      setSelectedEmbedServer(0);
+    }
+  };
+
+  // Run dynamic latency test whenever selected movie changes (start of movie play)
+  useEffect(() => {
+    if (selectedMovie) {
+      const initialLang = getDefaultLanguageByDdi(currentUser?.ddi);
+      setMovieAudioLang(initialLang);
+      testServerLatencies();
+    }
+  }, [selectedMovie]);
 
   // Initialize Player & HLS on playback start
   useEffect(() => {
@@ -889,15 +1064,24 @@ export const MediaModule: React.FC = () => {
       try {
         let fetchedData = null;
         
+        // Build fallback stream URLs directly
+        const numericId = selectedMovie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
+        const isMovie = selectedMovie.type !== 'serie';
+        
         // Always try to query bouncer stream details to get active healthy server list & server urls
-        if (selectedMovie.streamUrl) {
+        let bouncerStreamUrl = selectedMovie.streamUrl;
+        if (!bouncerStreamUrl) {
+          bouncerStreamUrl = `/api/bouncer/stream/jwt_token_fake/${isMovie ? 'movie_' : 'tv_'}${numericId}`;
+        }
+
+        if (bouncerStreamUrl) {
           const abortController = new AbortController();
           const timeoutId = setTimeout(() => {
             abortController.abort();
-          }, 4500); // Wait up to 4.5 seconds for parallel backend server check
+          }, 3500); // Fast timeout for parallel backend server check
           
           try {
-            const bouncerQueryUrl = `${selectedMovie.streamUrl}?type=${selectedMovie.type || 'movie'}&season=${selectedSeason}&episode=${selectedEpisode}`;
+            const bouncerQueryUrl = `${bouncerStreamUrl}?type=${selectedMovie.type || 'movie'}&season=${selectedSeason}&episode=${selectedEpisode}`;
             const res = await fetch(bouncerQueryUrl, { signal: abortController.signal });
             if (res.ok) {
               fetchedData = await res.json();
@@ -908,55 +1092,40 @@ export const MediaModule: React.FC = () => {
           }
         }
 
-        // If bouncer succeeded and retrieved healthy urls, use URLs mapping
+        // Generate target stream URL with language/subtitle parameters
+        const configuredIframeUrl = getEmbedUrlForMovie(
+          selectedMovie,
+          selectedEmbedServer,
+          movieAudioLang,
+          movieSubtitle,
+          selectedSeason,
+          selectedEpisode
+        );
+
+        // If bouncer succeeded and retrieved healthy urls, override the active target stream
         if (fetchedData && fetchedData.urls && fetchedData.urls[selectedEmbedServer]) {
+          const parsedBouncerUrl = fetchedData.urls[selectedEmbedServer];
+          
+          // Inject language/subtitle query params into bouncer URL too for full compatibility
+          const paramSeparator = parsedBouncerUrl.includes('?') ? '&' : '?';
+          const audioCode = movieAudioLang.toLowerCase().split('-')[0];
+          const subCode = movieSubtitle === 'OFF' ? '' : movieSubtitle.toLowerCase().split('-')[0];
+          let decoratedBouncerUrl = parsedBouncerUrl;
+          
+          if (audioCode) decoratedBouncerUrl += `${paramSeparator}lang=${audioCode}&audio=${audioCode}`;
+          if (subCode) decoratedBouncerUrl += `&sub=${subCode}&subtitle=${subCode}`;
+
           fetchedData = {
             ...fetchedData,
-            stream_url: fetchedData.urls[selectedEmbedServer]
+            stream_url: decoratedBouncerUrl
           };
           setActiveServer('principal');
         } else {
-          // If direct API checks are slow or missing, fall back directly on secure client-side assemblies
-          const numericId = selectedMovie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
-          const isMovie = selectedMovie.type !== 'serie';
-          
-          let iframeUrl = '';
-          switch (selectedEmbedServer) {
-            case 0:
-              iframeUrl = isMovie 
-                ? `https://vidsrc-embed.su/embed/movie?tmdb=${numericId}` 
-                : `https://vidsrc-embed.su/embed/tv?tmdb=${numericId}&season=${selectedSeason}&episode=${selectedEpisode}`;
-              break;
-            case 1:
-              iframeUrl = isMovie 
-                ? `https://vidsrcme.su/embed/movie?tmdb=${numericId}` 
-                : `https://vidsrcme.su/embed/tv?tmdb=${numericId}&season=${selectedSeason}&episode=${selectedEpisode}`;
-              break;
-            case 2:
-              iframeUrl = isMovie 
-                ? `https://vsrc.su/embed/movie/${numericId}` 
-                : `https://vsrc.su/embed/tv/${numericId}/${selectedSeason}/${selectedEpisode}`;
-              break;
-            case 3:
-              iframeUrl = isMovie 
-                ? `https://vidsrc.pro/embed/movie/${numericId}` 
-                : `https://vidsrc.pro/embed/tv/${numericId}/${selectedSeason}/${selectedEpisode}`;
-              break;
-            case 4:
-              iframeUrl = isMovie 
-                ? `https://www.2embed.cc/embed/${numericId}` 
-                : `https://www.2embed.cc/embed/tv?tmdb=${numericId}&s=${selectedSeason}&e=${selectedEpisode}`;
-              break;
-            default:
-              iframeUrl = isMovie 
-                ? `https://vidsrc-embed.su/embed/movie?tmdb=${numericId}` 
-                : `https://vidsrc-embed.su/embed/tv?tmdb=${numericId}&season=${selectedSeason}&episode=${selectedEpisode}`;
-          }
-
+          // Fall back gracefully with client-side assemblies integrated with correct audio params
           fetchedData = {
              status: 'active',
              source_type: 'iframe',
-             stream_url: iframeUrl,
+             stream_url: configuredIframeUrl,
              server_health: {
                "0": true,
                "1": true,
@@ -979,7 +1148,15 @@ export const MediaModule: React.FC = () => {
             movieVideoRef.current.load();
             movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(e => { console.warn("Player autoplay blocked", e); setIsVideoBuffering(false); setMovieIsPlaying(false); setActiveMediaAlert("AUTOPLAY BLOQUEADO PELO NAVEGADOR - CLIQUE NO PLAY"); });
           } else if (Hls.isSupported()) {
-            hlsInstance = new Hls();
+            // Highly optimized HLS settings to prioritize stable streams & maximize ABR throughput
+            hlsInstance = new Hls({
+              maxBufferSize: 30 * 1022 * 1022, 
+              maxBufferLength: 30, 
+              enableWorker: true,
+              lowLatencyMode: true,
+              abrEwmaDefaultEstimate: 5000000, 
+              capLevelToPlayerSize: true,
+            });
             hlsInstance.loadSource(fetchedData.stream_url);
             hlsInstance.attachMedia(movieVideoRef.current);
             hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -1012,7 +1189,7 @@ export const MediaModule: React.FC = () => {
         hlsInstance.destroy();
       }
     };
-  }, [selectedMovie, moviePlaying, selectedEmbedServer, selectedSeason, selectedEpisode]);
+  }, [selectedMovie, moviePlaying, selectedEmbedServer, selectedSeason, selectedEpisode, movieAudioLang, movieSubtitle]);
   const [abrMode, setAbrMode] = useState<'1080p' | '720p' | '480p'>('1080p');
   const [showMovieControls, setShowMovieControls] = useState(true);
   const [continueWatchingTime, setContinueWatchingTime] = useState<number | null>(45); // simulated resume timestamp
@@ -1312,22 +1489,20 @@ export const MediaModule: React.FC = () => {
     const ddiConfig = getLangByCurrentUserDdi();
     const isSearchActive = !!searchQuery && searchQuery.trim().length > 0;
 
-    const filterByDdiRule = (m: Movie) => {
+    const userDdiMatch = (m: Movie) => {
       const hasAudioLanguages = m.audioLanguages && m.audioLanguages.length > 0;
-      const hasDdiAudio = hasAudioLanguages ? m.audioLanguages!.includes(ddiConfig.code) : true;
+      if (!hasAudioLanguages) return true;
+      return m.audioLanguages!.includes(ddiConfig.code);
+    };
 
+    const filterByDdiRule = (m: Movie) => {
+      const match = userDdiMatch(m);
       if (!isSearchActive) {
-        // No catálogo comum (áudio padrão de acordo com o DDI prioritariamente)
-        return hasDdiAudio;
+        // Catalogo comum: apenas titulos compativeis com o ddi (estrangeiros sem suporte vao para estado search-only)
+        return match;
       } else {
-        // Na busca voluntária: exibe mídias nacionais, e estrangeiras apenas se houver legenda exata no idioma nativo do DDI
-        if (hasDdiAudio) {
-          return true;
-        } else {
-          // Só exibe se houver legenda específica do idioma nativo do DDI (todas as obras estrangeiras integradas possuem esta legenda)
-          const hasSubtitleForDdi = true; 
-          return hasSubtitleForDdi;
-        }
+        // No estado de busca: traz o catalogo completo (incluindo estrangeiros)
+        return true;
       }
     };
 
@@ -1347,11 +1522,11 @@ export const MediaModule: React.FC = () => {
         return m.status && progress[m.id];
       }),
       suggestions: moviesList.filter(filterByDdiRule).filter(m => m.status && (m as any).rating >= 8.2),
-      netflix: moviesList.filter(filterByDdiRule).filter(m => m.status && ((m as any).platform === 'netflix' || m.id.startsWith('nft') || m.id.startsWith('tf_b2049') || m.id.startsWith('tf_edgerunners'))),
-      disney: moviesList.filter(filterByDdiRule).filter(m => m.status && ((m as any).platform === 'disney' || m.id.startsWith('dis'))),
-      hbo: moviesList.filter(filterByDdiRule).filter(m => m.status && ((m as any).platform === 'hbo' || m.id.startsWith('hbo') || m.id.startsWith('tf_interstellar') || m.id.startsWith('tf_dune2'))),
-      prime: moviesList.filter(filterByDdiRule).filter(m => m.status && ((m as any).platform === 'prime' || m.id.startsWith('prm') || m.id.startsWith('tf_maverick'))),
-      globoplay: moviesList.filter(filterByDdiRule).filter(m => m.status && ((m as any).platform === 'globoplay' || m.id.startsWith('glo')))
+      netflix: moviesList.filter(filterByDdiRule).filter(m => m.status && (m as any).platform === 'netflix'),
+      disney: moviesList.filter(filterByDdiRule).filter(m => m.status && (m as any).platform === 'disney'),
+      hbo: moviesList.filter(filterByDdiRule).filter(m => m.status && (m as any).platform === 'hbo'),
+      prime: moviesList.filter(filterByDdiRule).filter(m => m.status && (m as any).platform === 'prime'),
+      globoplay: moviesList.filter(filterByDdiRule).filter(m => m.status && (m as any).platform === 'globoplay')
     };
   }, [moviesList, searchQuery, selectedCategory, scopeFiltering, currentUser]);
 
