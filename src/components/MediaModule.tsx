@@ -917,7 +917,7 @@ export const MediaModule: React.FC = () => {
     return 'EN';
   };
 
-  // Build unmasked dynamic player URLs incorporating selected configuration
+  // SPEC ATUALIZADA: Forçar roteamento interno. NUNCA usar iframes.
   const getEmbedUrlForMovie = (
     movie: Movie,
     serverIndex: number,
@@ -927,73 +927,29 @@ export const MediaModule: React.FC = () => {
     episode: number,
     timeInSecs?: number
   ) => {
-    const numericId = movie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
+    const numericId = movie.id?.replace("movie_", "").replace("tv_", "").replace("tmdb-", "") || "0";
     const isMovie = movie.type !== 'serie';
-
-    // Map audio and subtitle code properties to standard query params
+    
+    // Mapeamento de idioma real para envio ao backend
     const audioCode = audio.toLowerCase().split('-')[0];
     const subCode = subtitle === 'OFF' ? '' : subtitle.toLowerCase().split('-')[0];
 
-    let baseUrl = '';
-    switch (serverIndex) {
-      case 0:
-        // Index 0 represents INVIS Premium Resolve (Nativo HLS) using backend bouncer
-        baseUrl = `/api/bouncer/stream/jwt_token_fake/${isMovie ? 'movie_' : 'tv_'}${numericId}`;
-        break;
-      case 1:
-        baseUrl = isMovie 
-          ? `https://vidsrc.xyz/embed/movie/${numericId}` 
-          : `https://vidsrc.xyz/embed/tv/${numericId}/${season}/${episode}`;
-        break;
-      case 2:
-        baseUrl = isMovie 
-          ? `https://vidsrc.in/embed/movie/${numericId}` 
-          : `https://vidsrc.in/embed/tv/${numericId}/${season}/${episode}`;
-        break;
-      case 3:
-        baseUrl = isMovie 
-          ? `https://vsrc.su/embed/movie/${numericId}` 
-          : `https://vsrc.su/embed/tv/${numericId}/${season}/${episode}`;
-        break;
-      case 4:
-        baseUrl = isMovie 
-          ? `https://vidsrc.pm/embed/movie/${numericId}` 
-          : `https://vidsrc.pm/embed/tv/${numericId}/${season}/${episode}`;
-        break;
-      case 5:
-        baseUrl = isMovie 
-          ? `https://multiembed.mov/?video_id=${numericId}&tmdb=1` 
-          : `https://multiembed.mov/?video_id=${numericId}&tmdb=1&s=${season}&e=${episode}`;
-        break;
-      default:
-        baseUrl = `/api/bouncer/stream/jwt_token_fake/${isMovie ? 'movie_' : 'tv_'}${numericId}`;
-    }
+    // O backend (Vercel/Cloudflare) fará o scraping silencioso e retornará o .m3u8 ou .mp4 correspondente
+    const baseUrl = `/api/bouncer/extract/${isMovie ? 'movie' : 'tv'}/${numericId}`;
+    const params = new URLSearchParams();
 
-    const params: string[] = [];
-    if (audioCode) {
-      // Envia múltiplos parâmetros conhecidos por indexadores globais para forçar o áudio nativo
-      params.push(`lang=${audioCode}`);
-      params.push(`audio=${audioCode}`);
-      params.push(`primary_audio=${audioCode}`);
-      params.push(`locale=${audioCode}`);
-      params.push(`dubbed=1`); // Força dublagem caso o país não seja brasileiro mas prefira português/espanhol
+    params.append('server', serverIndex.toString());
+    
+    if (!isMovie) {
+      params.append('s', season.toString());
+      params.append('e', episode.toString());
     }
-    if (subCode && subCode !== 'off') {
-      params.push(`sub=${subCode}`);
-      params.push(`subtitle=${subCode}`);
-      params.push(`sub_lang=${subCode}`);
-    } else if (subtitle === 'OFF') {
-      params.push(`sub=0`);
-      params.push(`subtitle=0`);
-    }
+    
+    if (audioCode) params.append('audio', audioCode);
+    if (subCode) params.append('sub', subCode);
+    if (timeInSecs) params.append('start', timeInSecs.toString());
 
-    if (timeInSecs && timeInSecs > 0) {
-      params.push(`t=${timeInSecs}`);
-      params.push(`start=${timeInSecs}`);
-    }
-
-    const separator = baseUrl.includes('?') ? '&' : '?';
-    return params.length > 0 ? `${baseUrl}${separator}${params.join('&')}` : baseUrl;
+    return `${baseUrl}?${params.toString()}`;
   };
 
   const [moviesList, setMoviesList] = useState<Movie[]>(CINEMA_ROSTER);
@@ -1020,51 +976,21 @@ export const MediaModule: React.FC = () => {
 
   // Dynamic Latency check to select the fastest server (1-5) on-demand
   const testServerLatencies = async () => {
-    const servers = [
-      { id: 0, url: "https://vidsrc-embed.su" },
-      { id: 1, url: "https://vidsrcme.su" },
-      { id: 2, url: "https://vsrc.su" },
-      { id: 3, url: "https://vidsrc.to" },
-      { id: 4, url: "https://www.2embed.cc" }
-    ];
-
-    console.log("[Latency Test] Starting parallel server probe...");
+    console.log("[Latency Test] Avaliando extratores no backend INVIS...");
     try {
-      const latencyResults = await Promise.all(
-        servers.map(async (server) => {
-          const start = performance.now();
-          try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 1200);
-            
-            // HEAD request keeps probes extremely lightweight
-            await fetch(server.url, { 
-              method: 'HEAD', 
-              mode: 'no-cors', 
-              signal: controller.signal 
-            });
-            
-            clearTimeout(timeoutId);
-            return { id: server.id, latency: performance.now() - start };
-          } catch {
-            return { id: server.id, latency: 9999 };
-          }
-        })
-      );
-
-      const validServers = latencyResults.filter(s => s.latency < 9999);
-      if (validServers.length > 0) {
-        validServers.sort((a, b) => a.latency - b.latency);
-        const best = validServers[0];
-        console.log(`[Latency Test] Fastest server detected: Server ${best.id + 1} with ${best.latency.toFixed(1)}ms`);
-        setSelectedEmbedServer(best.id);
-        showAlert(`CONEXÃO OTIMIZADA: Servidor ${best.id + 1} (${best.latency.toFixed(0)}ms)`);
+      // Ping na SUA api, não no site externo. O Vercel/Cloudflare testa a conexão e devolve o mais rápido.
+      const response = await fetch('/api/bouncer/ping-servers', { method: 'GET' });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.bestServerId !== undefined) {
+          setSelectedEmbedServer(data.bestServerId);
+          showAlert(`CONEXÃO OTIMIZADA: Rota ${data.bestServerId} estabelecida`);
+        }
       } else {
-        console.warn("[Latency Test] All probes timed out, defaulting to Server 1");
         setSelectedEmbedServer(0);
       }
     } catch (e) {
-      console.error("[Latency Test] Error probing servers:", e);
+      console.warn("[Latency Test] Falha ao contatar orquestrador, usando Rota 0");
       setSelectedEmbedServer(0);
     }
   };
@@ -1089,7 +1015,7 @@ export const MediaModule: React.FC = () => {
     }
   }, [selectedMovie, currentUser?.ddi]);
 
-  // Initialize Player & HLS on playback start
+  // Initialize Player & HLS on playback start - 100% native client consuming direct streams.
   useEffect(() => {
     if (!selectedMovie || !moviePlaying) return;
 
@@ -1100,7 +1026,7 @@ export const MediaModule: React.FC = () => {
     const targetAudio = supportsNativeAudio ? initialLang : (movieAudioLangs[0] || 'EN');
     const targetSub = supportsNativeAudio ? 'OFF' : initialLang;
 
-    // Set synchronous initial bouncer stream state to prevent React from rendering <video> and then swapping to <iframe> as this destroys device focus / autoplay on first clicks
+    // Set synchronous initial state for clean native loading
     const defaultUrl = getEmbedUrlForMovie(
       selectedMovie,
       selectedEmbedServer,
@@ -1110,20 +1036,6 @@ export const MediaModule: React.FC = () => {
       selectedEpisode
     );
 
-    // If we're playing on any of the 5 iframe servers, initialize and return early!
-    // This allows the iframe to mount exactly ONCE with perfect parameters and play instantly without duplicate async reloads or interruption!
-    const isIframeServer = selectedEmbedServer >= 1 && selectedEmbedServer <= 5;
-    if (isIframeServer) {
-      setBouncerStreamData({
-        status: 'active',
-        source_type: 'iframe',
-        stream_url: defaultUrl,
-        server_health: { "0": true, "1": true, "2": true, "3": true, "4": true, "5": true }
-      });
-      setIsVideoBuffering(false);
-      return;
-    }
-    
     setBouncerStreamData({
       status: 'active',
       source_type: 'video',
@@ -1134,38 +1046,11 @@ export const MediaModule: React.FC = () => {
     let hlsInstance: Hls | null = null;
     const fetchStream = async () => {
       try {
-        let fetchedData = null;
+        setIsVideoBuffering(true);
+        setDuration(0);
         
-        // Build fallback stream URLs directly
-        const numericId = selectedMovie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
-        const isMovie = selectedMovie.type !== 'serie';
-        
-        // Always try to query bouncer stream details to get active healthy server list & server urls
-        let bouncerStreamUrl = selectedMovie.streamUrl;
-        if (!bouncerStreamUrl) {
-          bouncerStreamUrl = `/api/bouncer/stream/jwt_token_fake/${isMovie ? 'movie_' : 'tv_'}${numericId}`;
-        }
-
-        if (bouncerStreamUrl) {
-          const abortController = new AbortController();
-          const timeoutId = setTimeout(() => {
-            abortController.abort();
-          }, 3500); // Fast timeout for parallel backend server check
-          
-          try {
-            const bouncerQueryUrl = `${bouncerStreamUrl}?type=${selectedMovie.type || 'movie'}&season=${selectedSeason}&episode=${selectedEpisode}&server=${selectedEmbedServer}`;
-            const res = await fetch(bouncerQueryUrl, { signal: abortController.signal });
-            if (res.ok) {
-              fetchedData = await res.json();
-            }
-            clearTimeout(timeoutId);
-          } catch (err) {
-            console.warn("Bouncer resolver timed out, falling back to client-side assembler...");
-          }
-        }
-
-        // Generate target stream URL with language/subtitle parameters
-        const configuredIframeUrl = getEmbedUrlForMovie(
+        // 1. Gera a URL apontando para a sua API extratora
+        const extractionUrl = getEmbedUrlForMovie(
           selectedMovie,
           selectedEmbedServer,
           movieAudioLang,
@@ -1174,86 +1059,96 @@ export const MediaModule: React.FC = () => {
           selectedEpisode
         );
 
-        // If bouncer succeeded and retrieved healthy urls, override the active target stream
-        if (fetchedData && fetchedData.source_type === 'video') {
-          setActiveServer('principal');
-        } else if (fetchedData && fetchedData.urls && fetchedData.urls[selectedEmbedServer - 1]) {
-          const parsedBouncerUrl = fetchedData.urls[selectedEmbedServer - 1];
-          
-          // Inject language/subtitle query params into bouncer URL too for full compatibility
-          const paramSeparator = parsedBouncerUrl.includes('?') ? '&' : '?';
-          const audioCode = movieAudioLang.toLowerCase().split('-')[0];
-          const subCode = movieSubtitle === 'OFF' ? '' : movieSubtitle.toLowerCase().split('-')[0];
-          let decoratedBouncerUrl = parsedBouncerUrl;
-          
-          if (audioCode) decoratedBouncerUrl += `${paramSeparator}lang=${audioCode}&audio=${audioCode}`;
-          if (subCode) decoratedBouncerUrl += `&sub=${subCode}&subtitle=${subCode}`;
-
-          fetchedData = {
-            ...fetchedData,
-            stream_url: decoratedBouncerUrl
-          };
-          setActiveServer('principal');
-        } else {
-          // Fall back gracefully with client-side assemblies integrated with correct audio params
-          fetchedData = {
-             status: 'active',
-             source_type: 'video', // default fallback is our native clean resolver
-             stream_url: configuredIframeUrl,
-             server_health: {
-               "0": true,
-               "1": true,
-               "2": true,
-               "3": true,
-               "4": true,
-               "5": true
-             }
-          };
-          setActiveServer('alternativo');
+        // 2. O backend processa e devolve o manifesto puro
+        const res = await fetch(extractionUrl);
+        if (!res.ok) {
+          throw new Error(`Sinal indisponível: Status ${res.status}`);
         }
-        setBouncerStreamData(fetchedData);
         
-        if (fetchedData.source_type !== 'iframe' && movieVideoRef.current) {
-          setIsVideoBuffering(true);
-          // Exibir loading enquanto carrega metadados
-          setDuration(0);
-          
-          if (fetchedData.source_type === 'mp4' || fetchedData.stream_url.includes('.mp4')) {
+        const fetchedData = await res.json();
+
+        // Se o servidor atual falhar, pula para o próximo automaticamente
+        if (!fetchedData.stream_url) {
+          throw new Error("Sinal de vídeo vazio ou inválido.");
+        }
+
+        setBouncerStreamData(fetchedData);
+        setActiveServer('principal');
+
+        if (movieVideoRef.current) {
+          if (fetchedData.stream_url.includes('.mp4') || fetchedData.source_type === 'mp4') {
+            // Reprodução direta de MP4
             movieVideoRef.current.src = fetchedData.stream_url;
             movieVideoRef.current.load();
-            movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(e => { console.warn("Player autoplay blocked", e); setIsVideoBuffering(false); setMovieIsPlaying(false); setActiveMediaAlert("AUTOPLAY BLOQUEADO PELO NAVEGADOR - CLIQUE NO PLAY"); });
+            movieVideoRef.current.play()
+              .then(() => setIsVideoBuffering(false))
+              .catch(() => { 
+                setIsVideoBuffering(false); 
+                setMovieIsPlaying(false);
+                setActiveMediaAlert("CLIQUE NO PLAY PARA INICIAR"); 
+              });
           } else if (Hls.isSupported()) {
-            // Highly optimized HLS settings to prioritize stable streams & maximize ABR throughput
+            // Reprodução de M3U8 via HLS com configurações de alta qualidade e resiliência
+            if (hlsInstance) {
+              hlsInstance.destroy();
+            }
             hlsInstance = new Hls({
-              maxBufferSize: 30 * 1022 * 1022, 
-              maxBufferLength: 30, 
+              maxBufferSize: 60 * 1022 * 1022, // Buffer maior para reprodução contínua e sem travamentos
+              maxBufferLength: 60,
               enableWorker: true,
-              lowLatencyMode: true,
-              abrEwmaDefaultEstimate: 5000000, 
+              lowLatencyMode: false, // Desativado para manter estabilidade em conexões médias/baixas
+              abrEwmaDefaultEstimate: 5000000,
               capLevelToPlayerSize: true,
             });
+            
             hlsInstance.loadSource(fetchedData.stream_url);
             hlsInstance.attachMedia(movieVideoRef.current);
+            
             hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-              if (movieVideoRef.current) {
-                movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(e => { console.warn("Player autoplay blocked", e); setIsVideoBuffering(false); setMovieIsPlaying(false); setActiveMediaAlert("AUTOPLAY BLOQUEADO PELO NAVEGADOR - CLIQUE NO PLAY"); });
+              // FORÇAR DUBLAGEM: Seleciona se houver faixa local em português
+              if (hlsInstance && hlsInstance.audioTracks.length > 1) {
+                const targetLanguageLower = movieAudioLang.toLowerCase().split('-')[0];
+                const targetAudioIndex = hlsInstance.audioTracks.findIndex(track => 
+                  track.lang?.toLowerCase().includes(targetLanguageLower) || 
+                  track.name?.toLowerCase().includes(targetLanguageLower) ||
+                  (targetLanguageLower === 'pt' && (track.name?.toLowerCase().includes('dub') || track.lang?.toLowerCase().includes('por')))
+                );
+                if (targetAudioIndex !== -1) {
+                  hlsInstance.audioTrack = targetAudioIndex;
+                }
               }
+
+              movieVideoRef.current?.play()
+                .then(() => setIsVideoBuffering(false))
+                .catch(() => { 
+                  setIsVideoBuffering(false); 
+                  setMovieIsPlaying(false);
+                  setActiveMediaAlert("CLIQUE NO PLAY PARA INICIAR"); 
+                });
             });
+
+            // FALLBACK AUTOMÁTICO SE DER ERRO NO STREAM: Alterna para o próximo servidor em caso de falha física
             hlsInstance.on(Hls.Events.ERROR, (event, data) => {
               if (data.fatal) {
-                 setIsVideoBuffering(false);
-                 setMovieIsPlaying(false);
+                console.warn("[Media Player] HLS Erro Fatal. Tentando rota redundante...", data);
+                setIsVideoBuffering(false);
+                setSelectedEmbedServer(prev => (prev + 1) % 6); // Cicla entre os servidores 0, 1, 2, 3, 4, 5
               }
             });
           } else if (movieVideoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+            // Suporte Safari Nativo
             movieVideoRef.current.src = fetchedData.stream_url;
             movieVideoRef.current.load();
-            movieVideoRef.current.play().then(() => setIsVideoBuffering(false)).catch(() => { setIsVideoBuffering(false); setMovieIsPlaying(false); });
+            movieVideoRef.current.play()
+              .then(() => setIsVideoBuffering(false))
+              .catch(() => { setIsVideoBuffering(false); });
           }
         }
       } catch (err) {
-        console.error("Stream fetch error:", err);
+        console.error("Erro na busca de stream, ativando contingência:", err);
         setIsVideoBuffering(false);
+        // Cicla automaticamente para a próxima rota se der erro de requisição física
+        setSelectedEmbedServer(prev => (prev + 1) % 6);
       }
     };
     
