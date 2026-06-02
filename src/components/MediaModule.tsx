@@ -130,6 +130,16 @@ export const MediaModule: React.FC = () => {
   const { isMediaPipMode, togglePipMode, isTransitioning, showPipModal, setShowPipModal } = usePipSync();
   const [selectedEmbedServer, setSelectedEmbedServer] = useState<number>(0);
 
+  const hlsInstanceRef = useRef<Hls | null>(null);
+  const [availableAudioTracks, setAvailableAudioTracks] = useState<any[]>([]);
+
+  const changeAudioTrack = (trackIndex: number) => {
+    if (hlsInstanceRef.current) {
+      hlsInstanceRef.current.audioTrack = trackIndex;
+      console.log(`[INVIS PLAYER] Faixa de áudio alterada para o índice: ${trackIndex}`);
+    }
+  };
+
   // Helper to determine if a media item is in a foreign language under user's DDI
   const isMovieEstrangeiroByDdi = (m: Movie) => {
     const ddi = currentUser?.ddi?.trim() || '';
@@ -994,20 +1004,29 @@ export const MediaModule: React.FC = () => {
       server_health: { "0": true }
     });
     
-    let hlsInstance: Hls | null = null;
     const fetchStream = async () => {
       try {
         setIsVideoBuffering(true);
         setDuration(0);
+        setAvailableAudioTracks([]); // Reseta faixas de áudios mapeadas para o novo vídeo
         
-        // Solicita ao bouncer / banco de dados Supabase na rota de mídia direta
-        const extractionUrl = getDirectMediaUrl(
-          selectedMovie,
-          selectedSeason,
-          selectedEpisode,
-          movieAudioLang,
-          movieSubtitle
-        );
+        const numericId = selectedMovie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
+        const type = selectedMovie.type || 'movie';
+        
+        // Bate no endpoint novo, passando o ID e o Tipo corretos dinamicamente
+        let extractionUrl = `/api/media/${type}/${numericId}`;
+        const params = new URLSearchParams();
+        if (selectedMovie.type === 'serie' || selectedMovie.type === 'tv') {
+          params.append('s', selectedSeason.toString());
+          params.append('e', selectedEpisode.toString());
+        }
+        if (movieAudioLang) params.append('audio', movieAudioLang.toLowerCase().split('-')[0]);
+        if (movieSubtitle && movieSubtitle !== 'OFF') params.append('sub', movieSubtitle.toLowerCase().split('-')[0]);
+
+        const queryString = params.toString();
+        if (queryString) {
+          extractionUrl += `?${queryString}`;
+        }
 
         const res = await fetch(extractionUrl);
         if (!res.ok) {
@@ -1037,10 +1056,11 @@ export const MediaModule: React.FC = () => {
               });
           } else if (Hls.isSupported()) {
             // Reprodução de M3U8 via HLS com configurações de alta qualidade e resiliência
-            if (hlsInstance) {
-              hlsInstance.destroy();
+            if (hlsInstanceRef.current) {
+              hlsInstanceRef.current.destroy();
             }
-            hlsInstance = new Hls({
+            
+            const hls = new Hls({
               maxBufferSize: 60 * 1022 * 1022, // Buffer de 60MB para estabilidade absoluta
               maxBufferLength: 60,
               enableWorker: true,
@@ -1049,20 +1069,27 @@ export const MediaModule: React.FC = () => {
               capLevelToPlayerSize: true,
             });
             
-            hlsInstance.loadSource(fetchedData.stream_url);
-            hlsInstance.attachMedia(movieVideoRef.current);
+            hlsInstanceRef.current = hls; // Salva na referência persistente para acesso de interatividade
             
-            hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-              // Ajusta trilha de áudio se disponível no manifesto HLS
-              if (hlsInstance && hlsInstance.audioTracks.length > 1) {
+            hls.loadSource(fetchedData.stream_url);
+            hls.attachMedia(movieVideoRef.current);
+            
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+              // Extrai as faixas de áudio nativas do arquivo .m3u8
+              if (hls.audioTracks && hls.audioTracks.length > 0) {
+                setAvailableAudioTracks(hls.audioTracks);
+              }
+
+              // Ajusta trilha de áudio inicial se disponível no manifesto HLS
+              if (hls.audioTracks.length > 1) {
                 const targetLanguageLower = movieAudioLang.toLowerCase().split('-')[0];
-                const targetAudioIndex = hlsInstance.audioTracks.findIndex(track => 
+                const targetAudioIndex = hls.audioTracks.findIndex(track => 
                   track.lang?.toLowerCase().includes(targetLanguageLower) || 
                   track.name?.toLowerCase().includes(targetLanguageLower) ||
                   (targetLanguageLower === 'pt' && (track.name?.toLowerCase().includes('dub') || track.lang?.toLowerCase().includes('por')))
                 );
                 if (targetAudioIndex !== -1) {
-                  hlsInstance.audioTrack = targetAudioIndex;
+                  hls.audioTrack = targetAudioIndex;
                 }
               }
 
@@ -1075,7 +1102,7 @@ export const MediaModule: React.FC = () => {
                 });
             });
 
-            hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+            hls.on(Hls.Events.ERROR, (event, data) => {
               if (data.fatal) {
                 console.error("[Media Player] HLS Erro Fatal:", data);
                 setIsVideoBuffering(false);
@@ -1101,8 +1128,9 @@ export const MediaModule: React.FC = () => {
     fetchStream();
     
     return () => {
-      if (hlsInstance) {
-        hlsInstance.destroy();
+      if (hlsInstanceRef.current) {
+        hlsInstanceRef.current.destroy();
+        hlsInstanceRef.current = null;
       }
     };
   }, [selectedMovie, moviePlaying, selectedSeason, selectedEpisode, movieAudioLang, movieSubtitle]);
@@ -4788,21 +4816,43 @@ export const MediaModule: React.FC = () => {
                                   <div className="relative flex flex-col items-center">
                                     {(activePlayerMenu === 'audio' || activePlayerMenu === null) && (
                                       <div className={`absolute bottom-full mb-2 ${activePlayerMenu === 'audio' ? 'flex' : 'hidden group-hover/menu:flex'} flex-col bg-black/95 border border-white/10 rounded-xl p-1 z-50 shadow-2xl min-w-[100px] animate-in fade-in zoom-in-95 duration-150`}>
-                                        {(['PT-BR', 'EN'] as const).map((lang) => (
-                                          <button 
-                                            key={lang} 
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              triggerHaptic(10);
-                                              setMovieAudioLang(lang);
-                                              setActivePlayerMenu(null);
-                                              showAlert(`ÁUDIO: ${lang === 'PT-BR' ? 'PORTUGUÊS' : 'INGLÊS (EN)'}`);
-                                            }} 
-                                            className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${movieAudioLang === lang ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-400'}`}
-                                          >
-                                            {lang}
-                                          </button>
-                                        ))}
+                                        {availableAudioTracks.length > 0 ? (
+                                          availableAudioTracks.map((track, idx) => {
+                                            const isSelected = hlsInstanceRef.current?.audioTrack === idx;
+                                            return (
+                                              <button 
+                                                key={idx} 
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  triggerHaptic(10);
+                                                  changeAudioTrack(idx);
+                                                  setMovieAudioLang(track.name || track.lang || `Áudio ${idx + 1}`);
+                                                  setActivePlayerMenu(null);
+                                                  showAlert(`ÁUDIO: ${track.name || track.lang || `Canal ${idx + 1}`}`);
+                                                }} 
+                                                className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${isSelected ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-400'}`}
+                                              >
+                                                {track.name || track.lang || `Áudio ${idx + 1}`}
+                                              </button>
+                                            );
+                                          })
+                                        ) : (
+                                          (['PT-BR', 'EN'] as const).map((lang) => (
+                                            <button 
+                                              key={lang} 
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                triggerHaptic(10);
+                                                setMovieAudioLang(lang);
+                                                setActivePlayerMenu(null);
+                                                showAlert(`ÁUDIO: ${lang === 'PT-BR' ? 'PORTUGUÊS' : 'INGLÊS (EN)'}`);
+                                              }} 
+                                              className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${movieAudioLang === lang ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-400'}`}
+                                            >
+                                              {lang}
+                                            </button>
+                                          ))
+                                        )}
                                       </div>
                                     )}
                                     <button 

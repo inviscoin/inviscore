@@ -39,3 +39,9 @@ INSERT INTO public.invis_media_sources (media_id, media_type, stream_url, resolu
 ('157336', 'movie', 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8', '1080p Ultra HD', ARRAY['PT-BR', 'EN', 'ES'], ARRAY['pt-BR', 'en']),
 ('p1', 'movie', 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8', '1080p Stream', ARRAY['PT-BR', 'EN', 'ES'], ARRAY['pt-BR', 'en']),
 ('p2', 'movie', 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8', '1080p Stream', ARRAY['PT-BR', 'EN', 'ES'], ARRAY['pt-BR', 'en']);
+
+INSERT INTO public.media_catalog (title_id, media_type, stream_url, resolution, tracks_data) VALUES 
+('335984', 'movie', 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8', '1080p Ultra HD', '{"audio_languages": ["PT-BR", "EN", "ES"], "subtitles": ["pt-BR", "en"]}'::jsonb),
+('157336', 'movie', 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8', '1080p Ultra HD', '{"audio_languages": ["PT-BR", "EN", "ES"], "subtitles": ["pt-BR", "en"]}'::jsonb),
+('p1', 'movie', 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8', '1080p Stream', '{"audio_languages": ["PT-BR", "EN", "ES"], "subtitles": ["pt-BR", "en"]}'::jsonb),
+('p2', 'movie', 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8', '1080p Stream', '{"audio_languages": ["PT-BR", "EN", "ES"], "subtitles": ["pt-BR", "en"]}'::jsonb);

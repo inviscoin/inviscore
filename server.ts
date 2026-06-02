@@ -977,13 +977,38 @@ async function startServer() {
       
       const season = req.query.s ? parseInt(String(req.query.s)) : null;
       const episode = req.query.e ? parseInt(String(req.query.e)) : null;
-      const requestedAudio = req.query.audio ? String(req.query.audio).toLowerCase() : 'pt';
 
       console.log(`[Media Database Resolve] Resolvendo ID #${numericId} (${type}) direto no Supabase...`);
 
+      if (!supabase) {
+        return res.status(500).json({ error: "Supabase client não configurado no servidor" });
+      }
+
       let mediaSource = null;
 
-      if (supabase) {
+      // 1. Tenta buscar pela tabela 'media_catalog' (conforme especificação dinâmica enviada)
+      try {
+        const { data, error } = await supabase
+          .from("media_catalog")
+          .select("stream_url, tracks_data")
+          .eq("title_id", numericId)
+          .eq("media_type", type)
+          .maybeSingle();
+
+        if (!error && data && data.stream_url) {
+          mediaSource = {
+            stream_url: data.stream_url,
+            audio_languages: data.tracks_data?.audio_languages || ['pt-BR', 'en-US'],
+            resolution: "1080p Ultra HD",
+            subtitles: data.tracks_data?.subtitles || []
+          };
+        }
+      } catch (e: any) {
+        console.warn("[Media Database] Erro ao consultar tabela 'media_catalog':", e.message);
+      }
+
+      // 2. Se não encontrou, tenta buscar pela tabela original 'invis_media_sources'
+      if (!mediaSource) {
         try {
           let query = supabase
             .from("invis_media_sources")
@@ -997,45 +1022,34 @@ async function startServer() {
           }
 
           const { data, error } = await query.maybeSingle();
-          if (!error && data) {
+          if (!error && data && data.stream_url) {
             mediaSource = data;
           }
         } catch (e: any) {
-          console.warn("[Media Database] Erro de rede ou tabela inexistente no Supabase, ativando resolve resiliente:", e.message);
+          console.warn("[Media Database] Erro ao consultar tabela 'invis_media_sources':", e.message);
         }
       }
 
-      // Se não cadastrado no Supabase ainda, provemos um resolve automático com seeds cinematográficos premium para evitar lag e quebra
-      if (!mediaSource) {
-        const seed = premiumSeededStreams[numericId] || premiumSeededStreams[id] || premiumSeededStreams["default"];
-        if (seed) {
-          mediaSource = {
-            media_id: numericId,
-            media_type: isMovie ? "movie" : "serie",
-            stream_url: seed.streamUrl,
-            audio_languages: seed.audioTracks || ['pt-BR', 'en-US'],
-            resolution: "1080p (CDN INVIS)",
-            subtitles: []
-          };
-        } else {
-          // Fallback final limpo padrão Tears of Steel (Multi-Audio nativo HLS)
-          mediaSource = {
-            media_id: numericId,
-            media_type: isMovie ? "movie text" : "serie",
-            stream_url: "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
-            audio_languages: ['pt-BR', 'en-US'],
-            resolution: "1080p (FHD Auto)",
-            subtitles: []
-          };
-        }
+      // 3. Sem fallbacks forçados para Tears of Steel para mídia não cadastrada (Retorna 404 limpo)
+      // "NENHUM fallback para Tears of Steel deve existir aqui. Se o link ainda não foi indexado, retorna 404 limpo."
+      if (!mediaSource || !mediaSource.stream_url) {
+        return res.status(404).json({ 
+          success: false, 
+          error: "Este título ainda não foi indexado de forma válida pelo motor INVIS." 
+        });
       }
 
       const isMp4 = mediaSource.stream_url.includes(".mp4");
-      res.json({
+      return res.json({
+        success: true,
         status: "active",
         stream_url: mediaSource.stream_url,
         source_type: isMp4 ? "mp4" : "video",
         resolution: mediaSource.resolution || "1080p (FHD)",
+        tracks_data: {
+          audio_languages: mediaSource.audio_languages || ['pt-BR', 'en-US'],
+          subtitles: mediaSource.subtitles || []
+        },
         audios: (mediaSource.audio_languages || ['pt-BR', 'en-US']).map((lang: string, idx: number) => ({
           id: lang.toLowerCase().includes('pt') ? 'pt-BR' : 'en-US',
           label: lang.toLowerCase().includes('pt') ? "Português (Brasil) - Dublado" : `English - Original (${lang.toUpperCase()})`,
@@ -1047,8 +1061,10 @@ async function startServer() {
           { id: "OFF", label: "Desligado" }
         ]
       });
+
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      console.error("[INVIS SERVER ERROR]:", err.message);
+      return res.status(500).json({ success: false, error: "Falha interna no motor de roteamento de mídia" });
     }
   });
 
