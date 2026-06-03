@@ -34,8 +34,8 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.
 
 const supabase = resolvedSupabaseUrl && supabaseServiceKey ? createClient(resolvedSupabaseUrl, supabaseServiceKey, {
   auth: {
-    autoRefreshToken: false,
-    persistSession: false // Evita o erro "WebSocket closed without opened"
+    persistSession: false, // Evita o erro "WebSocket closed without opened"
+    autoRefreshToken: false
   }
 }) : null;
 
@@ -1104,16 +1104,8 @@ async function startServer() {
       finalResolution = "1080p Ultra HD";
       console.log(`[Bouncer] Match encontrado no Banco/Local para #${id}. StreamUrl: ${activeStreamUrl}`);
     } else {
-      const seed = premiumSeededStreams[numericId] || premiumSeededStreams[id];
-      if (seed) {
-        activeStreamUrl = seed.streamUrl;
-        activeSourceType = "video";
-        finalResolution = "1080p (HQ)";
-        console.log(`[Bouncer] Match encontrado em Premium Seeded para #${id}. StreamUrl: ${activeStreamUrl}`);
-      } else {
-        console.warn(`[Bouncer] Sinal não localizado para #${id}. Retornando SINAL INDISPONÍVEL.`);
-        return res.status(404).json({ success: false, error: "SINAL INDISPONÍVEL" });
-      }
+      console.warn(`[Bouncer] Sinal não localizado no banco para #${id}. Retornando SINAL INDISPONÍVEL.`);
+      return res.status(404).json({ success: false, error: "SINAL INDISPONÍVEL" });
     }
 
     // Se o usuario explicitamente pediu servidores de iframe adicionais (Servidores de redundancia)
@@ -1238,7 +1230,7 @@ async function startServer() {
       }
 
       if (!mediaSource || !mediaSource.stream_url) {
-        return res.status(404).json({ success: false, error: "Sinal Indisponível" });
+        return res.status(404).json({ success: false, error: "SINAL INDISPONÍVEL" });
       }
 
       // Determina a trilha prioritária antes de enviar ao Player [5]
@@ -1292,21 +1284,27 @@ async function startServer() {
       if (error) throw error;
 
       // Normalização agressiva para o frontend
-      const activeTitles = data.map(item => ({
-        ...item,
-        id: `tmdb-${item.title_id}`,
-        title_id: String(item.title_id).replace(/\D/g, "")
-      }));
+      const activeTitles = data.map(item => {
+        const cleanedTitleId = String(item.title_id).replace(/\D/g, "");
+        return {
+          ...item,
+          id: `tmdb-${cleanedTitleId}`,
+          title_id: cleanedTitleId
+        };
+      });
 
       return res.json({ success: true, active_titles: activeTitles });
     } catch (e: any) {
       console.warn("[Media Catalog Active API Error] Usando catálogo de backup local:", e.message);
       // Se o banco falhar, entrega o backup local para não esvaziar a tela
-      const fallbackList = (localMediaCatalogFallback || []).map(item => ({
-        ...item,
-        id: `tmdb-${item.title_id}`,
-        title_id: String(item.title_id).replace(/\D/g, "")
-      }));
+      const fallbackList = (localMediaCatalogFallback || []).map(item => {
+        const cleanedTitleId = String(item.title_id).replace(/\D/g, "");
+        return {
+          ...item,
+          id: `tmdb-${cleanedTitleId}`,
+          title_id: cleanedTitleId
+        };
+      });
       return res.json({ success: true, active_titles: fallbackList });
     }
   });

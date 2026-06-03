@@ -1513,21 +1513,21 @@ export const MediaModule: React.FC = () => {
   const memoizedCategories = React.useMemo(() => {
     const filterByDbExistenceAndDdi = (m: Movie) => {
         // Normaliza o ID da lista estática para apenas números
-        const numericId = m.id.replace(/\D/g, "");                   
+        const numericId = m.id.replace(/\D/g, '');                   
         
         // Busca no catálogo do banco normalizando também o title_id para string numérica
         const dbMatch = indexedDbCatalog.find(dbItem => 
-             String(dbItem.title_id).replace(/\D/g, "") === numericId
+             String(dbItem.title_id).replace(/\D/g, '') === numericId
         );
 
-        if (!dbMatch) return false; // Se não houver match exato, oculta do Hub [6].
+        if (!dbMatch) return false; // Se houver match, o título deve 'acender' no HUD.
 
         // Regra de DDI (+55 exige áudio PT-BR na vitrine)
-        const audioLangs = (dbMatch.tracks_data?.audio_languages || []).map((l: any) => String(l).toLowerCase());
-        const hasPtBr = audioLangs.some((l: string) => l.includes('pt'));
+        const audioLangs = (dbMatch.tracks_data?.audio_languages || dbMatch.audio_languages || dbMatch.audioLanguages || []).map((l: any) => String(l).toLowerCase());
+        const hasPtBr = audioLangs.some((l: string) => l.toLowerCase().includes('pt'));
 
         if (currentUser?.ddi === '+55' && !hasPtBr) {
-            return searchQuery ? true : false; // Na busca aparece como legendado, no Hub não [9].
+            return searchQuery ? true : false; // Oculta da vitrine (shelf), permite aparecer apenas na busca ativa como 'Legendado'
         }
         return true;
     };
