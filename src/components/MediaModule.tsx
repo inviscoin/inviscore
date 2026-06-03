@@ -1512,23 +1512,22 @@ export const MediaModule: React.FC = () => {
 
   const memoizedCategories = React.useMemo(() => {
     const filterByDbExistenceAndDdi = (m: Movie) => {
-        // Encontra o title_id através da extração apenas dos numéricos do ID (ex: tmdb-123 vira 123)
-        const numericId = m.id.replace(/\D/g, '');                   
+        // Normaliza o ID da lista estática para apenas números
+        const numericId = m.id.replace(/\D/g, "");                   
         
-        // 2. Busca no catálogo vindo do banco
+        // Busca no catálogo do banco normalizando também o title_id para string numérica
         const dbMatch = indexedDbCatalog.find(dbItem => 
-             String(dbItem.title_id) === numericId
+             String(dbItem.title_id).replace(/\D/g, "") === numericId
         );
 
-        if (!dbMatch) return false; // Strict Sync: Oculta se não houver arquivo no banco [16, 17]
+        if (!dbMatch) return false; // Se não houver match exato, oculta do Hub [6].
 
-        // 3. Regra Soberana de DDI (+55 exige áudio PT-BR na vitrine)
+        // Regra de DDI (+55 exige áudio PT-BR na vitrine)
         const audioLangs = (dbMatch.tracks_data?.audio_languages || []).map((l: any) => String(l).toLowerCase());
         const hasPtBr = audioLangs.some((l: string) => l.includes('pt'));
 
         if (currentUser?.ddi === '+55' && !hasPtBr) {
-            // Se for busca, permite aparecer como "Legendado". Na vitrine, oculta.
-            return searchQuery ? true : false;
+            return searchQuery ? true : false; // Na busca aparece como legendado, no Hub não [9].
         }
         return true;
     };

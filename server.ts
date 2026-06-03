@@ -1280,71 +1280,34 @@ async function startServer() {
 
   // Endpoint de Sincronização Estrita Corrigido
   app.get("/api/media/catalog/active", async (req, res) => {
-    if (!supabase) {
-      const fallbackList = localMediaCatalogFallback.map(item => ({
+    try {
+      if (!supabase) throw new Error("Supabase não inicializado");
+      
+      // Consulta direta ignorando RLS via service_role já configurada
+      const { data, error } = await supabase
+        .from("media_catalog")
+        .select("title_id, media_type, tracks_data")
+        .eq("is_active", true);
+
+      if (error) throw error;
+
+      // Normalização agressiva para o frontend
+      const activeTitles = data.map(item => ({
         ...item,
-        id: `tmdb-${item.title_id}`
+        id: `tmdb-${item.title_id}`,
+        title_id: String(item.title_id).replace(/\D/g, "")
+      }));
+
+      return res.json({ success: true, active_titles: activeTitles });
+    } catch (e: any) {
+      console.warn("[Media Catalog Active API Error] Usando catálogo de backup local:", e.message);
+      // Se o banco falhar, entrega o backup local para não esvaziar a tela
+      const fallbackList = (localMediaCatalogFallback || []).map(item => ({
+        ...item,
+        id: `tmdb-${item.title_id}`,
+        title_id: String(item.title_id).replace(/\D/g, "")
       }));
       return res.json({ success: true, active_titles: fallbackList });
-    }
-    try {
-      // Tentamos o query com is_active primeiro
-      let q = supabase.from("media_catalog").select("title_id, media_type, tracks_data").eq("is_active", true);
-      let { data, error } = await q;
-
-      // Se falhar (por exemplo, coluna is_active não localizada no banco), tentamos seleção geral
-      if (error) {
-        console.warn("[Media Catalog Active] Filtro is_active falhou, tentando seleção geral:", error.message);
-        const retry = await supabase.from("media_catalog").select("title_id, media_type, tracks_data");
-        data = retry.data;
-        if (retry.error) {
-          throw retry.error;
-        }
-      }
-
-      const mergedMap = new Map<string, { title_id: string; media_type: string; tracks_data: any }>();
-
-      // Semeia com os dados locais salvos no crawler local_media_catalog
-      if (localMediaCatalogFallback) {
-        for (const item of localMediaCatalogFallback) {
-          const type = item.media_type === 'serie' ? 'tv' : item.media_type;
-          const key = `${type}_${item.title_id}`;
-          mergedMap.set(key, {
-            title_id: item.title_id,
-            media_type: type,
-            tracks_data: item.tracks_data || { audio_languages: ['pt-BR', 'en-US'], subtitles: [] }
-          });
-        }
-      }
-
-      // Combina com os dados do banco
-      if (data) {
-        for (const item of data) {
-          const type = item.media_type === 'serie' ? 'tv' : item.media_type;
-          const key = `${type}_${item.title_id}`;
-          mergedMap.set(key, {
-            title_id: item.title_id,
-            media_type: type,
-            tracks_data: item.tracks_data || { audio_languages: ['pt-BR', 'en-US'], subtitles: [] }
-          });
-        }
-      }
-
-      // Normalização de IDs para bater com o frontend (tmdb-XXXXX)
-      const normalizedData = Array.from(mergedMap.values()).map(item => ({
-        ...item,
-        id: `tmdb-${item.title_id}`
-      }));
-
-      return res.json({ success: true, active_titles: normalizedData });
-    } catch (e: any) {
-      console.error("[Media Catalog Active API Error]:", e.message);
-      // Fallback supremo de segurança usando backup local
-      const fallbackList = localMediaCatalogFallback.map(item => ({
-        ...item,
-        id: `tmdb-${item.title_id}`
-      }));
-      return res.json({ success: true, active_titles: fallbackList, warning: e.message });
     }
   });
 
