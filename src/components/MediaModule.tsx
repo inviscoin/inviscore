@@ -1511,35 +1511,30 @@ export const MediaModule: React.FC = () => {
   }, [expandedSection, selectedMovie, mappedMovies]);
 
   const memoizedCategories = React.useMemo(() => {
-    // 1. Identificação do Idioma por DDI (+55 = pt-br) [5, 6]
-    const userLang = getDefaultLanguageByDdi(currentUser?.ddi).toLowerCase(); 
-    const langPrefix = userLang.split('-')[0]; // 'pt'
-
-    const filterByDdiStrict = (m: Movie) => {
-        const numericId = m.id.replace(/\D/g, "");
-        const dbMatch = indexedDbCatalog.find(dbItem => dbItem.title_id === numericId);
-
-        if (!dbMatch) return false; // Strict Sync: Só exibe se houver arquivo no banco [7]
-
-        const dbAudioLangs = (dbMatch.tracks_data?.audio_languages || []).map(l => l.toLowerCase());
-        const dbSubtitles = (dbMatch.tracks_data?.subtitles || []).map(l => l.toLowerCase());
-
-        const hasNativeAudio = dbAudioLangs.some(lang => lang.includes(langPrefix));
-        const hasNativeSubs = dbSubtitles.some(lang => lang.includes(langPrefix));
-
-        // REGRA SOBERANA DE EXIBIÇÃO [1]:
-        // Se NÃO estiver em modo busca: Só entra se for DUBLADO (Áudio nativo).
-        if (!searchQuery || searchQuery.trim() === "") {
-            return hasNativeAudio;
-        } 
+    const filterByDbExistenceAndDdi = (m: Movie) => {
+        // 1. Normalização do ID (remove 'tmdb-', 'movie_', etc)
+        const numericId = m.id.replace(/\D/g, "");                   
         
-        // Se ESTIVER em modo busca: Pode ser DUBLADO ou LEGENDADO na região.
-        // Títulos sem áudio e sem legenda na região do usuário são BANIDOS.
-        return hasNativeAudio || hasNativeSubs;
+        // 2. Busca no catálogo vindo do banco
+        const dbMatch = indexedDbCatalog.find(dbItem => 
+             String(dbItem.title_id) === numericId
+        );
+
+        if (!dbMatch) return false; // Strict Sync: Oculta se não houver arquivo no banco [16, 17]
+
+        // 3. Regra Soberana de DDI (+55 exige áudio PT-BR na vitrine)
+        const audioLangs = (dbMatch.tracks_data?.audio_languages || []).map((l: any) => String(l).toLowerCase());
+        const hasPtBr = audioLangs.some((l: string) => l.includes('pt'));
+
+        if (currentUser?.ddi === '+55' && !hasPtBr) {
+            // Se for busca, permite aparecer como "Legendado". Na vitrine, oculta.
+            return searchQuery ? true : false;
+        }
+        return true;
     };
 
     // Aplica o filtro mestre sobre o catálogo indexado (Source of Truth)
-    const strictCatalog = mappedMovies.filter(filterByDdiStrict);
+    const strictCatalog = mappedMovies.filter(filterByDbExistenceAndDdi);
 
     return {
       filtered: strictCatalog.filter(m => {
