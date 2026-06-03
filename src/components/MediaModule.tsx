@@ -1410,83 +1410,117 @@ export const MediaModule: React.FC = () => {
     }));
   };
 
+  // Dynamic mapping of database index (indexedDbCatalog) to Movie Objects (single source of truth)
+  const mappedMovies = React.useMemo(() => {
+    return indexedDbCatalog.map((dbItem) => {
+      const numericId = dbItem.title_id;
+      const mediaType = dbItem.media_type === 'tv' || dbItem.media_type === 'serie' ? 'serie' : 'filme';
+      
+      // Try to find a local rich matching item from moviesList or static catalog
+      const localMatch = moviesList.find((m) => {
+        const idStr = String(m.id);
+        const matchNum = idStr.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
+        return matchNum === numericId;
+      });
+
+      if (localMatch) {
+        return {
+          ...localMatch,
+          type: mediaType,
+          audioLanguages: dbItem.tracks_data?.audio_languages || localMatch.audioLanguages || ['pt-BR', 'en-US'],
+          streamUrl: dbItem.stream_url || localMatch.streamUrl
+        };
+      }
+
+      // Consistent and beautiful fallback for newly crawled titles from deep scan
+      const title = dbItem.tracks_data?.title || dbItem.tracks_data?.name || `Título #${numericId}`;
+      const overview = dbItem.tracks_data?.overview || 'Título indexado de forma resiliente no banco Supabase pelo crawler INVIS.';
+      const posterPath = dbItem.tracks_data?.poster_path || dbItem.tracks_data?.posterUrl;
+      const posterUrl = posterPath 
+        ? (posterPath.startsWith('http') ? posterPath : `https://image.tmdb.org/t/p/w500${posterPath}`)
+        : `https://images.unsplash.com/photo-1542204172-e7052809186d?w=500&auto=format&fit=crop&q=80`;
+
+      const backdropPath = dbItem.tracks_data?.backdrop_path || dbItem.tracks_data?.backdropUrl;
+      const backdropUrl = backdropPath
+        ? (backdropPath.startsWith('http') ? backdropPath : `https://image.tmdb.org/t/p/w1280${backdropPath}`)
+        : `https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1200&auto=format&fit=crop&q=40`;
+
+      let platform: 'netflix' | 'disney' | 'hbo' | 'prime' | 'globoplay' = 'netflix';
+      const dbPlatform = dbItem.tracks_data?.platform?.toLowerCase();
+      if (dbPlatform?.includes('netflix')) platform = 'netflix';
+      else if (dbPlatform?.includes('disney')) platform = 'disney';
+      else if (dbPlatform?.includes('hbo')) platform = 'hbo';
+      else if (dbPlatform?.includes('prime')) platform = 'prime';
+      else if (dbPlatform?.includes('globoplay')) platform = 'globoplay';
+      else {
+        const idx = parseInt(numericId) || 0;
+        const platforms: ('netflix' | 'disney' | 'hbo' | 'prime' | 'globoplay')[] = ['netflix', 'disney', 'hbo', 'prime', 'globoplay'];
+        platform = platforms[idx % platforms.length];
+      }
+
+      const rating = dbItem.tracks_data?.rating || dbItem.tracks_data?.vote_average || 8.0;
+      const category = dbItem.tracks_data?.category || (mediaType === 'serie' ? 'Série' : 'Filme');
+
+      return {
+        id: numericId,
+        title: title,
+        year: dbItem.tracks_data?.release_date ? new Date(dbItem.tracks_data.release_date).getFullYear() : 2024,
+        posterUrl: posterUrl,
+        backdropUrl: backdropUrl,
+        overview: overview,
+        videoUrl: 'https://www.youtube.com/embed/gCcx85zlye4',
+        type: mediaType,
+        status: true,
+        category: category,
+        platform: platform,
+        rating: rating,
+        audioLanguages: dbItem.tracks_data?.audio_languages || ['PT-BR', 'EN'],
+        totalDuration: dbItem.tracks_data?.runtime ? `${dbItem.tracks_data.runtime}m` : '120m',
+        streamUrl: dbItem.stream_url
+      } as Movie;
+    });
+  }, [indexedDbCatalog, moviesList]);
+
   // Active Timer to cycle featured trailers in background every 7 seconds
   useEffect(() => {
     if (expandedSection !== 'movies' || selectedMovie !== null) return;
     const interval = setInterval(() => {
-      setActiveTrailerIndex(prev => (prev + 1) % Math.min(10, moviesList.length || 10));
+      setActiveTrailerIndex(prev => (prev + 1) % Math.min(10, mappedMovies.length || 10));
     }, 7000);
     return () => clearInterval(interval);
-  }, [expandedSection, selectedMovie, moviesList]);
+  }, [expandedSection, selectedMovie, mappedMovies]);
 
   const memoizedCategories = React.useMemo(() => {
-    const ddiConfig = getDefaultLanguageByDdi(currentUser?.ddi); // 'PT-BR', 'EN', etc.
-    const userDdi = currentUser?.ddi?.trim() || '';
-
-    const filterByDbExistenceAndDdi = (m: Movie) => {
-      if (m.type === 'trailer') return true; // Mantém os trailers promocionais
-
-      // 1. REGRA DE EXISTÊNCIA: O filme existe no Supabase?
-      const numericId = m.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
-      const dbMatch = indexedDbCatalog.find((dbItem) => dbItem.title_id === numericId);
-      
-      if (!dbMatch) return false; // Se não está no banco, some da interface.
-
-      // 2. REGRA DE DDI: O filme atende ao idioma do usuário?
-      const dbAudioLangs = dbMatch.tracks_data?.audio_languages || ['en-US'];
-      const dbHasPtBr = dbAudioLangs.some((lang: string) => lang.toLowerCase().includes('pt'));
-      const dbHasEnglish = dbAudioLangs.some((lang: string) => lang.toLowerCase().includes('en'));
-
-      if (userDdi === '+55') {
-        // Se o usuário é do Brasil e o banco só tem áudio em inglês (sem dual audio), oculta o filme.
-        if (dbHasEnglish && !dbHasPtBr && dbAudioLangs.length < 2) {
-          return false;
-        }
-      } else {
-        // Se o usuário for estrangeiro, e o filme não tiver o idioma dele nem inglês, oculta.
-        const userLangCode = ddiConfig.toLowerCase().split('-')[0];
-        const hasUserLang = dbAudioLangs.some((lang: string) => lang.toLowerCase().includes(userLangCode));
-        if (!hasUserLang && !dbHasEnglish) {
-          return false;
-        }
-      }
-
-      return true;
-    };
-
-    // Aplica o filtro mestre antes de dividir nas categorias
-    const strictCatalog = moviesList.filter(filterByDbExistenceAndDdi);
-
     return {
-      filtered: strictCatalog.filter(m => {
+      filtered: mappedMovies.filter(m => {
         const matchQuery = searchQuery ? m.title.toLowerCase().includes(searchQuery.toLowerCase()) || m.overview.toLowerCase().includes(searchQuery.toLowerCase()) : true;
-        const matchCategory = selectedCategory !== 'Todos' ? (m as any).category === selectedCategory : true;
+        const matchCategory = selectedCategory !== 'Todos' ? (m as any).category === selectedCategory || m.category === selectedCategory : true;
         const matchScope = scopeFiltering !== 'todos' ? m.type === scopeFiltering : true;
         return matchQuery && matchCategory && matchScope && m.status;
       }),
-      favorites: strictCatalog.filter(m => {
+      favorites: mappedMovies.filter(m => {
         const favs = JSON.parse(localStorage.getItem('invis_favorites') || '[]');
         return m.status && favs.includes(m.id);
       }),
-      continue: strictCatalog.filter(m => {
+      continue: mappedMovies.filter(m => {
         const progress = JSON.parse(localStorage.getItem('invis_continue') || '{}');
         return m.status && progress[m.id];
       }),
-      suggestions: strictCatalog.filter(m => m.status && (m as any).rating >= 8.2),
-      netflix: strictCatalog.filter(m => m.status && (m as any).platform === 'netflix'),
-      disney: strictCatalog.filter(m => m.status && (m as any).platform === 'disney'),
-      hbo: strictCatalog.filter(m => m.status && (m as any).platform === 'hbo'),
-      prime: strictCatalog.filter(m => m.status && (m as any).platform === 'prime'),
-      globoplay: strictCatalog.filter(m => m.status && (m as any).platform === 'globoplay')
+      suggestions: mappedMovies.filter(m => m.status && m.rating !== undefined && m.rating >= 8.2),
+      netflix: mappedMovies.filter(m => m.status && m.platform === 'netflix'),
+      disney: mappedMovies.filter(m => m.status && m.platform === 'disney'),
+      hbo: mappedMovies.filter(m => m.status && m.platform === 'hbo'),
+      prime: mappedMovies.filter(m => m.status && m.platform === 'prime'),
+      globoplay: mappedMovies.filter(m => m.status && m.platform === 'globoplay')
     };
-  }, [moviesList, indexedDbCatalog, searchQuery, selectedCategory, scopeFiltering, currentUser]);
+  }, [mappedMovies, searchQuery, selectedCategory, scopeFiltering]);
 
   // Return titles straight from backend which supports batching naturally ~50
   const getExpandedTitlesForCategory = (category: string) => {
     let shelfItems: Movie[] = (memoizedCategories as any)[category] || [];
 
     if (shelfItems.length === 0) {
-      shelfItems = moviesList.slice(0, 10);
+      shelfItems = mappedMovies.slice(0, 10);
     }
 
     return shelfItems;
@@ -1936,7 +1970,7 @@ export const MediaModule: React.FC = () => {
 
   const handleMovieEnded = () => {
     // Continuous Playback: O sistema deve colocar o próximo vídeo da lista de favoritos para tocar
-    const favorites = (memoizedCategories && memoizedCategories.favorites) ? memoizedCategories.favorites : moviesList.filter(m => (m as any).isFavorite && m.status);
+    const favorites = (memoizedCategories && memoizedCategories.favorites) ? memoizedCategories.favorites : mappedMovies.filter(m => (m as any).isFavorite && m.status);
     
     if (favorites.length > 0) {
       // Find current selected movie in favorites
@@ -2001,11 +2035,11 @@ export const MediaModule: React.FC = () => {
 
   const { listTrailers, listSeries, listFilmes } = React.useMemo(() => {
     return {
-      listTrailers: moviesList.filter(m => m.type === 'trailer' && m.status),
-      listSeries: moviesList.filter(m => m.type === 'serie' && m.status),
-      listFilmes: moviesList.filter(m => m.type === 'filme' && m.status)
+      listTrailers: mappedMovies.filter(m => m.type === 'trailer' && m.status),
+      listSeries: mappedMovies.filter(m => m.type === 'serie' && m.status),
+      listFilmes: mappedMovies.filter(m => m.type === 'filme' && m.status)
     };
-  }, [moviesList]);
+  }, [mappedMovies]);
 
   // End of modules logics
   return (
@@ -2751,7 +2785,7 @@ export const MediaModule: React.FC = () => {
                             FECHAR [✕]
                           </button>
                         </div>
-                        {moviesList
+                        {mappedMovies
                           .filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()) || (m as any).category?.toLowerCase().includes(searchQuery.toLowerCase()))
                           .slice(0, 5)
                           .map(matchedMov => (
@@ -5074,7 +5108,7 @@ export const MediaModule: React.FC = () => {
                             <span>Títulos Relacionados</span>
                           </h3>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                            {moviesList
+                            {mappedMovies
                               .filter(m => m.id !== selectedMovie?.id && (m.type === selectedMovie?.type || m.category === selectedMovie?.category))
                               .slice(0, 4)
                               .map((m) => (

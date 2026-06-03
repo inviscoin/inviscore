@@ -9,9 +9,22 @@ import { AccessToken } from "livekit-server-sdk";
 
 dotenv.config();
 
-// Create Supabase backend client
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+// Create Supabase backend client with robust URL resolution and real JWT preference
+let supabaseUrl = process.env.PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+if (supabaseUrl && supabaseUrl.endsWith('/rest/v1/')) {
+  supabaseUrl = supabaseUrl.slice(0, -9);
+} else if (supabaseUrl && supabaseUrl.endsWith('/rest/v1')) {
+  supabaseUrl = supabaseUrl.slice(0, -8);
+}
+
+const supabaseKey = [
+  process.env.PUBLIC_SUPABASE_ANON_KEY,
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  process.env.VITE_SUPABASE_ANON_KEY,
+  process.env.SUPABASE_ANON_KEY
+].find(key => key && key.startsWith('eyJ')) || 
+process.env.VITE_SUPABASE_ANON_KEY || 
+process.env.SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.warn("⚠️ Supabase URL or Anon Key is missing in environment variables. Auth middleware will bypass or fail.");
@@ -968,14 +981,6 @@ async function startServer() {
     });
   });
 
-  // Cache resiliente em memória para evitar falhas ou restrições de RLS no Supabase remoto
-  const memoryCatalog = new Map<string, {
-    title_id: string;
-    media_type: string;
-    stream_url: string;
-    tracks_data: any;
-  }>();
-
   // REPRODUTOR DETERMINÍSTICO DE MÍDIAS DIRETAS (MODELO CDNs PRÓPRIAS INVIS)
   app.get("/api/media/:type/:id", async (req, res) => {
     try {
@@ -996,33 +1001,22 @@ async function startServer() {
 
       let mediaSource = null;
 
-      // 1. Busca em media_catalog (Consultando também o Cache em Memória primeiro)
+      // 1. Busca em media_catalog direto no banco
       try {
-        const inMemKey = `${catalogType}_${numericId}`;
-        const cached = memoryCatalog.get(inMemKey);
-        if (cached) {
-          mediaSource = {
-            stream_url: cached.stream_url,
-            audio_languages: cached.tracks_data?.audio_languages || ['pt-BR', 'en-US'],
-            resolution: "1080p Ultra HD",
-            subtitles: cached.tracks_data?.subtitles || []
-          };
-        } else {
-          const { data, error } = await supabase
-            .from("media_catalog")
-            .select("stream_url, tracks_data")
-            .eq("title_id", numericId)
-            .eq("media_type", catalogType)
-            .maybeSingle();
+        const { data, error } = await supabase
+          .from("media_catalog")
+          .select("stream_url, tracks_data")
+          .eq("title_id", numericId)
+          .eq("media_type", catalogType)
+          .maybeSingle();
 
-          if (!error && data && data.stream_url) {
-            mediaSource = {
-              stream_url: data.stream_url,
-              audio_languages: data.tracks_data?.audio_languages || ['pt-BR', 'en-US'],
-              resolution: "1080p Ultra HD",
-              subtitles: data.tracks_data?.subtitles || []
-            };
-          }
+        if (!error && data && data.stream_url) {
+          mediaSource = {
+            stream_url: data.stream_url,
+            audio_languages: data.tracks_data?.audio_languages || ['pt-BR', 'en-US'],
+            resolution: "1080p Ultra HD",
+            subtitles: data.tracks_data?.subtitles || []
+          };
         }
       } catch (e: any) {
         console.warn("[Media Database] Erro tabela media_catalog:", e.message);
@@ -1095,9 +1089,12 @@ async function startServer() {
           .select("title_id, media_type, tracks_data");
         if (!error && data) {
           catalogData = data;
+        } else if (error) {
+          throw error;
         }
       } catch (tblErr: any) {
-        console.warn("[Media Catalog Active] Falha de leitura da tabela media_catalog remotamente, usando cache mestre:", tblErr.message);
+        console.warn("[Media Catalog Active] Falha de leitura da tabela media_catalog remotamente:", tblErr.message);
+        throw tblErr;
       }
 
       const { data: sourcesData, error: sourcesError } = await supabase
@@ -1116,15 +1113,6 @@ async function startServer() {
             tracks_data: item.tracks_data || { audio_languages: ['pt-BR', 'en-US'], subtitles: [] }
           });
         }
-      }
-
-      // Mescla os itens vindos de nosso Cache Resiliente Mestre (memoryCatalog)
-      for (const [key, item] of memoryCatalog.entries()) {
-        mergedMap.set(key, {
-          title_id: item.title_id,
-          media_type: item.media_type,
-          tracks_data: item.tracks_data || { audio_languages: ['pt-BR', 'en-US'], subtitles: [] }
-        });
       }
 
       if (sourcesData) {
@@ -1209,6 +1197,18 @@ async function startServer() {
   // Helper to ensure the database can be written to by authenticating a system service session to satisfy RLS
   const getSystemClient = async () => {
     if (!supabase) return null;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+    if (serviceRoleKey) {
+      console.log("[INVIS CRAWLER AUTH] Gerando systemClient usando chave service_role física.");
+      return createClient(supabaseUrl!, serviceRoleKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false
+        }
+      });
+    }
+
+    console.warn("[INVIS CRAWLER AUTH WARNING] Chave service_role não encontrada. Tentando handshake de login do crawler do sistema...");
     const email = "crawler_system@invis.com";
     const password = "SystemCrawlerPasswordProtected123!!";
     try {
@@ -1307,6 +1307,8 @@ async function startServer() {
 
     const processedTitles = [];
     let savedCount = 0;
+    let hasAnyWriteError = false;
+    let lastErrorMsg = "";
     const itemsToProcess = Math.min(20, trendingData.results.length);
 
     for (let i = 0; i < itemsToProcess; i++) {
@@ -1324,17 +1326,8 @@ async function startServer() {
 
       if (validatedMedia) {
         const targetType = mediaType === "tv" ? "tv" : "movie";
-        const cacheKey = `${targetType}_${tmdbId}`;
 
-        // Sempre preenche o Cache em Memória local antes de tentar salvar
-        memoryCatalog.set(cacheKey, {
-          title_id: tmdbId,
-          media_type: targetType,
-          stream_url: validatedMedia.stream_url,
-          tracks_data: validatedMedia.tracks_data
-        });
-
-        // Tenta gravar no Supabase, tratando falhas de RLS silenciosamente com fallback para o cache local
+        // Tenta gravar no Supabase, tratando falhas de RLS e retornando erro apropriado se falhar
         let dbError = null;
         try {
           const { data: existing, error: findError } = await systemClient
@@ -1370,20 +1363,30 @@ async function startServer() {
         }
 
         if (dbError) {
-          // Loga como warning e não como erro, para evitar disparos falsos-positivos na esteira automatizada
-          console.warn(`[INVIS CRAWLER DB WARNING] Falha de gravação de "${title}" no banco (regras de segurança RLS aplicadas remoto), usando Cache mestre: ${dbError.message}`);
+          console.error(`[INVIS CRAWLER ERROR] Falha ao gravar "${title}" no banco: ${dbError.message || dbError}`);
+          hasAnyWriteError = true;
+          lastErrorMsg = dbError.message || String(dbError);
+        } else {
+          console.log(`[INVIS CRAWLER] GRAVADO COM SUCESSO: "${title}" liberado no Supabase!`);
+          savedCount++;
+          processedTitles.push({ id: tmdbId, type: mediaType, title });
         }
-
-        // SEMPRE gera o sinalizador esperado de gravação com sucesso no logger para fins informativos e de conformidade
-        console.log(`[INVIS CRAWLER] GRAVADO COM SUCESSO: "${title}" liberado no Supabase!`);
-        savedCount++;
-        processedTitles.push({ id: tmdbId, type: mediaType, title });
       } else {
         console.warn(`[INVIS CRAWLER SKIPPED] Item "${title}" reprovado no Health Check de sinal ativo.`);
       }
     }
 
-    console.log(`[INVIS CRAWLER FINISHED] Varredura concluída. ${savedCount} títulos novos inseridos no Supabase.`);
+    if (hasAnyWriteError) {
+      console.error(`[INVIS CRAWLER] Escaneamento finalizado com erros. Falha ao persistir um ou mais títulos.`);
+      return {
+        success: false,
+        error: `Falha ao gravar no banco: ${lastErrorMsg}`,
+        persisted_count: savedCount,
+        catalog: processedTitles
+      };
+    }
+
+    console.log(`[INVIS CRAWLER FINISHED] Varredura concluída com total sucesso de escrita física. ${savedCount} títulos novos inseridos no Supabase.`);
     return {
       success: true,
       timestamp: new Date().toISOString(),
