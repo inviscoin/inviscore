@@ -1053,18 +1053,67 @@ async function startServer() {
     let activeSourceType = "video";
     let finalResolution = "1080p";
     
+    // Verificação de Integridade Soberana: Se a mídia existir no banco ou no catálogo de backup local, reproduza.
+    let mediaExists = false;
+    let foundSrcUrl = "";
+    
+    const localMatch = (localMediaCatalogFallback || []).find(
+      x => x.title_id === numericId
+    );
+    if (localMatch && localMatch.stream_url) {
+      mediaExists = true;
+      foundSrcUrl = localMatch.stream_url;
+    }
+    
+    if (!mediaExists && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from("media_catalog")
+          .select("stream_url")
+          .eq("title_id", numericId)
+          .maybeSingle();
+        if (!error && data && data.stream_url) {
+          mediaExists = true;
+          foundSrcUrl = data.stream_url;
+        }
+      } catch (e) {}
+    }
+
+    if (!mediaExists && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from("invis_media_sources")
+          .select("stream_url")
+          .eq("media_id", numericId)
+          .maybeSingle();
+        if (!error && data && data.stream_url) {
+          mediaExists = true;
+          foundSrcUrl = data.stream_url;
+        }
+      } catch (e) {}
+    }
+    
     if (vaulted && vaulted.status === "active") {
       activeStreamUrl = vaulted.streamUrl;
       activeSourceType = "video";
       finalResolution = vaulted.resolution;
       console.log(`[Bouncer] Match encontrado no Cofre de Dados de Vídeo para #${id}. StreamUrl: ${activeStreamUrl}`);
-    } else {
-      // Se nao houver no cofre de dados ativo, pega um seed premium ou calcula um fallback canônico livre de coelhos
-      const seed = premiumSeededStreams[numericId] || premiumSeededStreams[id] || premiumSeededStreams["default"];
-      activeStreamUrl = seed ? seed.streamUrl : "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/teears-of-steel.ism/.m3u8";
+    } else if (mediaExists && foundSrcUrl) {
+      activeStreamUrl = foundSrcUrl;
       activeSourceType = "video";
-      finalResolution = "1080p (HQ)";
-      console.log(`[Bouncer] Sem registro no Cofre p/ #${id}. Seed canônico premium entregue: ${activeStreamUrl}`);
+      finalResolution = "1080p Ultra HD";
+      console.log(`[Bouncer] Match encontrado no Banco/Local para #${id}. StreamUrl: ${activeStreamUrl}`);
+    } else {
+      const seed = premiumSeededStreams[numericId] || premiumSeededStreams[id];
+      if (seed) {
+        activeStreamUrl = seed.streamUrl;
+        activeSourceType = "video";
+        finalResolution = "1080p (HQ)";
+        console.log(`[Bouncer] Match encontrado em Premium Seeded para #${id}. StreamUrl: ${activeStreamUrl}`);
+      } else {
+        console.warn(`[Bouncer] Sinal não localizado para #${id}. Retornando SINAL INDISPONÍVEL.`);
+        return res.status(404).json({ success: false, error: "SINAL INDISPONÍVEL" });
+      }
     }
 
     // Se o usuario explicitamente pediu servidores de iframe adicionais (Servidores de redundancia)

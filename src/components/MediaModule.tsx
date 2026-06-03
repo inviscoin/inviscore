@@ -1159,8 +1159,8 @@ export const MediaModule: React.FC = () => {
         console.error("Erro na busca de stream:", err);
         setIsVideoBuffering(false);
         setMovieIsPlaying(false);
-        // Remove mensagens de erro 404 da tela do usuário
-        setActiveMediaAlert("SINAL TEMPORARIAMENTE INDISPONÍVEL");
+        // Exibe mensagem conforme especificação soberana
+        setActiveMediaAlert("SINAL INDISPONÍVEL");
       }
     };
     
@@ -1512,8 +1512,8 @@ export const MediaModule: React.FC = () => {
 
   const memoizedCategories = React.useMemo(() => {
     const filterByDbExistenceAndDdi = (m: Movie) => {
-        // 1. Normalização do ID (remove 'tmdb-', 'movie_', etc)
-        const numericId = m.id.replace(/\D/g, "");                   
+        // Encontra o title_id através da extração apenas dos numéricos do ID (ex: tmdb-123 vira 123)
+        const numericId = m.id.replace(/\D/g, '');                   
         
         // 2. Busca no catálogo vindo do banco
         const dbMatch = indexedDbCatalog.find(dbItem => 
