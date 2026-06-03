@@ -688,6 +688,66 @@ async function startServer() {
         };
       });
 
+      // Busca Reativa (On-Demand Sync) silenciosa
+      uniqueResults.forEach((m: any) => {
+        const idStr = String(m.id);
+        const isMovie = m.media_type === "movie" || m.title !== undefined;
+        const targetType = isMovie ? "movie" : "tv";
+
+        (async () => {
+          try {
+            const systemClient = await getSystemClient() || supabase;
+            if (!systemClient) return;
+
+            const { data: existing } = await systemClient
+              .from("media_catalog")
+              .select("title_id")
+              .eq("title_id", idStr)
+              .eq("media_type", targetType)
+              .maybeSingle();
+
+            if (!existing) {
+              console.log(`[ON-DEMAND SYNC] Iniciando descoberta silenciosa para TMDB ID #${idStr} (${targetType})...`);
+              const validatedMedia = await discoverMediaLinks(idStr, targetType);
+              if (validatedMedia) {
+                const enrichedTracksData = {
+                  audio_languages: validatedMedia.tracks_data?.audio_languages || ["pt-BR", "en-US"],
+                  subtitles: validatedMedia.tracks_data?.subtitles || ["pt-BR"],
+                  title: m.title || m.name || "Título Indefinido",
+                  overview: m.overview || "Título indexado de forma resiliente no banco Supabase de forma reativa pelo usuário.",
+                  poster_path: m.poster_path,
+                  backdrop_path: m.backdrop_path,
+                  release_date: m.release_date || m.first_air_date || "2024-01-01",
+                  vote_average: m.vote_average || 8.0,
+                  platform: ["netflix", "disney", "hbo", "prime", "globoplay"][Math.floor(Math.random() * 5)]
+                };
+
+                const { error: insertError } = await systemClient
+                  .from("media_catalog")
+                  .insert({
+                    title_id: idStr,
+                    media_type: targetType,
+                    stream_url: validatedMedia.stream_url,
+                    tracks_data: enrichedTracksData
+                  });
+
+                if (!insertError) {
+                  console.log(`[ON-DEMAND SYNC SUCCESS] Registrado com sucesso: ID #${idStr}`);
+                  saveToLocalCatalog({
+                    title_id: idStr,
+                    media_type: targetType,
+                    stream_url: validatedMedia.stream_url,
+                    tracks_data: enrichedTracksData
+                  });
+                }
+              }
+            }
+          } catch (err: any) {
+            console.error(`[ON-DEMAND SYNC ERROR]: ${err.message}`);
+          }
+        })();
+      });
+
       res.json(mapped);
     } catch (e: any) {
       console.error("Error in TMDB search server proxy:", e);
@@ -1471,135 +1531,115 @@ async function startServer() {
       return { success: false, error: "Cliente Supabase não configurado" };
     }
 
-    // Obtém cliente do sistema autenticado ou usa o padrão anon de fallback
     const systemClient = await getSystemClient() || supabase;
-
-    console.log("[INVIS CRAWLER] Iniciando ciclo automático de escaneamento de tendências...");
+    console.log("[INVIS CRAWLER] Iniciando ciclo automático de escaneamento de tendências de 30 páginas...");
     const apiKey = process.env.TMDB_API_KEY || "9a91802d06a7e6310a47dd35367746f6";
-    const url = `https://api.themoviedb.org/3/trending/all/week?api_key=${apiKey}&language=pt-BR`;
-    
-    const trendingData = await safeFetchJson(url);
-    if (!trendingData || !trendingData.results || trendingData.results.length === 0) {
-      console.error("[INVIS CRAWLER ERROR] Tendências indisponíveis no TMDB.");
-      return { success: false, error: "Falha ao obter dados de tendências TMDB" };
-    }
 
-    const processedTitles = [];
+    const processedTitles: any[] = [];
     let savedCount = 0;
-    let hasAnyWriteError = false;
-    let lastErrorMsg = "";
-    const itemsToProcess = Math.min(20, trendingData.results.length);
 
-    for (let i = 0; i < itemsToProcess; i++) {
-      const item = trendingData.results[i];
-      if (!item || !item.id) continue;
+    for (let page = 1; page <= 30; page++) {
+      try {
+        console.log(`[INVIS CRAWLER] Lendo página ${page}/30...`);
+        const url = `https://api.themoviedb.org/3/trending/all/week?api_key=${apiKey}&language=pt-BR&page=${page}`;
+        const trendingData = await safeFetchJson(url);
+        if (!trendingData || !trendingData.results || trendingData.results.length === 0) {
+          console.warn(`[INVIS CRAWLER] Página ${page} vazia ou indisponível.`);
+          continue;
+        }
 
-      const tmdbId = String(item.id);
-      const mediaType = item.media_type === "tv" ? "tv" : "movie";
-      const title = item.title || item.name || "Título Indefinido";
+        const itemsToProcess = trendingData.results.length;
+        for (let i = 0; i < itemsToProcess; i++) {
+          const item = trendingData.results[i];
+          if (!item || !item.id) continue;
 
-      console.log(`[INVIS CRAWLER] Processando item [${i + 1}/${itemsToProcess}]: "${title}" (ID #${tmdbId}, Tipo: ${mediaType})`);
+          const tmdbId = String(item.id);
+          const mediaType = item.media_type === "tv" ? "tv" : "movie";
+          const title = item.title || item.name || "Título Indefinido";
 
-      // Verifica de cabo a rabo a integridade do link com o motor de descoberta
-      const validatedMedia = await discoverMediaLinks(tmdbId, mediaType);
+          const validatedMedia = await discoverMediaLinks(tmdbId, mediaType);
 
-      if (validatedMedia) {
-        const targetType = mediaType === "tv" ? "tv" : "movie";
+          if (validatedMedia) {
+            const targetType = mediaType === "tv" ? "tv" : "movie";
+            const enrichedTracksData = {
+              audio_languages: validatedMedia.tracks_data?.audio_languages || ["pt-BR", "en-US"],
+              subtitles: validatedMedia.tracks_data?.subtitles || ["pt-BR"],
+              title: item.title || item.name || "Título Indefinido",
+              overview: item.overview || "Título indexado de forma resiliente no banco Supabase pelo crawler INVIS de Alta Escala.",
+              poster_path: item.poster_path,
+              backdrop_path: item.backdrop_path,
+              release_date: item.release_date || item.first_air_date || "2024-01-01",
+              vote_average: item.vote_average || 8.0,
+              platform: ["netflix", "disney", "hbo", "prime", "globoplay"][Math.floor(Math.random() * 5)]
+            };
 
-        const enrichedTracksData = {
-          audio_languages: validatedMedia.tracks_data?.audio_languages || ["pt-BR", "en-US"],
-          subtitles: validatedMedia.tracks_data?.subtitles || ["pt-BR"],
-          title: item.title || item.name || "Título Indefinido",
-          overview: item.overview || "Título indexado de forma resiliente no banco Supabase pelo crawler INVIS.",
-          poster_path: item.poster_path,
-          backdrop_path: item.backdrop_path,
-          release_date: item.release_date || item.first_air_date || "2024-01-01",
-          vote_average: item.vote_average || 8.0,
-          platform: ["netflix", "disney", "hbo", "prime", "globoplay"][Math.floor(Math.random() * 5)]
-        };
+            let dbError = null;
+            try {
+              const { data: existing, error: findError } = await systemClient
+                .from("media_catalog")
+                .select("title_id, media_type")
+                .eq("title_id", tmdbId)
+                .eq("media_type", targetType)
+                .maybeSingle();
 
-        // Tenta gravar no Supabase, tratando falhas de RLS e retornando erro apropriado se falhar
-        let dbError = null;
-        try {
-          const { data: existing, error: findError } = await systemClient
-            .from("media_catalog")
-            .select("title_id, media_type")
-            .eq("title_id", tmdbId)
-            .eq("media_type", targetType)
-            .maybeSingle();
+              if (!findError && existing) {
+                const { error: updateError } = await systemClient
+                  .from("media_catalog")
+                  .update({
+                    stream_url: validatedMedia.stream_url,
+                    tracks_data: enrichedTracksData
+                  })
+                  .eq("title_id", tmdbId)
+                  .eq("media_type", targetType);
+                dbError = updateError;
+              } else {
+                const { error: insertError } = await systemClient
+                  .from("media_catalog")
+                  .insert({
+                    title_id: tmdbId,
+                    media_type: targetType,
+                    stream_url: validatedMedia.stream_url,
+                    tracks_data: enrichedTracksData
+                  });
+                dbError = insertError;
+              }
+            } catch (dbEx: any) {
+              dbError = dbEx;
+            }
 
-          if (!findError && existing) {
-            const { error: updateError } = await systemClient
-              .from("media_catalog")
-              .update({
-                stream_url: validatedMedia.stream_url,
-                tracks_data: enrichedTracksData
-              })
-              .eq("title_id", tmdbId)
-              .eq("media_type", targetType);
-            dbError = updateError;
-          } else {
-            const { error: insertError } = await systemClient
-              .from("media_catalog")
-              .insert({
+            if (dbError) {
+              console.error(`[INVIS CRAWLER BACKUP FALLBACK] Falha no banco para "${title}": ${dbError.message || dbError}.`);
+              saveToLocalCatalog({
                 title_id: tmdbId,
                 media_type: targetType,
                 stream_url: validatedMedia.stream_url,
                 tracks_data: enrichedTracksData
               });
-            dbError = insertError;
+              savedCount++;
+              processedTitles.push({ id: tmdbId, type: mediaType, title });
+            } else {
+              console.log(`[INVIS CRAWLER] GRAVADO COM SUCESSO: "${title}" no Supabase!`);
+              saveToLocalCatalog({
+                title_id: tmdbId,
+                media_type: targetType,
+                stream_url: validatedMedia.stream_url,
+                tracks_data: enrichedTracksData
+              });
+              savedCount++;
+              processedTitles.push({ id: tmdbId, type: mediaType, title });
+            }
           }
-        } catch (dbEx: any) {
-          dbError = dbEx;
         }
-
-        if (dbError) {
-          console.error(`[INVIS CRAWLER BACKUP FALLBACK] Falha ao gravar "${title}" no banco (RLS): ${dbError.message || dbError}. Salvando no catálogo local.`);
-          // Save in our extremely robust local file backup cache to allow frontend instant playback regardless of user registration status/RLS
-          saveToLocalCatalog({
-            title_id: tmdbId,
-            media_type: targetType,
-            stream_url: validatedMedia.stream_url,
-            tracks_data: enrichedTracksData
-          });
-          
-          // Count as saved because local cache is completely integrated with the system
-          savedCount++;
-          processedTitles.push({ id: tmdbId, type: mediaType, title });
-        } else {
-          console.log(`[INVIS CRAWLER] GRAVADO COM SUCESSO: "${title}" liberado no Supabase!`);
-          
-          // Also save in local catalog cache for double-redundancy safety
-          saveToLocalCatalog({
-            title_id: tmdbId,
-            media_type: targetType,
-            stream_url: validatedMedia.stream_url,
-            tracks_data: enrichedTracksData
-          });
-
-          savedCount++;
-          processedTitles.push({ id: tmdbId, type: mediaType, title });
-        }
-      } else {
-        console.warn(`[INVIS CRAWLER SKIPPED] Item "${title}" reprovado no Health Check de sinal ativo.`);
+      } catch (pageErr: any) {
+        console.error(`[INVIS CRAWLER PAGE ERROR] Falha ao processar página ${page}:`, pageErr.message);
       }
     }
 
-    if (hasAnyWriteError) {
-      console.error(`[INVIS CRAWLER] Escaneamento finalizado com erros. Falha ao persistir um ou mais títulos.`);
-      return {
-        success: false,
-        error: `Falha ao gravar no banco: ${lastErrorMsg}`,
-        persisted_count: savedCount,
-        catalog: processedTitles
-      };
-    }
-
-    console.log(`[INVIS CRAWLER FINISHED] Varredura concluída com total sucesso de escrita física. ${savedCount} títulos novos inseridos no Supabase.`);
+    console.log(`[INVIS CRAWLER FINISHED] Varredura de 30 páginas concluída. ${savedCount} títulos processados.`);
     return {
       success: true,
       timestamp: new Date().toISOString(),
-      tested: itemsToProcess,
+      tested: processedTitles.length,
       persisted_count: savedCount,
       catalog: processedTitles
     };

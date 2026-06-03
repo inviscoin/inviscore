@@ -976,22 +976,23 @@ export const MediaModule: React.FC = () => {
     return `/api/media/${typePath}/${numericId}?${params.toString()}`;
   };
 
-  const [moviesList, setMoviesList] = useState<Movie[]>(CINEMA_ROSTER);
+   const [moviesList, setMoviesList] = useState<Movie[]>(CINEMA_ROSTER);
   const [indexedDbCatalog, setIndexedDbCatalog] = useState<any[]>([]);
+
+  const fetchIndexedCatalog = async () => {
+    try {
+      const res = await fetch('/api/media/catalog/active');
+      const data = await res.json();
+      if (data.success && data.active_titles) {
+        setIndexedDbCatalog(data.active_titles);
+      }
+    } catch (err) {
+      console.error("Falha ao sincronizar catálogo do INVIS:", err);
+    }
+  };
 
   // Busca os títulos reais no banco ao montar o componente
   useEffect(() => {
-    async function fetchIndexedCatalog() {
-      try {
-        const res = await fetch('/api/media/catalog/active');
-        const data = await res.json();
-        if (data.success && data.active_titles) {
-          setIndexedDbCatalog(data.active_titles);
-        }
-      } catch (err) {
-        console.error("Falha ao sincronizar catálogo do INVIS:", err);
-      }
-    }
     fetchIndexedCatalog();
   }, []);
 
@@ -1372,6 +1373,7 @@ export const MediaModule: React.FC = () => {
               });
               return combined;
             });
+            fetchIndexedCatalog(); // Sincronizo de forma reativa e instantânea
           }
         }
       } catch (err) {
@@ -1534,28 +1536,8 @@ export const MediaModule: React.FC = () => {
   }, [expandedSection, selectedMovie, mappedMovies]);
 
   const memoizedCategories = React.useMemo(() => {
-    const filterByDbExistenceAndDdi = (m: Movie) => {
-      const numericId = m.id.replace(/\D/g, "");
-      const dbMatch = indexedDbCatalog.find(dbItem => {
-        const dbId = String(dbItem.title_id).replace(/\D/g, "");
-        return dbId === numericId;
-      });
-
-      if (!dbMatch) return false;
-
-      // Filtro DDI: Se o currentUser.ddi for '+55', o sistema deve ocultar da vitrine (shelf) apenas os títulos que NÃO contenham 'pt' no array de áudios do banco, permitindo que apareçam apenas na busca ativa como 'Legendado'
-      if (currentUser?.ddi === '+55') {
-        const audioLangs = (dbMatch.tracks_data?.audio_languages || dbMatch.audio_languages || dbMatch.audioLanguages || []).map((l: any) => String(l).toLowerCase());
-        const hasPt = audioLangs.some((l: string) => l.includes('pt'));
-        if (!hasPt) {
-          return searchQuery ? true : false;
-        }
-      }
-      return true;
-    };
-
     // Aplica o filtro mestre sobre o catálogo indexado (Source of Truth)
-    const strictCatalog = moviesList.filter(filterByDbExistenceAndDdi);
+    const strictCatalog = moviesList.filter(m => indexedDbCatalog.some(db => String(db.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')));
 
     return {
       filtered: strictCatalog.filter(m => {
@@ -1579,7 +1561,7 @@ export const MediaModule: React.FC = () => {
       prime: strictCatalog.filter(m => m.platform === 'prime'),
       globoplay: strictCatalog.filter(m => m.platform === 'globoplay')
     };
-  }, [mappedMovies, indexedDbCatalog, searchQuery, currentUser, selectedCategory, scopeFiltering]);
+  }, [moviesList, indexedDbCatalog, searchQuery, currentUser, selectedCategory, scopeFiltering]);
 
   // Return titles straight from backend which supports batching naturally ~50
   const getExpandedTitlesForCategory = (category: string) => {
