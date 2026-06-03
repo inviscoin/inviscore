@@ -29,8 +29,8 @@ process.env.SUPABASE_ANON_KEY;
 
 // server.ts - Inicialização Soberana
 const resolvedSupabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || supabaseUrl;
-// IMPORTANTE: Use obrigatoriamente a SUPABASE_SERVICE_ROLE_KEY (Chave de Serviço) para o crawler e interações ignorarem RLS
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || supabaseKey;
+// IMPORTANTE: Use obrigatoriamente a SUPABASE_SERVICE_ROLE_KEY (Chave de Serviço) para o crawler e interações ignorarem RLS de maneira absoluta
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
 const supabase = resolvedSupabaseUrl && supabaseServiceKey ? createClient(resolvedSupabaseUrl, supabaseServiceKey, {
   auth: {
@@ -1358,10 +1358,11 @@ async function startServer() {
       // Normalização agressiva para o frontend com garantia de prefixo tmdb-
       const activeTitles = (data || []).map(item => {
         const cleanedTitleId = String(item.title_id).replace(/\D/g, "").trim();
+        const prefixedId = `tmdb-${cleanedTitleId}`;
         return {
           ...item,
-          id: `tmdb-${cleanedTitleId}`,
-          title_id: cleanedTitleId
+          id: prefixedId,
+          title_id: prefixedId
         };
       });
 
@@ -1371,10 +1372,11 @@ async function startServer() {
       // Se o banco falhar, entrega o backup local para não esvaziar a tela
       const fallbackList = (localMediaCatalogFallback || []).map(item => {
         const cleanedTitleId = String(item.title_id).replace(/\D/g, "");
+        const prefixedId = `tmdb-${cleanedTitleId}`;
         return {
           ...item,
-          id: `tmdb-${cleanedTitleId}`,
-          title_id: cleanedTitleId
+          id: prefixedId,
+          title_id: prefixedId
         };
       });
       console.log('[SINCRO] Enviando catalogo (fallback):', fallbackList?.length);

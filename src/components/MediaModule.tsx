@@ -1458,14 +1458,13 @@ export const MediaModule: React.FC = () => {
   // Dynamic mapping of database index (indexedDbCatalog) to Movie Objects (single source of truth)
   const mappedMovies = React.useMemo(() => {
     return indexedDbCatalog.map((dbItem) => {
-      const numericId = dbItem.title_id;
+      const numericId = String(dbItem.title_id).replace(/\D/g, "");
       const mediaType = dbItem.media_type === 'tv' || dbItem.media_type === 'serie' ? 'serie' : 'filme';
       
       // Try to find a local rich matching item from moviesList or static catalog
       const localMatch = moviesList.find((m) => {
-        const idStr = String(m.id);
-        const matchNum = idStr.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
-        return matchNum === numericId;
+        const idStr = m.id.replace(/\D/g, "");
+        return idStr === numericId;
       });
 
       if (localMatch) {
@@ -1537,7 +1536,7 @@ export const MediaModule: React.FC = () => {
 
   const memoizedCategories = React.useMemo(() => {
     const filterByDbExistenceAndDdi = (m: Movie) => {
-      const numericId = String(m.id).replace(/\D/g, "");
+      const numericId = m.id.replace(/\D/g, "");
       const dbMatch = indexedDbCatalog.find(dbItem => 
         String(dbItem.title_id).replace(/\D/g, "") === numericId
       );
