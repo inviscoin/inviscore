@@ -179,7 +179,7 @@ export const MediaModule: React.FC = () => {
   const renderAudioBadge = (m: Movie) => {
     if (m.type === 'trailer') return null;
     return isMovieEstrangeiroByDdi(m) ? (
-      <div className="absolute top-1.5 right-1.5 bg-amber-500/95 text-black border border-amber-400/20 font-black text-[7.5px] px-1.5 py-0.5 rounded z-30 uppercase font-sans shadow-[0_0_12px_rgba(245,158,11,0.5)] select-none tracking-widest">
+      <div className="absolute top-1.5 right-1.5 bg-[#D4AF37] text-black border border-amber-300/30 font-black text-[7.5px] px-1.5 py-0.5 rounded z-30 uppercase font-sans shadow-[0_0_12px_rgba(212,175,55,0.6)] select-none tracking-widest">
         Legendado
       </div>
     ) : (
@@ -1097,6 +1097,26 @@ export const MediaModule: React.FC = () => {
                 setAvailableAudioTracks(hls.audioTracks);
               }
 
+              // Player Masking: Ao iniciar a reprodução de um título "Search-Only" (estrangeiro),
+              // o sistema deve forçar a ativação da legenda PT-BR no primeiro frame, utilizando o evento MANIFEST_PARSED do HLS.js.
+              const isEstrangeiro = isMovieEstrangeiroByDdi(selectedMovie);
+              if (isEstrangeiro) {
+                setMovieSubtitle('PT-BR');
+                if (hls.subtitleTracks && hls.subtitleTracks.length > 0) {
+                  const ptSubIndex = hls.subtitleTracks.findIndex(track => 
+                    track.lang?.toLowerCase().includes('pt') || 
+                    track.name?.toLowerCase().includes('pt') ||
+                    track.name?.toLowerCase().includes('por')
+                  );
+                  if (ptSubIndex !== -1) {
+                    hls.subtitleTrack = ptSubIndex;
+                    console.log("[INVIS PLAYER] Player Masking: Ativando legenda PT-BR (índice", ptSubIndex, ")");
+                  } else {
+                    hls.subtitleTrack = 0; // fallback para a primeira legenda
+                  }
+                }
+              }
+
               // Ajusta trilha de áudio inicial se disponível no manifesto HLS
               if (hls.audioTracks.length > 1) {
                 const targetLanguageLower = movieAudioLang.toLowerCase().split('-')[0];
@@ -1491,29 +1511,59 @@ export const MediaModule: React.FC = () => {
   }, [expandedSection, selectedMovie, mappedMovies]);
 
   const memoizedCategories = React.useMemo(() => {
+    // 1. Identificação do Idioma por DDI (+55 = pt-br) [5, 6]
+    const userLang = getDefaultLanguageByDdi(currentUser?.ddi).toLowerCase(); 
+    const langPrefix = userLang.split('-')[0]; // 'pt'
+
+    const filterByDdiStrict = (m: Movie) => {
+        const numericId = m.id.replace(/\D/g, "");
+        const dbMatch = indexedDbCatalog.find(dbItem => dbItem.title_id === numericId);
+
+        if (!dbMatch) return false; // Strict Sync: Só exibe se houver arquivo no banco [7]
+
+        const dbAudioLangs = (dbMatch.tracks_data?.audio_languages || []).map(l => l.toLowerCase());
+        const dbSubtitles = (dbMatch.tracks_data?.subtitles || []).map(l => l.toLowerCase());
+
+        const hasNativeAudio = dbAudioLangs.some(lang => lang.includes(langPrefix));
+        const hasNativeSubs = dbSubtitles.some(lang => lang.includes(langPrefix));
+
+        // REGRA SOBERANA DE EXIBIÇÃO [1]:
+        // Se NÃO estiver em modo busca: Só entra se for DUBLADO (Áudio nativo).
+        if (!searchQuery || searchQuery.trim() === "") {
+            return hasNativeAudio;
+        } 
+        
+        // Se ESTIVER em modo busca: Pode ser DUBLADO ou LEGENDADO na região.
+        // Títulos sem áudio e sem legenda na região do usuário são BANIDOS.
+        return hasNativeAudio || hasNativeSubs;
+    };
+
+    // Aplica o filtro mestre sobre o catálogo indexado (Source of Truth)
+    const strictCatalog = mappedMovies.filter(filterByDdiStrict);
+
     return {
-      filtered: mappedMovies.filter(m => {
+      filtered: strictCatalog.filter(m => {
         const matchQuery = searchQuery ? m.title.toLowerCase().includes(searchQuery.toLowerCase()) || m.overview.toLowerCase().includes(searchQuery.toLowerCase()) : true;
         const matchCategory = selectedCategory !== 'Todos' ? (m as any).category === selectedCategory || m.category === selectedCategory : true;
         const matchScope = scopeFiltering !== 'todos' ? m.type === scopeFiltering : true;
         return matchQuery && matchCategory && matchScope && m.status;
       }),
-      favorites: mappedMovies.filter(m => {
+      favorites: strictCatalog.filter(m => {
         const favs = JSON.parse(localStorage.getItem('invis_favorites') || '[]');
         return m.status && favs.includes(m.id);
       }),
-      continue: mappedMovies.filter(m => {
+      continue: strictCatalog.filter(m => {
         const progress = JSON.parse(localStorage.getItem('invis_continue') || '{}');
         return m.status && progress[m.id];
       }),
-      suggestions: mappedMovies.filter(m => m.status && m.rating !== undefined && m.rating >= 8.2),
-      netflix: mappedMovies.filter(m => m.status && m.platform === 'netflix'),
-      disney: mappedMovies.filter(m => m.status && m.platform === 'disney'),
-      hbo: mappedMovies.filter(m => m.status && m.platform === 'hbo'),
-      prime: mappedMovies.filter(m => m.status && m.platform === 'prime'),
-      globoplay: mappedMovies.filter(m => m.status && m.platform === 'globoplay')
+      suggestions: strictCatalog.filter(m => m.status && m.rating !== undefined && m.rating >= 8.2),
+      netflix: strictCatalog.filter(m => m.platform === 'netflix'),
+      disney: strictCatalog.filter(m => m.platform === 'disney'),
+      hbo: strictCatalog.filter(m => m.platform === 'hbo'),
+      prime: strictCatalog.filter(m => m.platform === 'prime'),
+      globoplay: strictCatalog.filter(m => m.platform === 'globoplay')
     };
-  }, [mappedMovies, searchQuery, selectedCategory, scopeFiltering]);
+  }, [mappedMovies, indexedDbCatalog, searchQuery, currentUser, selectedCategory, scopeFiltering]);
 
   // Return titles straight from backend which supports batching naturally ~50
   const getExpandedTitlesForCategory = (category: string) => {
