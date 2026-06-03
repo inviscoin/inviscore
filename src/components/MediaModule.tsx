@@ -1536,27 +1536,31 @@ export const MediaModule: React.FC = () => {
   }, [expandedSection, selectedMovie, mappedMovies]);
 
   const memoizedCategories = React.useMemo(() => {
-    // Aplica o filtro mestre sobre o catálogo indexado (Source of Truth)
-    const strictCatalog = moviesList.filter(m => {
+    const filterByDbExistenceAndDdi = (m: Movie) => {
+      const numericId = String(m.id).replace(/\D/g, "");
       const dbMatch = indexedDbCatalog.find(dbItem => 
-        String(dbItem.title_id).replace(/\D/g, "") === String(m.id).replace(/\D/g, "")
+        String(dbItem.title_id).replace(/\D/g, "") === numericId
       );
 
       if (!dbMatch) return false;
 
-      // Filtro DDI PT-BR check para as prateleiras da vitrine
-      if (!searchQuery) {
-        if (currentUser?.ddi === '+55') {
-          const audioLangs = (dbMatch.tracks_data?.audio_languages || dbMatch.audio_languages || dbMatch.audioLanguages || []).map((l: any) => String(l).toLowerCase());
-          const hasPt = audioLangs.some((l: string) => l.includes('pt'));
-          if (!hasPt) {
-            return false; // Se não tem áudio em PT, oculta da vitrine (home/shelves) para manter o padrão premium do DDI +55
+      // Filtro DDI: Se o currentUser.ddi for '+55', o sistema deve ocultar da vitrine principal apenas os títulos que NÃO contenham 'pt' no array de áudio do banco. Se for uma busca ativa (searchQuery), exiba o card com a tag visual 'Legendado' em vez de ocultá-lo.
+      if (currentUser?.ddi === '+55') {
+        const audioLangs = (dbMatch.tracks_data?.audio_languages || dbMatch.audio_languages || dbMatch.audioLanguages || []).map((l: any) => String(l).toLowerCase());
+        const hasPt = audioLangs.some((l: string) => l.includes('pt'));
+        if (!hasPt) {
+          if (searchQuery) {
+            return true; // Exibe o card se for busca ativa (seja apenas legendado)
           }
+          return false; // Oculta da vitrine principal se não contiver 'pt' e não houver searchQuery
         }
       }
 
       return true;
-    });
+    };
+
+    // Aplica o filtro mestre sobre o catálogo indexado (Source of Truth)
+    const strictCatalog = moviesList.filter(filterByDbExistenceAndDdi);
 
     return {
       filtered: strictCatalog.filter(m => {

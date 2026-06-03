@@ -29,12 +29,12 @@ process.env.SUPABASE_ANON_KEY;
 
 // server.ts - Inicialização Soberana
 const resolvedSupabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || supabaseUrl;
-// IMPORTANTE: Use a SERVICE_ROLE_KEY para o crawler ignorar o RLS
+// IMPORTANTE: Use obrigatoriamente a SUPABASE_SERVICE_ROLE_KEY (Chave de Serviço) para o crawler e interações ignorarem RLS
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || supabaseKey;
 
 const supabase = resolvedSupabaseUrl && supabaseServiceKey ? createClient(resolvedSupabaseUrl, supabaseServiceKey, {
   auth: {
-    persistSession: false, // Evita o erro "WebSocket closed without opened"
+    persistSession: false, // Evita o erro "WebSocket closed without opened" e extingue o erro 'WebSocket closed'
     autoRefreshToken: false,
     detectSessionInUrl: false
   },
@@ -728,7 +728,8 @@ async function startServer() {
                     title_id: idStr,
                     media_type: targetType,
                     stream_url: validatedMedia.stream_url,
-                    tracks_data: enrichedTracksData
+                    tracks_data: enrichedTracksData,
+                    is_active: true
                   });
 
                 if (!insertError) {
@@ -1348,16 +1349,15 @@ async function startServer() {
       // Consulta direta ignorando RLS via service_role já configurada
       const { data, error } = await supabase
           .from("media_catalog")
-          .select("title_id, media_type, tracks_data")
-          .eq("is_active", true);
+          .select("title_id, media_type, tracks_data");
 
       if (error) throw error;
 
       console.log('[SINCRO] Enviando catalogo:', data?.length);
 
-      // Normalização agressiva para o frontend
+      // Normalização agressiva para o frontend com garantia de prefixo tmdb-
       const activeTitles = (data || []).map(item => {
-        const cleanedTitleId = String(item.title_id).replace(/\D/g, "");
+        const cleanedTitleId = String(item.title_id).replace(/\D/g, "").trim();
         return {
           ...item,
           id: `tmdb-${cleanedTitleId}`,
@@ -1598,7 +1598,8 @@ async function startServer() {
                     title_id: tmdbId,
                     media_type: targetType,
                     stream_url: validatedMedia.stream_url,
-                    tracks_data: enrichedTracksData
+                    tracks_data: enrichedTracksData,
+                    is_active: true
                   });
                 dbError = insertError;
               }
