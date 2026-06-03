@@ -35,7 +35,11 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.
 const supabase = resolvedSupabaseUrl && supabaseServiceKey ? createClient(resolvedSupabaseUrl, supabaseServiceKey, {
   auth: {
     persistSession: false, // Evita o erro "WebSocket closed without opened"
-    autoRefreshToken: false
+    autoRefreshToken: false,
+    detectSessionInUrl: false
+  },
+  db: {
+    schema: 'public'
   }
 }) : null;
 
@@ -1144,6 +1148,7 @@ async function startServer() {
   // REPRODUTOR DETERMINÍSTICO DE MÍDIAS DIRETAS (MODELO CDNs PRÓPRIAS INVIS)
   app.get("/api/media/:type/:id", async (req, res) => {
     try {
+      console.log('[DEBUG] Tentando buscar mídias para DDI:', req.query.ddi);
       const { type, id } = req.params;
       const numericId = id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "").replace(/\D/g, "");
       const userDdi = String(req.query.ddi || "+55"); // Captura o DDI enviado pelo front
@@ -1277,14 +1282,16 @@ async function startServer() {
       
       // Consulta direta ignorando RLS via service_role já configurada
       const { data, error } = await supabase
-        .from("media_catalog")
-        .select("title_id, media_type, tracks_data")
-        .eq("is_active", true);
+          .from("media_catalog")
+          .select("title_id, media_type, tracks_data")
+          .eq("is_active", true);
 
       if (error) throw error;
 
+      console.log('[SINCRO] Enviando catalogo:', data?.length);
+
       // Normalização agressiva para o frontend
-      const activeTitles = data.map(item => {
+      const activeTitles = (data || []).map(item => {
         const cleanedTitleId = String(item.title_id).replace(/\D/g, "");
         return {
           ...item,
@@ -1305,6 +1312,7 @@ async function startServer() {
           title_id: cleanedTitleId
         };
       });
+      console.log('[SINCRO] Enviando catalogo (fallback):', fallbackList?.length);
       return res.json({ success: true, active_titles: fallbackList });
     }
   });

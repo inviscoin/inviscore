@@ -178,6 +178,29 @@ export const MediaModule: React.FC = () => {
 
   const renderAudioBadge = (m: Movie) => {
     if (m.type === 'trailer') return null;
+
+    const numericId = String(m.id).replace(/\D/g, '');
+    const dbMatch = indexedDbCatalog.find(dbItem => String(dbItem.title_id).replace(/\D/g, '') === numericId);
+
+    if (currentUser?.ddi === '+55') {
+      if (dbMatch) {
+         const audioLangs = (dbMatch.tracks_data?.audio_languages || dbMatch.audio_languages || dbMatch.audioLanguages || []).map((l: any) => String(l).toLowerCase());
+         const hasPtBr = audioLangs.some((l: string) => l.toLowerCase().includes('pt'));
+         if (hasPtBr) {
+           return (
+             <div className="absolute top-1.5 right-1.5 bg-emerald-500/95 text-white border border-emerald-400/20 font-black text-[7.5px] px-1.5 py-0.5 rounded z-30 uppercase font-sans shadow-[0_0_12px_rgba(16,185,129,0.5)] select-none tracking-widest">
+               DUBLADO
+             </div>
+           );
+         }
+      }
+      return (
+        <div className="absolute top-1.5 right-1.5 bg-[#D4AF37] text-black border border-amber-300/30 font-black text-[7.5px] px-1.5 py-0.5 rounded z-30 uppercase font-sans shadow-[0_0_12px_rgba(212,175,55,0.6)] select-none tracking-widest">
+          LEGENDADO
+        </div>
+      );
+    }
+
     return isMovieEstrangeiroByDdi(m) ? (
       <div className="absolute top-1.5 right-1.5 bg-[#D4AF37] text-black border border-amber-300/30 font-black text-[7.5px] px-1.5 py-0.5 rounded z-30 uppercase font-sans shadow-[0_0_12px_rgba(212,175,55,0.6)] select-none tracking-widest">
         Legendado
@@ -1512,28 +1535,27 @@ export const MediaModule: React.FC = () => {
 
   const memoizedCategories = React.useMemo(() => {
     const filterByDbExistenceAndDdi = (m: Movie) => {
-        // Normaliza o ID da lista estática para apenas números
-        const numericId = m.id.replace(/\D/g, '');                   
-        
-        // Busca no catálogo do banco normalizando também o title_id para string numérica
-        const dbMatch = indexedDbCatalog.find(dbItem => 
-             String(dbItem.title_id).replace(/\D/g, '') === numericId
-        );
+      const numericId = m.id.replace(/\D/g, "");
+      const dbMatch = indexedDbCatalog.find(dbItem => {
+        const dbId = String(dbItem.title_id).replace(/\D/g, "");
+        return dbId === numericId;
+      });
 
-        if (!dbMatch) return false; // Se houver match, o título deve 'acender' no HUD.
+      if (!dbMatch) return false;
 
-        // Regra de DDI (+55 exige áudio PT-BR na vitrine)
+      // Filtro DDI: Se o currentUser.ddi for '+55', o sistema deve ocultar da vitrine (shelf) apenas os títulos que NÃO contenham 'pt' no array de áudios do banco, permitindo que apareçam apenas na busca ativa como 'Legendado'
+      if (currentUser?.ddi === '+55') {
         const audioLangs = (dbMatch.tracks_data?.audio_languages || dbMatch.audio_languages || dbMatch.audioLanguages || []).map((l: any) => String(l).toLowerCase());
-        const hasPtBr = audioLangs.some((l: string) => l.toLowerCase().includes('pt'));
-
-        if (currentUser?.ddi === '+55' && !hasPtBr) {
-            return searchQuery ? true : false; // Oculta da vitrine (shelf), permite aparecer apenas na busca ativa como 'Legendado'
+        const hasPt = audioLangs.some((l: string) => l.includes('pt'));
+        if (!hasPt) {
+          return searchQuery ? true : false;
         }
-        return true;
+      }
+      return true;
     };
 
     // Aplica o filtro mestre sobre o catálogo indexado (Source of Truth)
-    const strictCatalog = mappedMovies.filter(filterByDbExistenceAndDdi);
+    const strictCatalog = moviesList.filter(filterByDbExistenceAndDdi);
 
     return {
       filtered: strictCatalog.filter(m => {
