@@ -1172,6 +1172,11 @@ async function startServer() {
       return res.status(404).json({ success: false, error: "SINAL INDISPONÍVEL" });
     }
 
+    if (!activeStreamUrl || activeStreamUrl.includes("tears-of-steel")) {
+      console.warn(`[Bouncer] Sinal vazio ou Tears of Steel bloqueado para #${id}. Retornando 404.`);
+      return res.status(404).json({ success: false, error: "SINAL INDISPONÍVEL" });
+    }
+
     // Se o usuario explicitamente pediu servidores de iframe adicionais (Servidores de redundancia)
     if (serverParam >= 1 && serverParam <= 5) {
       activeStreamUrl = urls[serverParam - 1];
@@ -1294,7 +1299,7 @@ async function startServer() {
         }
       }
 
-      if (!mediaSource || !mediaSource.stream_url) {
+      if (!mediaSource || !mediaSource.stream_url || mediaSource.stream_url.includes("tears-of-steel")) {
         return res.status(404).json({ success: false, error: "SINAL INDISPONÍVEL" });
       }
 
@@ -1378,7 +1383,7 @@ async function startServer() {
   });
 
   // ==================== DEEP-SCAN CRAWLER AUTOMÁTICO (INVIS SYSTEM) ====================
-  // Motor de Descoberta: realiza o check silencioso nos 5 provedores de elite + CDN resiliente
+  // Motor de Descoberta: realiza o check silencioso nos 5 provedores de elite
   const discoverMediaLinks = async (tmdbId: string, mediaType: string) => {
     const type = mediaType === "tv" ? "tv" : "movie";
     const providers = [
@@ -1386,8 +1391,7 @@ async function startServer() {
       { name: "vidsrc_to", url: `https://vidsrc.to/embed/${type}/${tmdbId}` },
       { name: "embedsu", url: `https://embed.su/embed/${type}/${tmdbId}` },
       { name: "multiembed", url: `https://multiembed.to/get.php?id=${tmdbId}` },
-      { name: "superflix", url: `https://superflixapi.dev/colabora/${type}/${tmdbId}` },
-      { name: "invis_cdn", url: `https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8` }
+      { name: "superflix", url: `https://superflixapi.dev/colabora/${type}/${tmdbId}` }
     ];
 
     for (const provider of providers) {
@@ -1410,13 +1414,8 @@ async function startServer() {
         if (response.status === 200) {
           console.log(`[INVIS CRAWLER SUCCESS] Provedor "${provider.name}" ativo (Status 200) para TMDB ID #${tmdbId}!`);
           
-          // Retorna URL limpa e tags de áudio detectadas para persistência no banco
-          const finalStreamUrl = provider.url.includes(".m3u8") 
-            ? provider.url 
-            : `https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8`;
-
           return {
-            stream_url: finalStreamUrl,
+            stream_url: provider.url,
             resolution: "1080p Ultra HD",
             tracks_data: {
               audio_languages: ["PT-BR", "EN", "ES"],

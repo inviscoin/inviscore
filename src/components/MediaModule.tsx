@@ -1537,7 +1537,26 @@ export const MediaModule: React.FC = () => {
 
   const memoizedCategories = React.useMemo(() => {
     // Aplica o filtro mestre sobre o catálogo indexado (Source of Truth)
-    const strictCatalog = moviesList.filter(m => indexedDbCatalog.some(db => String(db.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')));
+    const strictCatalog = moviesList.filter(m => {
+      const dbMatch = indexedDbCatalog.find(dbItem => 
+        String(dbItem.title_id).replace(/\D/g, "") === String(m.id).replace(/\D/g, "")
+      );
+
+      if (!dbMatch) return false;
+
+      // Filtro DDI PT-BR check para as prateleiras da vitrine
+      if (!searchQuery) {
+        if (currentUser?.ddi === '+55') {
+          const audioLangs = (dbMatch.tracks_data?.audio_languages || dbMatch.audio_languages || dbMatch.audioLanguages || []).map((l: any) => String(l).toLowerCase());
+          const hasPt = audioLangs.some((l: string) => l.includes('pt'));
+          if (!hasPt) {
+            return false; // Se não tem áudio em PT, oculta da vitrine (home/shelves) para manter o padrão premium do DDI +55
+          }
+        }
+      }
+
+      return true;
+    });
 
     return {
       filtered: strictCatalog.filter(m => {
