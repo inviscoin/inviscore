@@ -1455,74 +1455,100 @@ export const MediaModule: React.FC = () => {
     }));
   };
 
-  // Dynamic mapping of database index (indexedDbCatalog) to Movie Objects (single source of truth)
+  // Dynamic mapping of database index (indexedDbCatalog) and moviesList to Movie Objects (single source of truth)
   const mappedMovies = React.useMemo(() => {
-    return indexedDbCatalog.map((dbItem) => {
-      const numericId = String(dbItem.title_id).replace(/\D/g, "");
-      const mediaType = dbItem.media_type === 'tv' || dbItem.media_type === 'serie' ? 'serie' : 'filme';
-      
-      // Try to find a local rich matching item from moviesList or static catalog
-      const localMatch = moviesList.find((m) => {
-        const idStr = m.id.replace(/\D/g, "");
-        return idStr === numericId;
-      });
+    const list: Movie[] = [];
+    const seenIds = new Set<string>();
 
-      if (localMatch) {
-        return {
-          ...localMatch,
+    // 1. Process items from moviesList and enrich with database matches
+    moviesList.forEach((m) => {
+      const numericId = String(m.id).replace(/\D/g, "");
+      const dbMatch = indexedDbCatalog.find(
+        (dbItem) => String(dbItem.title_id).replace(/\D/g, "") === numericId
+      );
+
+      let enriched: Movie;
+      if (dbMatch) {
+        const mediaType = dbMatch.media_type === "tv" || dbMatch.media_type === "serie" ? "serie" : "filme";
+        enriched = {
+          ...m,
+          id: `tmdb-${numericId}`,
           type: mediaType,
-          audioLanguages: dbItem.tracks_data?.audio_languages || localMatch.audioLanguages || ['pt-BR', 'en-US'],
-          streamUrl: dbItem.stream_url || localMatch.streamUrl
+          audioLanguages: dbMatch.tracks_data?.audio_languages || m.audioLanguages || ["PT-BR", "EN"],
+          streamUrl: dbMatch.stream_url || m.streamUrl
+        };
+      } else {
+        enriched = {
+          ...m,
+          id: m.id.startsWith("c") || m.id.startsWith("s") || m.id.startsWith("p") ? m.id : `tmdb-${numericId}`
         };
       }
 
-      // Consistent and beautiful fallback for newly crawled titles from deep scan
+      if (enriched.id && !seenIds.has(enriched.id)) {
+        seenIds.add(enriched.id);
+        list.push(enriched);
+      }
+    });
+
+    // 2. Add database items that are not present in moviesList
+    indexedDbCatalog.forEach((dbItem) => {
+      const numericId = String(dbItem.title_id).replace(/\D/g, "");
+      const finalId = `tmdb-${numericId}`;
+
+      if (seenIds.has(finalId)) return;
+
+      const mediaType = dbItem.media_type === "tv" || dbItem.media_type === "serie" ? "serie" : "filme";
       const title = dbItem.tracks_data?.title || dbItem.tracks_data?.name || `Título #${numericId}`;
-      const overview = dbItem.tracks_data?.overview || 'Título indexado de forma resiliente no banco Supabase pelo crawler INVIS.';
+      const overview = dbItem.tracks_data?.overview || "Título indexado de forma resiliente no banco Supabase pelo crawler INVIS.";
       const posterPath = dbItem.tracks_data?.poster_path || dbItem.tracks_data?.posterUrl;
       const posterUrl = posterPath 
-        ? (posterPath.startsWith('http') ? posterPath : `https://image.tmdb.org/t/p/w500${posterPath}`)
+        ? (posterPath.startsWith("http") ? posterPath : `https://image.tmdb.org/t/p/w500${posterPath}`)
         : `https://images.unsplash.com/photo-1542204172-e7052809186d?w=500&auto=format&fit=crop&q=80`;
 
       const backdropPath = dbItem.tracks_data?.backdrop_path || dbItem.tracks_data?.backdropUrl;
       const backdropUrl = backdropPath
-        ? (backdropPath.startsWith('http') ? backdropPath : `https://image.tmdb.org/t/p/w1280${backdropPath}`)
+        ? (backdropPath.startsWith("http") ? backdropPath : `https://image.tmdb.org/t/p/w1280${backdropPath}`)
         : `https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1200&auto=format&fit=crop&q=40`;
 
-      let platform: 'netflix' | 'disney' | 'hbo' | 'prime' | 'globoplay' = 'netflix';
+      let platform: "netflix" | "disney" | "hbo" | "prime" | "globoplay" = "netflix";
       const dbPlatform = dbItem.tracks_data?.platform?.toLowerCase();
-      if (dbPlatform?.includes('netflix')) platform = 'netflix';
-      else if (dbPlatform?.includes('disney')) platform = 'disney';
-      else if (dbPlatform?.includes('hbo')) platform = 'hbo';
-      else if (dbPlatform?.includes('prime')) platform = 'prime';
-      else if (dbPlatform?.includes('globoplay')) platform = 'globoplay';
+      if (dbPlatform?.includes("netflix")) platform = "netflix";
+      else if (dbPlatform?.includes("disney")) platform = "disney";
+      else if (dbPlatform?.includes("hbo")) platform = "hbo";
+      else if (dbPlatform?.includes("prime")) platform = "prime";
+      else if (dbPlatform?.includes("globoplay")) platform = "globoplay";
       else {
         const idx = parseInt(numericId) || 0;
-        const platforms: ('netflix' | 'disney' | 'hbo' | 'prime' | 'globoplay')[] = ['netflix', 'disney', 'hbo', 'prime', 'globoplay'];
+        const platforms: ("netflix" | "disney" | "hbo" | "prime" | "globoplay")[] = ["netflix", "disney", "hbo", "prime", "globoplay"];
         platform = platforms[idx % platforms.length];
       }
 
       const rating = dbItem.tracks_data?.rating || dbItem.tracks_data?.vote_average || 8.0;
-      const category = dbItem.tracks_data?.category || (mediaType === 'serie' ? 'Série' : 'Filme');
+      const category = dbItem.tracks_data?.category || (mediaType === "serie" ? "Série" : "Filme");
 
-      return {
-        id: `tmdb-${numericId}`,
-        title: title,
+      const item: Movie = {
+        id: finalId,
+        title,
         year: dbItem.tracks_data?.release_date ? new Date(dbItem.tracks_data.release_date).getFullYear() : 2024,
-        posterUrl: posterUrl,
-        backdropUrl: backdropUrl,
-        overview: overview,
-        videoUrl: 'https://www.youtube.com/embed/gCcx85zlye4',
+        posterUrl,
+        backdropUrl,
+        overview,
+        videoUrl: "https://www.youtube.com/embed/gCcx85zlye4",
         type: mediaType,
         status: true,
-        category: category,
-        platform: platform,
-        rating: rating,
-        audioLanguages: dbItem.tracks_data?.audio_languages || ['PT-BR', 'EN'],
-        totalDuration: dbItem.tracks_data?.runtime ? `${dbItem.tracks_data.runtime}m` : '120m',
+        category,
+        platform,
+        rating,
+        audioLanguages: dbItem.tracks_data?.audio_languages || ["PT-BR", "EN"],
+        totalDuration: dbItem.tracks_data?.runtime ? `${dbItem.tracks_data.runtime}m` : "120m",
         streamUrl: dbItem.stream_url
-      } as Movie;
+      };
+
+      seenIds.add(finalId);
+      list.push(item);
     });
+
+    return list;
   }, [indexedDbCatalog, moviesList]);
 
   // Active Timer to cycle featured trailers in background every 7 seconds
@@ -1536,19 +1562,27 @@ export const MediaModule: React.FC = () => {
 
   const memoizedCategories = React.useMemo(() => {
     const filterByDbExistenceAndDdi = (m: Movie) => {
+      if (m.id.startsWith("c") || m.id.startsWith("s") || m.id.startsWith("p")) {
+        return true;
+      }
       const numericId = m.id.replace(/\D/g, "");
       const dbMatch = indexedDbCatalog.find(dbItem => 
         String(dbItem.title_id).replace(/\D/g, "") === numericId
       );
 
-      if (!dbMatch) return false;
+      if (!dbMatch) {
+        if (searchQuery.trim() !== "") {
+          return true; // Exibe resultados de busca retornados da API do TMDB mesmo se não indexados
+        }
+        return false;
+      }
 
       // Filtro DDI: Se o currentUser.ddi for '+55', o sistema deve ocultar da vitrine principal apenas os títulos que NÃO contenham 'pt' no array de áudio do banco. Se for uma busca ativa (searchQuery), exiba o card com a tag visual 'Legendado' em vez de ocultá-lo.
       if (currentUser?.ddi === '+55') {
         const audioLangs = (dbMatch.tracks_data?.audio_languages || dbMatch.audio_languages || dbMatch.audioLanguages || []).map((l: any) => String(l).toLowerCase());
         const hasPt = audioLangs.some((l: string) => l.includes('pt'));
         if (!hasPt) {
-          if (searchQuery) {
+          if (searchQuery.trim() !== "") {
             return true; // Exibe o card se for busca ativa (seja apenas legendado)
           }
           return false; // Oculta da vitrine principal se não contiver 'pt' e não houver searchQuery
