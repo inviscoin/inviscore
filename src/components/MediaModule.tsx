@@ -1506,7 +1506,7 @@ export const MediaModule: React.FC = () => {
       const category = dbItem.tracks_data?.category || (mediaType === 'serie' ? 'Série' : 'Filme');
 
       return {
-        id: numericId,
+        id: `tmdb-${numericId}`,
         title: title,
         year: dbItem.tracks_data?.release_date ? new Date(dbItem.tracks_data.release_date).getFullYear() : 2024,
         posterUrl: posterUrl,
@@ -1559,7 +1559,7 @@ export const MediaModule: React.FC = () => {
     };
 
     // Aplica o filtro mestre sobre o catálogo indexado (Source of Truth)
-    const strictCatalog = moviesList.filter(filterByDbExistenceAndDdi);
+    const strictCatalog = mappedMovies.filter(filterByDbExistenceAndDdi);
 
     return {
       filtered: strictCatalog.filter(m => {
@@ -1583,7 +1583,7 @@ export const MediaModule: React.FC = () => {
       prime: strictCatalog.filter(m => m.platform === 'prime'),
       globoplay: strictCatalog.filter(m => m.platform === 'globoplay')
     };
-  }, [moviesList, indexedDbCatalog, searchQuery, currentUser, selectedCategory, scopeFiltering]);
+  }, [moviesList, indexedDbCatalog, searchQuery, currentUser, selectedCategory, scopeFiltering, mappedMovies]);
 
   // Return titles straight from backend which supports batching naturally ~50
   const getExpandedTitlesForCategory = (category: string) => {
