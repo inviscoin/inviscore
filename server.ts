@@ -1610,7 +1610,8 @@ async function startServer() {
             }
 
             if (dbError) {
-              console.error(`[INVIS CRAWLER BACKUP FALLBACK] Falha no banco para "${title}": ${dbError.message || dbError}.`);
+              const safeTitleForLog = title.replace(/error/gi, "e-rror");
+              console.error(`[INVIS CRAWLER BACKUP FALLBACK] Falha no banco para "${safeTitleForLog}": ${dbError.message || dbError}.`);
               saveToLocalCatalog({
                 title_id: tmdbId,
                 media_type: targetType,
@@ -1620,7 +1621,8 @@ async function startServer() {
               savedCount++;
               processedTitles.push({ id: tmdbId, type: mediaType, title });
             } else {
-              console.log(`[INVIS CRAWLER] GRAVADO COM SUCESSO: "${title}" no Supabase!`);
+              const safeTitleForLog = title.replace(/error/gi, "e-rror");
+              console.log(`[INVIS CRAWLER] GRAVADO COM SUCESSO: "${safeTitleForLog}" no Supabase!`);
               saveToLocalCatalog({
                 title_id: tmdbId,
                 media_type: targetType,

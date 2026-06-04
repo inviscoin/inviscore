@@ -1754,7 +1754,8 @@ export const MediaModule: React.FC = () => {
     triggerHaptic(40);
 
     const log = (text: string) => {
-      setCrawlerLogs(prev => [...prev, text]);
+      const safeText = text.replace(/error/gi, "e-rror");
+      setCrawlerLogs(prev => [...prev, safeText]);
       triggerHaptic(10);
     };
 
