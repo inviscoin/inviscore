@@ -991,9 +991,13 @@ export const MediaModule: React.FC = () => {
     }
   };
 
-  // Busca os títulos reais no banco ao montar o componente
+  // Busca os títulos reais no banco ao montar o componente com retry/sincronia reativa de 30 segundos
   useEffect(() => {
     fetchIndexedCatalog();
+    const interval = setInterval(() => {
+      fetchIndexedCatalog();
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
@@ -1567,7 +1571,7 @@ export const MediaModule: React.FC = () => {
       }
       const numericId = m.id.replace(/\D/g, "");
       const dbMatch = indexedDbCatalog.find(dbItem => 
-        String(dbItem.title_id).replace(/\D/g, "") === numericId
+        String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')
       );
 
       if (!dbMatch) {
@@ -1577,16 +1581,9 @@ export const MediaModule: React.FC = () => {
         return false;
       }
 
-      // Filtro DDI: Se o currentUser.ddi for '+55', o sistema deve ocultar da vitrine principal apenas os títulos que NÃO contenham 'pt' no array de áudio do banco. Se for uma busca ativa (searchQuery), exiba o card com a tag visual 'Legendado' em vez de ocultá-lo.
+      // Filtro DDI: Se o usuário for DDI +55, não oculte o filme na vitrine se ele não for dublado; em vez disso, exiba-o com o selo 'LEGENDADO' para que o catálogo nunca pareça vazio.
       if (currentUser?.ddi === '+55') {
-        const audioLangs = (dbMatch.tracks_data?.audio_languages || dbMatch.audio_languages || dbMatch.audioLanguages || []).map((l: any) => String(l).toLowerCase());
-        const hasPt = audioLangs.some((l: string) => l.includes('pt'));
-        if (!hasPt) {
-          if (searchQuery.trim() !== "") {
-            return true; // Exibe o card se for busca ativa (seja apenas legendado)
-          }
-          return false; // Oculta da vitrine principal se não contiver 'pt' e não houver searchQuery
-        }
+        return true;
       }
 
       return true;

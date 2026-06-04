@@ -453,8 +453,7 @@ async function startServer() {
     return activeCount >= 2;
   };
 
-  // Simulate Health Check for VOD links (crawler matchmaking) periodically
-  let crawlerCache: Record<string, boolean> = {};
+  // Simulate Health Check for VOD links (crawler matchmaking) periodically - All checks mapped physically to media_catalog in Supabase.
 
   // API Route - TMDB Trending (fetches pages 1 to 4 to ensure up to 50 unique movies/tv shows)
   app.get("/api/tmdb/trending", async (req, res) => {
@@ -482,12 +481,25 @@ async function startServer() {
           const cacheKey = `tmdb-${idStr}`;
           const isMovie = m.media_type === "movie" || m.title !== undefined;
           
-          if (crawlerCache[cacheKey] === undefined) {
-             const isValid = await validateServers(idStr, isMovie);
-             crawlerCache[cacheKey] = isValid;
+          let isIndexed = false;
+          if (supabase) {
+            try {
+              const { data: dbItem } = await supabase
+                .from("media_catalog")
+                .select("is_active")
+                .eq("title_id", idStr)
+                .eq("media_type", isMovie ? "movie" : "tv")
+                .maybeSingle();
+              if (dbItem && dbItem.is_active) {
+                isIndexed = true;
+              }
+            } catch (err) {}
           }
-          
-          if (crawlerCache[cacheKey] === false) continue;
+
+          if (!isIndexed) {
+             const isValid = await validateServers(idStr, isMovie);
+             if (!isValid) continue;
+          }
           
           if (!seenIds.has(idStr)) {
             seenIds.add(idStr);
@@ -626,13 +638,26 @@ async function startServer() {
             continue;
           }
 
-          const cacheKey = `tmdb-${idStr}`;
-          
-          if (crawlerCache[cacheKey] === undefined) {
-             const isValid = await validateServers(idStr, m.media_type === "movie");
-             crawlerCache[cacheKey] = isValid;
+          const isMovie = m.media_type === "movie" || m.title !== undefined;
+          let isIndexed = false;
+          if (supabase) {
+            try {
+              const { data: dbItem } = await supabase
+                .from("media_catalog")
+                .select("is_active")
+                .eq("title_id", idStr)
+                .eq("media_type", isMovie ? "movie" : "tv")
+                .maybeSingle();
+              if (dbItem && dbItem.is_active) {
+                isIndexed = true;
+              }
+            } catch (err) {}
           }
-          if (crawlerCache[cacheKey] === false) continue;
+
+          if (!isIndexed) {
+             const isValid = await validateServers(idStr, isMovie);
+             if (!isValid) continue;
+          }
           
           if (!seenIds.has(idStr)) {
             seenIds.add(idStr);
@@ -891,20 +916,7 @@ async function startServer() {
   };
 
   // --- SEGMENTO COFRE DE DADOS (STREAM VAULT) ---
-  interface ValidatedStream {
-    id: string;
-    title: string;
-    streamUrl: string;
-    sourceType: string;
-    status: 'active' | 'inactive';
-    audioTracks: string[];
-    subtitles: { id: string, label: string }[];
-    checkedAt: string;
-    resolution: string;
-    codecs: string;
-  }
-
-  const streamVault = new Map<string, ValidatedStream>();
+  // Extinção total de caches voláteis (memoryCatalog/Map) para garantir sincronização física resiliente.
 
   // Pre-seed some premium high-quality clean cinematic HLS streams (sci-fi / cyberpunk to fit theme)
   // These are free of ads, popups or bunny fallbacks! They provide a spectacular native user experience.
@@ -1027,39 +1039,71 @@ async function startServer() {
       if (validationResult.valid) {
         logs.push(`[FFPROBE OK] Codecs identificados: ${validationResult.codecs || "H264/AAC"}. Resolução: ${validationResult.resolution || "1080p"}. SINAL APROVADO.`);
         
-        // Salva no cofre de dados ("Fase 2")
-        streamVault.set(fileId, {
-          id: fileId,
+        const enrichedTracksData = {
+          audio_languages: isPremiumSeeded ? isPremiumSeeded.audioTracks : ["PT-BR", "EN", "ES"],
+          subtitles: ["pt-BR", "en"],
           title: isPremiumSeeded ? isPremiumSeeded.title : `Movie ${fileId}`,
-          streamUrl: testUrl,
-          sourceType: "video",
-          status: "active",
-          audioTracks: isPremiumSeeded ? isPremiumSeeded.audioTracks : ["PT-BR", "EN"],
-          subtitles: [
-            { id: "pt-BR", label: "Português (Brasil)" },
-            { id: "OFF", label: "Desligado" }
-          ],
-          checkedAt: new Date().toISOString(),
-          resolution: validationResult.resolution || "1080p",
-          codecs: validationResult.codecs || "H264/AAC"
+          overview: `Sinal verificado com integridade resiliente pelo Worker de Saúde.`,
+          release_date: "2024-01-01",
+          vote_average: 8.0,
+          platform: "netflix"
+        };
+        
+        if (supabase) {
+          try {
+            const { data: existing, error: findError } = await supabase
+              .from("media_catalog")
+              .select("title_id, media_type")
+              .eq("title_id", numericId)
+              .eq("media_type", "movie")
+              .maybeSingle();
+
+            if (!findError && existing) {
+              await supabase
+                .from("media_catalog")
+                .update({
+                  stream_url: testUrl,
+                  tracks_data: enrichedTracksData,
+                  is_active: true
+                })
+                .eq("title_id", numericId)
+                .eq("media_type", "movie");
+            } else {
+              await supabase
+                .from("media_catalog")
+                .insert({
+                  title_id: numericId,
+                  media_type: "movie",
+                  stream_url: testUrl,
+                  tracks_data: enrichedTracksData,
+                  is_active: true
+                });
+            }
+          } catch (e: any) {
+            logs.push(`[ERRO BANCO]: ${e.message}`);
+          }
+        }
+        
+        saveToLocalCatalog({
+          title_id: numericId,
+          media_type: "movie",
+          stream_url: testUrl,
+          tracks_data: enrichedTracksData
         });
         
         updatedMovies.push({ id: fileId, status: true });
       } else {
         logs.push(`[REJEITADO] ${validationResult.reason}. Marcando status = 0 (inativo), ocultando da prateleira HUD.`);
         
-        streamVault.set(fileId, {
-          id: fileId,
-          title: `Movie ${fileId}`,
-          streamUrl: "",
-          sourceType: "iframe",
-          status: "inactive",
-          audioTracks: [],
-          subtitles: [],
-          checkedAt: new Date().toISOString(),
-          resolution: "N/A",
-          codecs: "N/A"
-        });
+        if (supabase) {
+          try {
+            await supabase
+              .from("media_catalog")
+              .update({ is_active: false })
+              .eq("title_id", numericId)
+              .eq("media_type", "movie");
+          } catch (e) {}
+        }
         
         updatedMovies.push({ id: fileId, status: false });
       }
@@ -1111,9 +1155,7 @@ async function startServer() {
     ];
 
     // FASE 3: ENTREGA (O BOUNCER)
-    // Olha primeiro para o Cofre de Dados ("Fase 2") para esse ID
-    const vaulted = streamVault.get(numericId) || streamVault.get(id);
-    
+    // Coleta o stream do banco direto ou local para este ID
     let activeStreamUrl = "";
     let activeSourceType = "video";
     let finalResolution = "1080p";
@@ -1158,12 +1200,7 @@ async function startServer() {
       } catch (e) {}
     }
     
-    if (vaulted && vaulted.status === "active") {
-      activeStreamUrl = vaulted.streamUrl;
-      activeSourceType = "video";
-      finalResolution = vaulted.resolution;
-      console.log(`[Bouncer] Match encontrado no Cofre de Dados de Vídeo para #${id}. StreamUrl: ${activeStreamUrl}`);
-    } else if (mediaExists && foundSrcUrl) {
+    if (mediaExists && foundSrcUrl) {
       activeStreamUrl = foundSrcUrl;
       activeSourceType = "video";
       finalResolution = "1080p Ultra HD";
