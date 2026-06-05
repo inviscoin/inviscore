@@ -43,33 +43,13 @@ const supabase = resolvedSupabaseUrl && supabaseServiceKey ? createClient(resolv
   }
 }) : null;
 
-// Local Backup Catalog Fallback to survive RLS write errors
+// Local Backup Catalog Fallback - Extinct to enforce strict physical database access
 const LOCAL_CATALOG_PATH = path.join(process.cwd(), "local_media_catalog.json");
-let localMediaCatalogFallback: any[] = [];
-try {
-  if (fs.existsSync(LOCAL_CATALOG_PATH)) {
-    localMediaCatalogFallback = JSON.parse(fs.readFileSync(LOCAL_CATALOG_PATH, "utf8") || "[]");
-    console.log(`[INVIS SERVER] Carregados ${localMediaCatalogFallback.length} títulos do catálogo local de backup.`);
-  }
-} catch (err: any) {
-  console.warn("[INVIS SERVER WARNING] Não foi possível carregar o catálogo de backup local:", err.message);
-}
+const localMediaCatalogFallback: any[] = [];
 
 const saveToLocalCatalog = (item: { title_id: string; media_type: string; stream_url: string; tracks_data: any }) => {
-  const existingIndex = localMediaCatalogFallback.findIndex(
-    x => x.title_id === item.title_id && x.media_type === item.media_type
-  );
-  if (existingIndex > -1) {
-    localMediaCatalogFallback[existingIndex] = item;
-  } else {
-    localMediaCatalogFallback.push(item);
-  }
-  try {
-    fs.writeFileSync(LOCAL_CATALOG_PATH, JSON.stringify(localMediaCatalogFallback, null, 2), "utf8");
-    console.log(`[INVIS SERVER SUCCESS] Item #${item.title_id} salvo com sucesso no catálogo de backup local.`);
-  } catch (err: any) {
-    console.warn("[INVIS SERVER WARNING] Erro ao gravar catálogo de backup local no disco:", err.message);
-  }
+  // Propositadamente sem operações em memória ou em arquivo para garantir persistência 100% física no Supabase
+  console.log(`[INVIS SERVER PHYSICAL DIRECTIVE] Ignorando salvamento em disco/memória. Item #${item.title_id} confiado ao Supabase.`);
 };
 
 // Helper utility to get the preferred language according to user DDI (synchronized with frontend)
@@ -732,41 +712,9 @@ async function startServer() {
               .maybeSingle();
 
             if (!existing) {
-              console.log(`[ON-DEMAND SYNC] Iniciando descoberta silenciosa para TMDB ID #${idStr} (${targetType})...`);
-              const validatedMedia = await discoverMediaLinks(idStr, targetType);
-              if (validatedMedia) {
-                const enrichedTracksData = {
-                  audio_languages: validatedMedia.tracks_data?.audio_languages || ["pt-BR", "en-US"],
-                  subtitles: validatedMedia.tracks_data?.subtitles || ["pt-BR"],
-                  title: m.title || m.name || "Título Indefinido",
-                  overview: m.overview || "Título indexado de forma resiliente no banco Supabase de forma reativa pelo usuário.",
-                  poster_path: m.poster_path,
-                  backdrop_path: m.backdrop_path,
-                  release_date: m.release_date || m.first_air_date || "2024-01-01",
-                  vote_average: m.vote_average || 8.0,
-                  platform: ["netflix", "disney", "hbo", "prime", "globoplay"][Math.floor(Math.random() * 5)]
-                };
-
-                const { error: insertError } = await systemClient
-                  .from("media_catalog")
-                  .insert({
-                    title_id: idStr,
-                    media_type: targetType,
-                    stream_url: validatedMedia.stream_url,
-                    tracks_data: enrichedTracksData,
-                    is_active: true
-                  });
-
-                if (!insertError) {
-                  console.log(`[ON-DEMAND SYNC SUCCESS] Registrado com sucesso: ID #${idStr}`);
-                  saveToLocalCatalog({
-                    title_id: idStr,
-                    media_type: targetType,
-                    stream_url: validatedMedia.stream_url,
-                    tracks_data: enrichedTracksData
-                  });
-                }
-              }
+              console.log(`[ON-DEMAND SYNC] Descoberta reativa disparada para TMDB ID #${idStr} (${targetType})`);
+              // Dispara discoverMediaLinks assincronamente e persiste permanentemente
+              reactiveIndexTitle(idStr, targetType, m);
             }
           } catch (err: any) {
             console.error(`[ON-DEMAND SYNC ERROR]: ${err.message}`);
@@ -1160,19 +1108,11 @@ async function startServer() {
     let activeSourceType = "video";
     let finalResolution = "1080p";
     
-    // Verificação de Integridade Soberana: Se a mídia existir no banco ou no catálogo de backup local, reproduza.
+    // Verificação de Integridade Soberana: Se a mídia existir no banco, reproduza.
     let mediaExists = false;
     let foundSrcUrl = "";
     
-    const localMatch = (localMediaCatalogFallback || []).find(
-      x => x.title_id === numericId
-    );
-    if (localMatch && localMatch.stream_url) {
-      mediaExists = true;
-      foundSrcUrl = localMatch.stream_url;
-    }
-    
-    if (!mediaExists && supabase) {
+    if (supabase) {
       try {
         const { data, error } = await supabase
           .from("media_catalog")
@@ -1270,21 +1210,7 @@ async function startServer() {
 
       let mediaSource = null;
 
-      // 1. Busca da Fonte local no nosso backup cache primeiro
-      const localMatch = localMediaCatalogFallback.find(
-        x => x.title_id === numericId && x.media_type === catalogType
-      );
-      if (localMatch) {
-        mediaSource = {
-          stream_url: localMatch.stream_url,
-          audio_languages: localMatch.tracks_data?.audio_languages || ['pt-BR', 'en-US'],
-          resolution: "1080p Ultra HD",
-          subtitles: localMatch.tracks_data?.subtitles || [],
-          tracks_data: localMatch.tracks_data
-        };
-      }
-
-      // 2. Busca em media_catalog direto no banco
+      // 1. Busca em media_catalog direto no banco
       if (!mediaSource) {
         try {
           const { data, error } = await supabase
@@ -1395,29 +1321,17 @@ async function startServer() {
       // Normalização agressiva para o frontend com garantia de prefixo tmdb-
       const activeTitles = (data || []).map(item => {
         const cleanedTitleId = String(item.title_id).replace(/\D/g, "").trim();
-        const prefixedId = `tmdb-${cleanedTitleId}`;
         return {
           ...item,
-          id: prefixedId,
-          title_id: prefixedId
+          id: `tmdb-${cleanedTitleId}`,
+          title_id: cleanedTitleId
         };
       });
 
       return res.json({ success: true, active_titles: activeTitles });
     } catch (e: any) {
-      console.warn("[Media Catalog Active API Error] Usando catálogo de backup local:", e.message);
-      // Se o banco falhar, entrega o backup local para não esvaziar a tela
-      const fallbackList = (localMediaCatalogFallback || []).map(item => {
-        const cleanedTitleId = String(item.title_id).replace(/\D/g, "");
-        const prefixedId = `tmdb-${cleanedTitleId}`;
-        return {
-          ...item,
-          id: prefixedId,
-          title_id: prefixedId
-        };
-      });
-      console.log('[SINCRO] Enviando catalogo (fallback):', fallbackList?.length);
-      return res.json({ success: true, active_titles: fallbackList });
+      console.error("[Media Catalog Active API Error] Falha de comunicação física com o banco:", e.message);
+      return res.json({ success: true, active_titles: [] });
     }
   });
 
@@ -1469,6 +1383,77 @@ async function startServer() {
       }
     }
     return null;
+  };
+
+  const reactiveIndexTitle = async (tmdbId: string, mediaType: string, titleData: any) => {
+    try {
+      const validatedMedia = await discoverMediaLinks(tmdbId, mediaType);
+      if (!validatedMedia) {
+        console.log(`[BUSCA REATIVA] Título #${tmdbId} não possui streaming no ar nos provedores.`);
+        return;
+      }
+      const targetType = mediaType === "tv" ? "tv" : "movie";
+      const enrichedTracksData = {
+        audio_languages: validatedMedia.tracks_data?.audio_languages || ["PT-BR", "EN", "ES"],
+        subtitles: validatedMedia.tracks_data?.subtitles || ["pt-BR", "en"],
+        title: titleData.title || titleData.name || "Título Indefinido",
+        overview: titleData.overview || "Título indexado de forma reativa e resiliente no banco Supabase.",
+        poster_path: titleData.poster_path,
+        backdrop_path: titleData.backdrop_path,
+        release_date: titleData.release_date || titleData.first_air_date || "2024-01-01",
+        vote_average: titleData.vote_average || 8.0,
+        platform: ["netflix", "disney", "hbo", "prime", "globoplay"][Math.floor(Math.random() * 5)]
+      };
+      
+      const systemClient = await getSystemClient() || supabase;
+      if (systemClient) {
+        const { data: existing, error: findError } = await systemClient
+          .from("media_catalog")
+          .select("title_id, media_type")
+          .eq("title_id", tmdbId)
+          .eq("media_type", targetType)
+          .maybeSingle();
+
+        let dbError = null;
+        if (!findError && existing) {
+          const { error: updateError } = await systemClient
+            .from("media_catalog")
+            .update({
+              stream_url: validatedMedia.stream_url,
+              tracks_data: enrichedTracksData,
+              is_active: true
+            })
+            .eq("title_id", tmdbId)
+            .eq("media_type", targetType);
+          dbError = updateError;
+        } else {
+          const { error: insertError } = await systemClient
+            .from("media_catalog")
+            .insert({
+              title_id: tmdbId,
+              media_type: targetType,
+              stream_url: validatedMedia.stream_url,
+              tracks_data: enrichedTracksData,
+              is_active: true
+            });
+          dbError = insertError;
+        }
+
+        if (!dbError) {
+          console.log(`[BUSCA REATIVA] GRAVADO COM SUCESSO: "${enrichedTracksData.title}" no Supabase!`);
+          saveToLocalCatalog({
+            title_id: tmdbId,
+            media_type: targetType,
+            stream_url: validatedMedia.stream_url,
+            tracks_data: enrichedTracksData
+          });
+        } else {
+          console.error(`[BUSCA REATIVA ERROR] Falha no banco para salvar "${enrichedTracksData.title}": ${dbError.message || dbError}`);
+        }
+      }
+    } catch (err: any) {
+      console.error(`[BUSCA REATIVA EXCEPTION] Erro no processamento reativo para #${tmdbId}:`, err.message);
+    }
   };
 
   // Helper to ensure the database can be written to by authenticating a system service session to satisfy RLS
