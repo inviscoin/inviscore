@@ -180,7 +180,7 @@ export const MediaModule: React.FC = () => {
     if (m.type === 'trailer') return null;
 
     const numericId = String(m.id).replace(/\D/g, '');
-    const dbMatch = indexedDbCatalog.find(dbItem => String(dbItem.title_id).replace(/\D/g, '') === numericId);
+    const dbMatch = indexedDbCatalog.find(dbItem => String(dbItem.title_id) === numericId);
 
     if (currentUser?.ddi === '+55') {
       if (dbMatch) {
@@ -976,7 +976,7 @@ export const MediaModule: React.FC = () => {
     return `/api/media/${typePath}/${numericId}?${params.toString()}`;
   };
 
-   const [moviesList, setMoviesList] = useState<Movie[]>(CINEMA_ROSTER);
+   const [moviesList, setMoviesList] = useState<Movie[]>([]);
   const [indexedDbCatalog, setIndexedDbCatalog] = useState<any[]>([]);
 
   const fetchIndexedCatalog = async () => {
@@ -1146,7 +1146,18 @@ export const MediaModule: React.FC = () => {
               }
 
               // Ajusta trilha de áudio inicial se disponível no manifesto HLS
-              if (hls.audioTracks.length > 1) {
+              if (currentUser?.ddi === '+55' && hls.audioTracks && hls.audioTracks.length > 0) {
+                const targetAudioIndex = hls.audioTracks.findIndex(track => 
+                  track.lang?.toLowerCase().includes('pt') || 
+                  track.name?.toLowerCase().includes('pt') ||
+                  track.name?.toLowerCase().includes('por') ||
+                  track.name?.toLowerCase().includes('dub')
+                );
+                if (targetAudioIndex !== -1) {
+                  hls.audioTrack = targetAudioIndex;
+                  console.log("[PLAYER NATIVO] Forçando trilha PT/DUB para DDI +55 (índice ", targetAudioIndex, ")");
+                }
+              } else if (hls.audioTracks.length > 1) {
                 const targetLanguageLower = movieAudioLang.toLowerCase().split('-')[0];
                 const targetAudioIndex = hls.audioTracks.findIndex(track => 
                   track.lang?.toLowerCase().includes(targetLanguageLower) || 
@@ -1569,9 +1580,9 @@ export const MediaModule: React.FC = () => {
       if (m.id.startsWith("c") || m.id.startsWith("s") || m.id.startsWith("p")) {
         return true;
       }
-      const numericId = m.id.replace(/\D/g, "");
+      const numericId = String(m.id).replace(/\D/g, '');
       const dbMatch = indexedDbCatalog.find(dbItem => 
-        String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')
+        String(dbItem.title_id) === String(m.id).replace(/\D/g, '')
       );
 
       if (!dbMatch) {
@@ -3253,14 +3264,30 @@ export const MediaModule: React.FC = () => {
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -15 }}
-                  className="space-y-6 flex-1 overflow-y-auto no-scrollbar pr-1"
+                  className="space-y-6 flex-1 overflow-y-auto no-scrollbar pr-1 flex flex-col"
                   onScroll={handleContainerScroll}
                 >
-                  
-                  {/* METADATA ACTION CONTROLS / SECTIONS BAR HAS BEEN REMOVED TO PREVENT DUPLICATION */}
+                  {indexedDbCatalog.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center py-20 px-4 text-center my-auto min-h-[400px]">
+                      <div className="relative w-16 h-16 mb-4">
+                        <span className="absolute inset-0 w-full h-full rounded-full border-2 border-cyan-500/10" />
+                        <span className="absolute inset-0 w-full h-full rounded-full border-2 border-t-cyan-500 animate-spin" />
+                        <span className="absolute inset-[3px] rounded-full border border-purple-500/10" />
+                        <span className="absolute inset-[3px] rounded-full border-t border-purple-500 animate-spin" style={{ animationDuration: '1.2s' }} />
+                      </div>
+                      <p className="text-xs font-mono font-black text-cyan-400 tracking-[0.2em] animate-pulse uppercase">
+                        SINCRONIZANDO SATÉLITES...
+                      </p>
+                      <p className="text-[9px] text-zinc-400 mt-1.5 font-mono tracking-widest uppercase">
+                        Conectando ao banco de dados físico
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* METADATA ACTION CONTROLS / SECTIONS BAR HAS BEEN REMOVED TO PREVENT DUPLICATION */}
 
-                  {/* 6 AUTOMATIC TRAILERS ROW - HORIZONTAL CAROUSEL WITH AUDIOLESS AUTOPLAY */}
-                  <div className="space-y-4 text-left border-b border-white/5 pb-6 mt-2">
+                      {/* 6 AUTOMATIC TRAILERS ROW - HORIZONTAL CAROUSEL WITH AUDIOLESS AUTOPLAY */}
+                      <div className="space-y-4 text-left border-b border-white/5 pb-6 mt-2">
                     <div className="flex justify-between items-center px-2">
                       <span className="text-[10px] font-black text-cyan-400 font-mono uppercase tracking-widest block flex items-center gap-1">
                         <span className="w-2 h-2 rounded-full bg-cyan-500 animate-ping shrink-0" />
@@ -4533,7 +4560,8 @@ export const MediaModule: React.FC = () => {
                     </div>
 
                   </div>
-
+                    </>
+                  )}
                 </motion.div>
               )) : (
                 /* MOVIE SELECTED FLOW SATELLITE */

@@ -27,10 +27,10 @@ const supabaseKey = [
 process.env.VITE_SUPABASE_ANON_KEY || 
 process.env.SUPABASE_ANON_KEY;
 
-// server.ts - Inicialização Soberana
+// server.ts - Inicialização Soberana e Handshake de Elite
 const resolvedSupabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || supabaseUrl;
-// IMPORTANTE: Use obrigatoriamente a SUPABASE_SERVICE_ROLE_KEY (Chave de Serviço) para o crawler e interações ignorarem RLS de maneira absoluta
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+// IMPORTANTE: Uso mandatório da SUPABASE_SERVICE_ROLE_KEY (Chave de Serviço) para bypass absoluto de RLS no backend
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || supabaseKey;
 
 const supabase = resolvedSupabaseUrl && supabaseServiceKey ? createClient(resolvedSupabaseUrl, supabaseServiceKey, {
   auth: {
@@ -1193,7 +1193,7 @@ async function startServer() {
     try {
       console.log('[DEBUG] Tentando buscar mídias para DDI:', req.query.ddi);
       const { type, id } = req.params;
-      const numericId = id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "").replace(/\D/g, "");
+      const numericId = String(id).replace(/\D/g, '');
       const userDdi = String(req.query.ddi || "+55"); // Captura o DDI enviado pelo front
       
       const season = req.query.s ? parseInt(String(req.query.s)) : null;
