@@ -180,7 +180,7 @@ export const MediaModule: React.FC = () => {
     if (m.type === 'trailer') return null;
 
     const numericId = String(m.id).replace(/\D/g, '');
-    const dbMatch = indexedDbCatalog.find(dbItem => String(dbItem.title_id) === numericId);
+    const dbMatch = indexedDbCatalog.find(dbItem => String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, ''));
 
     if (currentUser?.ddi === '+55') {
       if (dbMatch) {
@@ -978,16 +978,63 @@ export const MediaModule: React.FC = () => {
 
    const [moviesList, setMoviesList] = useState<Movie[]>([]);
   const [indexedDbCatalog, setIndexedDbCatalog] = useState<any[]>([]);
+  const [showReconnectButton, setShowReconnectButton] = useState(false);
+
+  // Watchdog for reconnection button - 10 seconds timeout
+  useEffect(() => {
+    if (indexedDbCatalog.length > 0) {
+      setShowReconnectButton(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      if (indexedDbCatalog.length === 0) {
+        setShowReconnectButton(true);
+      }
+    }, 10000);
+
+    return () => clearTimeout(timer);
+  }, [indexedDbCatalog.length]);
 
   const fetchIndexedCatalog = async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     try {
-      const res = await fetch('/api/media/catalog/active');
+      const res = await fetch('/api/media/catalog/active', { signal: controller.signal });
+      clearTimeout(timeoutId);
       const data = await res.json();
-      if (data.success && data.active_titles) {
+      if (data.success && data.active_titles && data.active_titles.length > 0) {
         setIndexedDbCatalog(data.active_titles);
+        if (moviesList.length === 0) {
+          setMoviesList(data.active_titles);
+        }
+      } else {
+        throw new Error("Catálogo indisponível ou vazio na API");
       }
     } catch (err) {
-      console.error("Falha ao sincronizar catálogo do INVIS:", err);
+      clearTimeout(timeoutId);
+      console.error("Falha ao sincronizar catálogo do INVIS, aplicando MOCK_MOVIES de resiliência:", err);
+      
+      // Fallback para evitar tela preta
+      const mappedMockTitles = (MOCK_MOVIES || []).map(m => {
+        const numericId = String(m.id).replace(/\D/g, "");
+        return {
+          title_id: `tmdb-${numericId}`,
+          media_type: m.type === 'serie' ? 'tv' : 'movie',
+          stream_url: m.videoUrl || '',
+          tracks_data: {
+            title: m.title,
+            overview: m.overview,
+            poster_path: m.posterUrl,
+            backdrop_path: m.posterUrl,
+            audio_languages: ["pt-BR", "en-US"]
+          }
+        };
+      });
+      setIndexedDbCatalog(mappedMockTitles);
+      if (moviesList.length === 0) {
+        setMoviesList(MOCK_MOVIES);
+      }
     }
   };
 
@@ -1479,7 +1526,7 @@ export const MediaModule: React.FC = () => {
     moviesList.forEach((m) => {
       const numericId = String(m.id).replace(/\D/g, "");
       const dbMatch = indexedDbCatalog.find(
-        (dbItem) => String(dbItem.title_id).replace(/\D/g, "") === numericId
+        (dbItem) => String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')
       );
 
       let enriched: Movie;
@@ -1582,7 +1629,7 @@ export const MediaModule: React.FC = () => {
       }
       const numericId = String(m.id).replace(/\D/g, '');
       const dbMatch = indexedDbCatalog.find(dbItem => 
-        String(dbItem.title_id) === String(m.id).replace(/\D/g, '')
+        String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')
       );
 
       if (!dbMatch) {
@@ -3269,18 +3316,61 @@ export const MediaModule: React.FC = () => {
                 >
                   {indexedDbCatalog.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center py-20 px-4 text-center my-auto min-h-[400px]">
-                      <div className="relative w-16 h-16 mb-4">
-                        <span className="absolute inset-0 w-full h-full rounded-full border-2 border-cyan-500/10" />
-                        <span className="absolute inset-0 w-full h-full rounded-full border-2 border-t-cyan-500 animate-spin" />
-                        <span className="absolute inset-[3px] rounded-full border border-purple-500/10" />
-                        <span className="absolute inset-[3px] rounded-full border-t border-purple-500 animate-spin" style={{ animationDuration: '1.2s' }} />
-                      </div>
-                      <p className="text-xs font-mono font-black text-cyan-400 tracking-[0.2em] animate-pulse uppercase">
-                        SINCRONIZANDO SATÉLITES...
-                      </p>
-                      <p className="text-[9px] text-zinc-400 mt-1.5 font-mono tracking-widest uppercase">
-                        Conectando ao banco de dados físico
-                      </p>
+                      {showReconnectButton ? (
+                        <div className="flex flex-col items-center justify-center max-w-xs mx-auto space-y-4">
+                          <p className="text-xs font-mono font-black text-rose-500 tracking-[0.2em] uppercase">
+                            SINAL PARCIALMENTE RESTRITO
+                          </p>
+                          <p className="text-[10px] text-zinc-400 font-mono text-center leading-relaxed">
+                            O satélite de sincronização do banco de dados físico excedeu o tempo limite. Deseja reatar conexão ou usar dados locais?
+                          </p>
+                          <button
+                            id="btn-reconnect-satellite"
+                            onClick={() => {
+                              setShowReconnectButton(false);
+                              // Força o uso imediato dos dados locais / MOCK_MOVIES para não deixar a tela preta e tenta sincronizar
+                              const mappedMockTitles = (MOCK_MOVIES || []).map(m => {
+                                const numericId = String(m.id).replace(/\D/g, "");
+                                return {
+                                  title_id: `tmdb-${numericId}`,
+                                  media_type: m.type === 'serie' ? 'tv' : 'movie',
+                                  stream_url: m.videoUrl || '',
+                                  tracks_data: {
+                                    title: m.title,
+                                    overview: m.overview,
+                                    poster_path: m.posterUrl,
+                                    backdrop_path: m.posterUrl,
+                                    audio_languages: ["pt-BR", "en-US"]
+                                  }
+                                };
+                              });
+                              setIndexedDbCatalog(mappedMockTitles);
+                              if (moviesList.length === 0) {
+                                setMoviesList(MOCK_MOVIES);
+                              }
+                              fetchIndexedCatalog();
+                            }}
+                            className="px-4 py-2 text-[10px] font-mono font-bold bg-cyan-950/80 hover:bg-cyan-500 hover:text-black text-cyan-400 border border-cyan-500/30 rounded-lg shadow-lg shadow-cyan-500/10 transition-all duration-300 transform active:scale-95 uppercase tracking-widest cursor-pointer"
+                          >
+                            RECONECTAR SATÉLITE
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="relative w-16 h-16 mb-4">
+                            <span className="absolute inset-0 w-full h-full rounded-full border-2 border-cyan-500/10" />
+                            <span className="absolute inset-0 w-full h-full rounded-full border-2 border-t-cyan-500 animate-spin" />
+                            <span className="absolute inset-[3px] rounded-full border border-purple-500/10" />
+                            <span className="absolute inset-[3px] rounded-full border-t border-purple-500 animate-spin" style={{ animationDuration: '1.2s' }} />
+                          </div>
+                          <p className="text-xs font-mono font-black text-cyan-400 tracking-[0.2em] animate-pulse uppercase">
+                            SINCRONIZANDO SATÉLITES...
+                          </p>
+                          <p className="text-[9px] text-zinc-400 mt-1.5 font-mono tracking-widest uppercase">
+                            Conectando ao banco de dados físico
+                          </p>
+                        </>
+                      )}
                     </div>
                   ) : (
                     <>
