@@ -183,22 +183,31 @@ export const MediaModule: React.FC = () => {
     const dbMatch = indexedDbCatalog.find(dbItem => String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, ''));
 
     if (currentUser?.ddi === '+55') {
+      let isDublado = false;
+      const audioSources: any[] = [];
       if (dbMatch) {
-         const audioLangs = (dbMatch.tracks_data?.audio_languages || dbMatch.audio_languages || dbMatch.audioLanguages || []).map((l: any) => String(l).toLowerCase());
-         const hasPtBr = audioLangs.some((l: string) => l.toLowerCase().includes('pt'));
-         if (hasPtBr) {
-           return (
-             <div className="absolute top-1.5 right-1.5 bg-emerald-500/95 text-white border border-emerald-400/20 font-black text-[7.5px] px-1.5 py-0.5 rounded z-30 uppercase font-sans shadow-[0_0_12px_rgba(16,185,129,0.5)] select-none tracking-widest">
-               DUBLADO
-             </div>
-           );
-         }
+        const dbLangs = dbMatch.tracks_data?.audio_languages || dbMatch.audio_languages || dbMatch.audioLanguages || [];
+        audioSources.push(...dbLangs);
       }
-      return (
-        <div className="absolute top-1.5 right-1.5 bg-[#D4AF37] text-black border border-amber-300/30 font-black text-[7.5px] px-1.5 py-0.5 rounded z-30 uppercase font-sans shadow-[0_0_12px_rgba(212,175,55,0.6)] select-none tracking-widest">
-          LEGENDADO
-        </div>
-      );
+      if (m.audioLanguages) {
+        audioSources.push(...m.audioLanguages);
+      }
+      const audioLangs = audioSources.map((l: any) => String(l).toLowerCase());
+      isDublado = audioLangs.some((l: string) => l.includes('pt') || l.includes('por') || l.includes('dub'));
+
+      if (isDublado) {
+        return (
+          <div className="absolute top-1.5 right-1.5 bg-emerald-500/95 text-white border border-emerald-400/20 font-black text-[7.5px] px-1.5 py-0.5 rounded z-30 uppercase font-sans shadow-[0_0_12px_rgba(16,185,129,0.5)] select-none tracking-widest">
+            DUBLADO
+          </div>
+        );
+      } else {
+        return (
+          <div className="absolute top-1.5 right-1.5 bg-[#D4AF37] text-black border border-amber-300/30 font-black text-[7.5px] px-1.5 py-0.5 rounded z-30 uppercase font-sans shadow-[0_0_12px_rgba(212,175,55,0.6)] select-none tracking-widest">
+            LEGENDADO
+          </div>
+        );
+      }
     }
 
     return isMovieEstrangeiroByDdi(m) ? (

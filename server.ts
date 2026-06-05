@@ -1159,8 +1159,8 @@ async function startServer() {
       return res.status(404).json({ success: false, error: "SINAL INDISPONÍVEL" });
     }
 
-    if (!activeStreamUrl || activeStreamUrl.includes("tears-of-steel")) {
-      console.warn(`[Bouncer] Sinal vazio ou Tears of Steel bloqueado para #${id}. Retornando 404.`);
+    if (!activeStreamUrl) {
+      console.warn(`[Bouncer] Sinal vazio para #${id}. Retornando 404.`);
       return res.status(404).json({ success: false, error: "SINAL INDISPONÍVEL" });
     }
 
@@ -1272,7 +1272,7 @@ async function startServer() {
         }
       }
 
-      if (!mediaSource || !mediaSource.stream_url || mediaSource.stream_url.includes("tears-of-steel")) {
+      if (!mediaSource || !mediaSource.stream_url) {
         return res.status(404).json({ success: false, error: "SINAL INDISPONÍVEL" });
       }
 
@@ -1542,7 +1542,8 @@ async function startServer() {
             }
           },
           auth: {
-            persistSession: false
+            persistSession: false,
+            autoRefreshToken: false
           }
         });
 
