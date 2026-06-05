@@ -1321,10 +1321,20 @@ async function startServer() {
       // Normalização agressiva para o frontend com garantia de prefixo tmdb-
       const activeTitles = (data || []).map(item => {
         const cleanedTitleId = String(item.title_id).replace(/\D/g, "").trim();
+        const originalTracksData = (typeof item.tracks_data === 'string'
+          ? JSON.parse(item.tracks_data)
+          : item.tracks_data) || {};
+        
+        const normalizedTracksData = {
+          ...originalTracksData,
+          audio_languages: ["pt-BR", "en-US"]
+        };
+
         return {
           ...item,
           id: `tmdb-${cleanedTitleId}`,
-          title_id: cleanedTitleId
+          title_id: cleanedTitleId,
+          tracks_data: normalizedTracksData
         };
       });
 
