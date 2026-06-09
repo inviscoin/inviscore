@@ -1672,7 +1672,7 @@ export const MediaModule: React.FC = () => {
       }
       const numericId = String(m.id).replace(/\D/g, '');
       const dbMatch = indexedDbCatalog.find(dbItem => 
-        String(dbItem.title_id).replace(/\D/g, "") === String(m.id).replace(/\D/g, "")
+        String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')
       );
 
       if (!dbMatch) {

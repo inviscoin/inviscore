@@ -1205,9 +1205,9 @@ async function startServer() {
       
       // Normalizador de tipo: se for 'filme' -> 'movie', se for 'serie' -> 'tv'
       let normalizedType = type;
-      if (type === 'filme') {
+      if (type === 'filme' || type === 'movie') {
         normalizedType = 'movie';
-      } else if (type === 'serie') {
+      } else if (type === 'serie' || type === 'tv') {
         normalizedType = 'tv';
       }
       
@@ -1281,7 +1281,7 @@ async function startServer() {
         }
       }
 
-      if (!mediaSource || !mediaSource.stream_url) {
+      if (!mediaSource || !mediaSource.stream_url || mediaSource.stream_url.includes("tears-of-steel")) {
         return res.status(404).json({ success: false, error: "SINAL INDISPONÍVEL" });
       }
 

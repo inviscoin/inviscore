@@ -201,7 +201,7 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
 }) => {
   const { 
     activeBlocks, addBlock, minimizeBlock, restoreBlock, closeBlock, togglePin, swapBlocks, 
-    language, wallet, setWallet, systemStatus, triggerChronCleanup 
+    language, wallet, setWallet, systemStatus, triggerChronCleanup, currentUser
   } = useInvis();
 
   const { 
@@ -279,7 +279,10 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
   };
 
   // Inactivity Screensaver overlay (2 minutes idle)
-  const [isIdle, setIsIdle] = useState(false);
+  const isLoggedIn = !!currentUser;
+  const [showInactivity, setShowInactivity] = useState(false);
+  const isIdle = showInactivity;
+  const setIsIdle = setShowInactivity;
   const [batteryLevel, setBatteryLevel] = useState('98%');
   const [currentTimeStr, setCurrentTimeStr] = useState('12:00:00');
   const [currentDateStr, setCurrentDateStr] = useState('Terça-feira, 19 de Maio');
@@ -453,12 +456,20 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
   const [hasInteracted, setHasInteracted] = useState(false);
 
   useEffect(() => {
-    const handleFirstClick = () => {
-      setHasInteracted(true);
-    };
-    window.addEventListener('click', handleFirstClick);
+    let clickHandler: (() => void) | null = null;
+    
+    const timer = setTimeout(() => {
+      clickHandler = () => {
+        setHasInteracted(true);
+      };
+      window.addEventListener('click', clickHandler);
+    }, 500);
+
     return () => {
-      window.removeEventListener('click', handleFirstClick);
+      clearTimeout(timer);
+      if (clickHandler) {
+        window.removeEventListener('click', clickHandler);
+      }
     };
   }, []);
 
@@ -976,7 +987,7 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
 
       {/* DELICADA INTERACTIVE SCREEN SAVER OVERLAY (PELÍCULA DE DESCANSO - PAGE 43/44) */}
       <AnimatePresence>
-        {isIdle && (
+        {isLoggedIn && showInactivity && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

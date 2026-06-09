@@ -95,11 +95,12 @@ export const LockScreen: React.FC = () => {
       <div className="absolute inset-0 pointer-events-none vignette-pulse" />
 
       {/* Language Selector Indicator in lock stage */}
-      <div className="absolute top-6 right-6 z-50">
+      <div className="absolute top-6 right-6 z-[9999]" style={{ pointerEvents: 'auto' }}>
         <button 
           id="btn_lang_toggle"
           onClick={() => setLangDrawerOpen(!isLangDrawerOpen)}
           className="flex items-center gap-2 px-4 py-2 rounded-full border border-cyan-500/30 bg-black/40 hover:bg-black/80 transition-all text-sm outline-none cursor-pointer"
+          style={{ pointerEvents: 'auto' }}
         >
           <Languages className="w-4 h-4 text-[#00c8ff]" />
           <span>{languagesList.find(l => l.code === language)?.flag}</span>
@@ -231,7 +232,8 @@ export const LockScreen: React.FC = () => {
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={handleAccess}
-                  className="relative w-20 h-20 rounded-full border-2 border-[#00FF80] flex items-center justify-center cursor-pointer overflow-hidden bg-black/40 hover:bg-black/70 transition-all shadow-[0_0_20px_rgba(0,255,128,0.2)] focus:outline-none"
+                  className="relative w-20 h-20 rounded-full border-2 border-[#00FF80] flex items-center justify-center cursor-pointer overflow-hidden bg-black/40 hover:bg-black/70 transition-all shadow-[0_0_20px_rgba(0,255,128,0.2)] focus:outline-none z-[9999]"
+                  style={{ pointerEvents: 'auto' }}
                 >
                   {/* Fingerprint subtle shine */}
                   <span className="absolute inset-0 bg-gradient-to-tr from-cyan-500/10 via-transparent to-emerald-500/20 animate-pulse" />
@@ -243,7 +245,8 @@ export const LockScreen: React.FC = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setLangDrawerOpen(true)}
-                  className="relative px-6 py-3 rounded-xl border border-cyan-500/50 flex items-center justify-center gap-3 cursor-pointer overflow-hidden bg-cyan-950/30 hover:bg-cyan-900/50 transition-all shadow-[0_0_20px_rgba(0,200,255,0.2)] focus:outline-none"
+                  className="relative px-6 py-3 rounded-xl border border-cyan-500/50 flex items-center justify-center gap-3 cursor-pointer overflow-hidden bg-cyan-950/30 hover:bg-cyan-900/50 transition-all shadow-[0_0_20px_rgba(0,200,255,0.2)] focus:outline-none z-[9999]"
+                  style={{ pointerEvents: 'auto' }}
                 >
                   <Globe className="w-5 h-5 text-cyan-400" />
                   <span className="font-mono text-xs text-white uppercase tracking-widest">Select Language</span>
