@@ -474,6 +474,10 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
   }, []);
 
   useEffect(() => {
+    if (!isLoggedIn) {
+      setIsIdle(false);
+      return;
+    }
     if (!hasInteracted) {
       setIsIdle(false);
       return;
@@ -481,10 +485,16 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
 
     let idleTimer: NodeJS.Timeout;
     const resetIdleTimer = () => {
+      if (!isLoggedIn) {
+        setIsIdle(false);
+        return;
+      }
       setIsIdle(false);
       clearTimeout(idleTimer);
       idleTimer = setTimeout(() => {
-        setIsIdle(true);
+        if (isLoggedIn) {
+          setIsIdle(true);
+        }
       }, 25000); // 25 seconds of absolute idleness triggers dynamic Película de Descanso
     };
 
@@ -502,7 +512,7 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
       window.removeEventListener('click', resetIdleTimer);
       clearTimeout(idleTimer);
     };
-  }, [hasInteracted]);
+  }, [hasInteracted, isLoggedIn]);
 
   const renderActiveWidgetIndex = (type: BlockType) => {
     switch (type) {

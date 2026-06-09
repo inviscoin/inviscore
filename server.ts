@@ -1228,13 +1228,13 @@ async function startServer() {
 
       let mediaSource = null;
 
-      // 1. Busca em media_catalog direto no banco aplicando numericId
+      // 1. Busca em media_catalog direto no banco aplicando numericId (supports tmdb- prefix)
       if (!mediaSource) {
         try {
           const { data, error } = await supabase
             .from("media_catalog")
             .select("*")
-            .eq("title_id", numericId)
+            .in("title_id", [numericId, `tmdb-${numericId}`])
             .eq("media_type", catalogType)
             .maybeSingle();
 

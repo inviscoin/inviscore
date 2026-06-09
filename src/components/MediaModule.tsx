@@ -180,7 +180,7 @@ export const MediaModule: React.FC = () => {
     if (m.type === 'trailer') return null;
 
     const numericId = String(m.id).replace(/\D/g, '');
-    const dbMatch = indexedDbCatalog.find(dbItem => String(dbItem.title_id).replace(/\D/g, "") === String(m.id).replace(/\D/g, ""));
+    const dbMatch = indexedDbCatalog.find(dbItem => String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, ''));
 
     if (currentUser?.ddi === '+55') {
       let isDublado = false;
@@ -1026,7 +1026,7 @@ export const MediaModule: React.FC = () => {
       
       // Fallback para evitar tela preta
       const mappedMockTitles = (MOCK_MOVIES || []).map(m => {
-        const numericId = String(m.id).replace(/\D/g, "");
+        const numericId = String(m.id).replace(/\D/g, '');
         return {
           title_id: `tmdb-${numericId}`,
           media_type: m.type === 'serie' ? 'tv' : 'movie',
@@ -1063,7 +1063,7 @@ export const MediaModule: React.FC = () => {
       if (isMounted && indexedDbCatalog.length === 0) {
         console.warn("[Media Handshake WD] Sincronização do catálogo demorou mais que 3s. Liberando MOCK_MOVIES de resiliência.");
         const mappedMockTitles = (MOCK_MOVIES || []).map(m => {
-          const numericId = String(m.id).replace(/\D/g, "");
+          const numericId = String(m.id).replace(/\D/g, '');
           return {
             title_id: `tmdb-${numericId}`,
             media_type: m.type === 'serie' ? 'tv' : 'movie',
@@ -1567,9 +1567,9 @@ export const MediaModule: React.FC = () => {
 
     // 1. Process items from moviesList and enrich with database matches
     moviesList.forEach((m) => {
-      const numericId = String(m.id).replace(/\D/g, "");
+      const numericId = String(m.id).replace(/\D/g, '');
       const dbMatch = indexedDbCatalog.find(
-        (dbItem) => String(dbItem.title_id).replace(/\D/g, "") === String(m.id).replace(/\D/g, "")
+        (dbItem) => String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')
       );
 
       let enriched: Movie;
@@ -1597,7 +1597,7 @@ export const MediaModule: React.FC = () => {
 
     // 2. Add database items that are not present in moviesList
     indexedDbCatalog.forEach((dbItem) => {
-      const numericId = String(dbItem.title_id).replace(/\D/g, "");
+      const numericId = String(dbItem.title_id).replace(/\D/g, '');
       const finalId = `tmdb-${numericId}`;
 
       if (seenIds.has(finalId)) return;
