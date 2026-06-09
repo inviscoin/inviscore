@@ -449,8 +449,25 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
     }
   }, []);
 
-  // Inactivity timeout sensor resetter (simulated 20s for easy testing / evaluation)
+  // Inactivity timeout sensor resetter (simulated 25s for easy testing / evaluation)
+  const [hasInteracted, setHasInteracted] = useState(false);
+
   useEffect(() => {
+    const handleFirstClick = () => {
+      setHasInteracted(true);
+    };
+    window.addEventListener('click', handleFirstClick);
+    return () => {
+      window.removeEventListener('click', handleFirstClick);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasInteracted) {
+      setIsIdle(false);
+      return;
+    }
+
     let idleTimer: NodeJS.Timeout;
     const resetIdleTimer = () => {
       setIsIdle(false);
@@ -463,6 +480,7 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
     window.addEventListener('mousemove', resetIdleTimer);
     window.addEventListener('keydown', resetIdleTimer);
     window.addEventListener('touchstart', resetIdleTimer);
+    window.addEventListener('click', resetIdleTimer);
 
     resetIdleTimer();
 
@@ -470,9 +488,10 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
       window.removeEventListener('mousemove', resetIdleTimer);
       window.removeEventListener('keydown', resetIdleTimer);
       window.removeEventListener('touchstart', resetIdleTimer);
+      window.removeEventListener('click', resetIdleTimer);
       clearTimeout(idleTimer);
     };
-  }, []);
+  }, [hasInteracted]);
 
   const renderActiveWidgetIndex = (type: BlockType) => {
     switch (type) {

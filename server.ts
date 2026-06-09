@@ -1211,7 +1211,7 @@ async function startServer() {
         normalizedType = 'tv';
       }
       
-      const cleanId = String(id).replace(/\D/g, '');
+      const numericId = id.replace(/\D/g, '');
       const userDdi = String(req.query.ddi || "+55"); // Captura o DDI enviado pelo front
       
       const season = req.query.s ? parseInt(String(req.query.s)) : null;
@@ -1228,13 +1228,13 @@ async function startServer() {
 
       let mediaSource = null;
 
-      // 1. Busca em media_catalog direto no banco aplicando cleanId
+      // 1. Busca em media_catalog direto no banco aplicando numericId
       if (!mediaSource) {
         try {
           const { data, error } = await supabase
             .from("media_catalog")
             .select("*")
-            .eq("title_id", cleanId)
+            .eq("title_id", numericId)
             .eq("media_type", catalogType)
             .maybeSingle();
 
@@ -1252,13 +1252,13 @@ async function startServer() {
         }
       }
 
-      // 3. Busca em invis_media_sources aplicando cleanId
+      // 3. Busca em invis_media_sources aplicando numericId
       if (!mediaSource) {
         try {
           let query = supabase
             .from("invis_media_sources")
             .select("*")
-            .eq("media_id", cleanId)
+            .eq("media_id", numericId)
             .eq("media_type", sourcesType);
 
           if (!isMovie) {

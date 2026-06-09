@@ -180,7 +180,7 @@ export const MediaModule: React.FC = () => {
     if (m.type === 'trailer') return null;
 
     const numericId = String(m.id).replace(/\D/g, '');
-    const dbMatch = indexedDbCatalog.find(dbItem => String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, ''));
+    const dbMatch = indexedDbCatalog.find(dbItem => String(dbItem.title_id).replace(/\D/g, "") === String(m.id).replace(/\D/g, ""));
 
     if (currentUser?.ddi === '+55') {
       let isDublado = false;
@@ -1056,6 +1056,40 @@ export const MediaModule: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // 3 seconds initial load watchdog for indexedDbCatalog fallback to avoid screen lock
+  useEffect(() => {
+    let isMounted = true;
+    const fallbackTimer = setTimeout(() => {
+      if (isMounted && indexedDbCatalog.length === 0) {
+        console.warn("[Media Handshake WD] Sincronização do catálogo demorou mais que 3s. Liberando MOCK_MOVIES de resiliência.");
+        const mappedMockTitles = (MOCK_MOVIES || []).map(m => {
+          const numericId = String(m.id).replace(/\D/g, "");
+          return {
+            title_id: `tmdb-${numericId}`,
+            media_type: m.type === 'serie' ? 'tv' : 'movie',
+            stream_url: m.videoUrl || '',
+            tracks_data: {
+              title: m.title,
+              overview: m.overview,
+              poster_path: m.posterUrl,
+              backdrop_path: m.posterUrl,
+              audio_languages: ["pt-BR", "en-US"]
+            }
+          };
+        });
+        setIndexedDbCatalog(mappedMockTitles);
+        if (moviesList.length === 0) {
+          setMoviesList(MOCK_MOVIES);
+        }
+      }
+    }, 3000);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(fallbackTimer);
+    };
+  }, [indexedDbCatalog.length, moviesList.length]);
+
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [moviePlaying, setMoviePlaying] = useState(false);
@@ -1112,7 +1146,7 @@ export const MediaModule: React.FC = () => {
         setDuration(0);
         setAvailableAudioTracks([]); // Reseta faixas de áudios mapeadas para o novo vídeo
         
-        const numericId = selectedMovie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
+        const numericId = selectedMovie.id.replace(/\D/g, '');
         const typePath = (selectedMovie.type === 'serie' || selectedMovie.type === 'tv') ? 'tv' : 'movie';
         
         let extractionUrl = `/api/media/${typePath}/${numericId}`;
@@ -1535,7 +1569,7 @@ export const MediaModule: React.FC = () => {
     moviesList.forEach((m) => {
       const numericId = String(m.id).replace(/\D/g, "");
       const dbMatch = indexedDbCatalog.find(
-        (dbItem) => String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')
+        (dbItem) => String(dbItem.title_id).replace(/\D/g, "") === String(m.id).replace(/\D/g, "")
       );
 
       let enriched: Movie;
@@ -1638,7 +1672,7 @@ export const MediaModule: React.FC = () => {
       }
       const numericId = String(m.id).replace(/\D/g, '');
       const dbMatch = indexedDbCatalog.find(dbItem => 
-        String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')
+        String(dbItem.title_id).replace(/\D/g, "") === String(m.id).replace(/\D/g, "")
       );
 
       if (!dbMatch) {
