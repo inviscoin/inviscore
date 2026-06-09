@@ -917,26 +917,6 @@ export const MOCK_BOOKS: Book[] = [
 
 export const MOCK_MOVIES: Movie[] = [
   {
-    id: 'm1',
-    title: 'Cosmic Journey - Sci-Fi Trailer',
-    year: 2026,
-    posterUrl: 'https://images.unsplash.com/photo-1461360370896-922624d12aa1?w=400&auto=format&fit=crop&q=80',
-    overview: 'Uma odisseia épica pelos confins de galáxias inexploradas, expandindo nossa compreensão de física de fendas no tempo.',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Ricky for fallback / mock playback
-    type: 'trailer',
-    status: true
-  },
-  {
-    id: 'm2',
-    title: 'The Silent Sea - Ocean Documental',
-    year: 2025,
-    posterUrl: 'https://images.unsplash.com/photo-1518826778787-43cd2931156b?w=400&auto=format&fit=crop&q=80',
-    overview: 'Exploração visual dos canais submarinos intocados sob a perspectiva do eco-balanço marinho.',
-    videoUrl: 'https://www.youtube.com/embed/S263370JNby',
-    type: 'filme',
-    status: true
-  },
-  {
     id: 'm3',
     title: 'Cyberpunk Neon Matrix Series',
     year: 2026,

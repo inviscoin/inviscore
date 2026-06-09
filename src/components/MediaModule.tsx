@@ -3325,61 +3325,18 @@ export const MediaModule: React.FC = () => {
                 >
                   {indexedDbCatalog.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center py-20 px-4 text-center my-auto min-h-[400px]">
-                      {showReconnectButton ? (
-                        <div className="flex flex-col items-center justify-center max-w-xs mx-auto space-y-4">
-                          <p className="text-xs font-mono font-black text-rose-500 tracking-[0.2em] uppercase">
-                            SINAL PARCIALMENTE RESTRITO
-                          </p>
-                          <p className="text-[10px] text-zinc-400 font-mono text-center leading-relaxed">
-                            O satélite de sincronização do banco de dados físico excedeu o tempo limite. Deseja reatar conexão ou usar dados locais?
-                          </p>
-                          <button
-                            id="btn-reconnect-satellite"
-                            onClick={() => {
-                              setShowReconnectButton(false);
-                              // Força o uso imediato dos dados locais / MOCK_MOVIES para não deixar a tela preta e tenta sincronizar
-                              const mappedMockTitles = (MOCK_MOVIES || []).map(m => {
-                                const numericId = String(m.id).replace(/\D/g, "");
-                                return {
-                                  title_id: `tmdb-${numericId}`,
-                                  media_type: m.type === 'serie' ? 'tv' : 'movie',
-                                  stream_url: m.videoUrl || '',
-                                  tracks_data: {
-                                    title: m.title,
-                                    overview: m.overview,
-                                    poster_path: m.posterUrl,
-                                    backdrop_path: m.posterUrl,
-                                    audio_languages: ["pt-BR", "en-US"]
-                                  }
-                                };
-                              });
-                              setIndexedDbCatalog(mappedMockTitles);
-                              if (moviesList.length === 0) {
-                                setMoviesList(MOCK_MOVIES);
-                              }
-                              fetchIndexedCatalog();
-                            }}
-                            className="px-4 py-2 text-[10px] font-mono font-bold bg-cyan-950/80 hover:bg-cyan-500 hover:text-black text-cyan-400 border border-cyan-500/30 rounded-lg shadow-lg shadow-cyan-500/10 transition-all duration-300 transform active:scale-95 uppercase tracking-widest cursor-pointer"
-                          >
-                            RECONECTAR SATÉLITE
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="relative w-16 h-16 mb-4">
-                            <span className="absolute inset-0 w-full h-full rounded-full border-2 border-cyan-500/10" />
-                            <span className="absolute inset-0 w-full h-full rounded-full border-2 border-t-cyan-500 animate-spin" />
-                            <span className="absolute inset-[3px] rounded-full border border-purple-500/10" />
-                            <span className="absolute inset-[3px] rounded-full border-t border-purple-500 animate-spin" style={{ animationDuration: '1.2s' }} />
-                          </div>
-                          <p className="text-xs font-mono font-black text-cyan-400 tracking-[0.2em] animate-pulse uppercase">
-                            SINCRONIZANDO SATÉLITES...
-                          </p>
-                          <p className="text-[9px] text-zinc-400 mt-1.5 font-mono tracking-widest uppercase">
-                            Conectando ao banco de dados físico
-                          </p>
-                        </>
-                      )}
+                      <div className="relative w-16 h-16 mb-4">
+                        <span className="absolute inset-0 w-full h-full rounded-full border-2 border-cyan-500/10" />
+                        <span className="absolute inset-0 w-full h-full rounded-full border-2 border-t-cyan-500 animate-spin" />
+                        <span className="absolute inset-[3px] rounded-full border border-purple-500/10" />
+                        <span className="absolute inset-[3px] rounded-full border-t border-purple-500 animate-spin" style={{ animationDuration: '1.2s' }} />
+                      </div>
+                      <p className="text-xs font-mono font-black text-cyan-400 tracking-[0.2em] animate-pulse uppercase">
+                        SINCRONIZANDO SATÉLITES...
+                      </p>
+                      <p className="text-[9px] text-zinc-400 mt-1.5 font-mono tracking-widest uppercase">
+                        Conectando ao banco de dados físico
+                      </p>
                     </div>
                   ) : (
                     <>

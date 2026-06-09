@@ -1,3 +1,4 @@
+// @ts-nocheck
 import server from "../dist/server.cjs";
 
 export default async function (req: any, res: any) {
