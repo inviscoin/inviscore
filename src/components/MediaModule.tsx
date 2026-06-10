@@ -985,7 +985,7 @@ export const MediaModule: React.FC = () => {
     return `/api/media/${typePath}/${numericId}?${params.toString()}`;
   };
 
-   const [moviesList, setMoviesList] = useState<Movie[]>([]);
+   const [moviesList, setMoviesList] = useState<Movie[]>(CINEMA_ROSTER);
   const [indexedDbCatalog, setIndexedDbCatalog] = useState<any[]>([]);
   const [showReconnectButton, setShowReconnectButton] = useState(false);
 
@@ -1469,14 +1469,28 @@ export const MediaModule: React.FC = () => {
     const seenIds = new Set<string>(CINEMA_ROSTER.map(item => item.id));
 
     (moviesList || []).forEach((m) => {
-      if (m && m.id && !seenIds.has(m.id)) {
-        seenIds.add(m.id);
-        list.push(m);
+      if (!m || !m.id) return;
+      const dbMatch = indexedDbCatalog.find(
+        (dbItem) => String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')
+      );
+
+      let enriched: Movie = { ...m };
+      if (dbMatch) {
+         enriched = {
+           ...m,
+           audioLanguages: dbMatch.tracks_data?.audio_languages || m.audioLanguages || ["PT-BR", "EN"],
+           streamUrl: dbMatch.stream_url || m.streamUrl
+         };
+      }
+
+      if (enriched.id && !seenIds.has(enriched.id)) {
+        seenIds.add(enriched.id);
+        list.push(enriched);
       }
     });
 
     return list;
-  }, [moviesList]);
+  }, [moviesList, indexedDbCatalog]);
 
   // Active Timer to cycle featured trailers in background every 7 seconds
   useEffect(() => {
