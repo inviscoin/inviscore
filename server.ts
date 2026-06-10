@@ -1281,7 +1281,7 @@ async function startServer() {
         }
       }
 
-      if (!mediaSource || !mediaSource.stream_url || mediaSource.stream_url.includes("tears-of-steel")) {
+      if (!mediaSource || !mediaSource.stream_url) {
         return res.status(404).json({ success: false, error: "SINAL INDISPONÍVEL" });
       }
 
