@@ -986,53 +986,7 @@ export const MediaModule: React.FC = () => {
   };
 
    const [moviesList, setMoviesList] = useState<Movie[]>(CINEMA_ROSTER);
-  const [indexedDbCatalog, setIndexedDbCatalog] = useState<any[]>([]);
   const [showReconnectButton, setShowReconnectButton] = useState(false);
-
-  const fetchIndexedCatalog = async () => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-    try {
-      const res = await fetch('/api/media/catalog/active', { signal: controller.signal });
-      clearTimeout(timeoutId);
-      const data = await res.json();
-      if (data.success && data.active_titles && data.active_titles.length > 0) {
-        setIndexedDbCatalog(data.active_titles);
-      } else {
-        throw new Error("Catálogo indisponível ou vazio na API");
-      }
-    } catch (err) {
-      clearTimeout(timeoutId);
-      console.warn("Falha ao sincronizar catálogo do INVIS, aplicando resiliência de fallback para tabelas:", err);
-      
-      // Fallback robusto para evitar travamento da UI por erro 42P01
-      const mappedMockTitles = (CINEMA_ROSTER || []).map(m => {
-        const numericId = String(m.id).replace(/\D/g, '');
-        return {
-          title_id: `tmdb-${numericId}`,
-          media_type: m.type === 'serie' ? 'tv' : 'movie',
-          stream_url: m.videoUrl || '',
-          tracks_data: {
-            title: m.title,
-            overview: m.overview,
-            poster_path: m.posterUrl,
-            backdrop_path: m.posterUrl,
-            audio_languages: ["PT-BR", "EN"]
-          }
-        };
-      });
-      setIndexedDbCatalog(mappedMockTitles);
-    }
-  };
-
-  useEffect(() => {
-    fetchIndexedCatalog();
-    const interval = setInterval(() => {
-      fetchIndexedCatalog();
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
@@ -1422,7 +1376,6 @@ export const MediaModule: React.FC = () => {
               });
               return combined;
             });
-            fetchIndexedCatalog(); // Sincronizo de forma reativa e instantânea
           }
         }
       } catch (err) {
@@ -1511,27 +1464,14 @@ export const MediaModule: React.FC = () => {
 
     (moviesList || []).forEach((m) => {
       if (!m || !m.id) return;
-      const dbMatch = indexedDbCatalog.find(
-        (dbItem) => String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')
-      );
-
-      let enriched: Movie = { ...m };
-      if (dbMatch) {
-         enriched = {
-           ...m,
-           audioLanguages: dbMatch.tracks_data?.audio_languages || m.audioLanguages || ["PT-BR", "EN"],
-           streamUrl: dbMatch.stream_url || m.streamUrl
-         };
-      }
-
-      if (enriched.id && !seenIds.has(enriched.id)) {
-        seenIds.add(enriched.id);
-        list.push(enriched);
+      if (m.id && !seenIds.has(m.id)) {
+        seenIds.add(m.id);
+        list.push(m);
       }
     });
 
     return list;
-  }, [moviesList, indexedDbCatalog]);
+  }, [moviesList]);
 
   // Active Timer to cycle featured trailers in background every 7 seconds
   useEffect(() => {
@@ -1543,28 +1483,7 @@ export const MediaModule: React.FC = () => {
   }, [expandedSection, selectedMovie, mappedMovies]);
 
   const memoizedCategories = React.useMemo(() => {
-    const filterByDbExistenceAndDdi = (m: Movie) => {
-      if (m.id.startsWith("c") || m.id.startsWith("s") || m.id.startsWith("p")) {
-        return true;
-      }
-      
-      const numericId = String(m.id).replace(/\D/g, '');
-      const dbMatch = indexedDbCatalog.find(dbItem => 
-        String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')
-      );
-
-      if (!dbMatch) {
-        if (searchQuery.trim() !== "") {
-          return true; // Exibe resultados de busca do TMDB na busca mesmo se vazios
-        }
-        return false;
-      }
-
-      return true;
-    };
-
-    // Aplica o filtro mestre sobre o catálogo indexado (Source of Truth)
-    const strictCatalog = mappedMovies.filter(filterByDbExistenceAndDdi);
+    const strictCatalog = mappedMovies;
 
     return {
       filtered: strictCatalog.filter(m => {
@@ -1588,7 +1507,7 @@ export const MediaModule: React.FC = () => {
       prime: strictCatalog.filter(m => m.platform === 'prime'),
       globoplay: strictCatalog.filter(m => m.platform === 'globoplay')
     };
-  }, [moviesList, indexedDbCatalog, searchQuery, currentUser, selectedCategory, scopeFiltering, mappedMovies]);
+  }, [moviesList, searchQuery, currentUser, selectedCategory, scopeFiltering, mappedMovies]);
 
   // Return titles straight from backend which supports batching naturally ~50
   const getExpandedTitlesForCategory = (category: string) => {

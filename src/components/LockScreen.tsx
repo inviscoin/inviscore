@@ -113,8 +113,15 @@ export const LockScreen: React.FC = () => {
         className="z-10 flex flex-col items-center justify-center text-center px-4"
       >
         {/* Realístic SVG Lock (Cadeado Matemático) */}
-        <div className="relative w-48 h-48 md:w-56 md:h-56 mb-8 flex items-center justify-center">
-          <svg viewBox="0 0 200 200" className="w-full h-full filter drop-shadow-[0_0_20px_rgba(0,200,255,0.4)] overflow-visible">
+        <div 
+          className="relative w-48 h-48 md:w-56 md:h-56 mb-8 flex items-center justify-center z-[9999]" 
+          style={{ pointerEvents: 'auto', zIndex: 9999, position: 'relative' }}
+        >
+          <svg 
+            viewBox="0 0 200 200" 
+            className="w-full h-full filter drop-shadow-[0_0_20px_rgba(0,200,255,0.4)] overflow-visible cursor-pointer"
+            style={{ pointerEvents: 'auto', zIndex: 9999, position: 'relative' }}
+          >
             <defs>
               <linearGradient id="metal-grad" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#1a1a40" />
@@ -156,6 +163,7 @@ export const LockScreen: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 className="cursor-pointer"
                 onClick={handleAccess}
+                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
               >
                 <path d="M100,105 A15,15 0 0,1 115,120" stroke="#00FF80" fill="none" strokeWidth="2" strokeLinecap="round" />
                 <path d="M90,102 A25,25 0 0,1 125,125" stroke="#00FF80" fill="none" strokeWidth="2" opacity="0.7" />
