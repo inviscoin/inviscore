@@ -91,9 +91,6 @@ export const LockScreen: React.FC = () => {
         }}
       />
 
-      {/* Vignette-pulse Overlay */}
-      <div className="absolute inset-0 pointer-events-none vignette-pulse" />
-
       {/* Language Selector Indicator in lock stage */}
       <div className="absolute top-6 right-6 z-[9999]" style={{ pointerEvents: 'auto', zIndex: 9999, position: 'relative' }}>
         <button 
