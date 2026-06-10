@@ -449,26 +449,7 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
     }
   }, []);
 
-  // Inactivity timeout sensor resetter (simulated 25s for easy testing / evaluation)
-  const [hasInteracted, setHasInteracted] = useState(false);
 
-  useEffect(() => {
-    let clickHandler: (() => void) | null = null;
-    
-    const timer = setTimeout(() => {
-      clickHandler = () => {
-        setHasInteracted(true);
-      };
-      window.addEventListener('click', clickHandler);
-    }, 500);
-
-    return () => {
-      clearTimeout(timer);
-      if (clickHandler) {
-        window.removeEventListener('click', clickHandler);
-      }
-    };
-  }, []);
 
 
 

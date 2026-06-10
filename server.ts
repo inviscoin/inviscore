@@ -1203,15 +1203,16 @@ async function startServer() {
       console.log('[DEBUG] Tentando buscar mídias para DDI:', req.query.ddi);
       const { type, id } = req.params;
       
-      // Normalizador de tipo: se for 'filme' -> 'movie', se for 'serie' -> 'tv'
-      let normalizedType = type;
-      if (type === 'filme' || type === 'movie') {
+      const cleanId = id.replace(/\D/g, '');
+      const cleanType = String(type).trim().toLowerCase();
+      let normalizedType = 'movie';
+      if (cleanType === 'filme' || cleanType === 'movie') {
         normalizedType = 'movie';
-      } else if (type === 'serie' || type === 'tv') {
+      } else if (cleanType === 'serie' || cleanType === 'tv') {
         normalizedType = 'tv';
       }
       
-      const numericId = id.replace(/\D/g, '');
+      const numericId = cleanId;
       const userDdi = String(req.query.ddi || "+55"); // Captura o DDI enviado pelo front
       
       const season = req.query.s ? parseInt(String(req.query.s)) : null;
