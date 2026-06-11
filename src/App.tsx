@@ -154,23 +154,6 @@ function AppContent() {
 
   return (
     <div id="invis_app_root" className="h-screen flex flex-col bg-[#050508] text-white relative overflow-hidden antialiased">
-      {/* RESET MATRIZ floating button */}
-      <button
-        id="btn_reset_matriz"
-        onClick={() => {
-          document.cookie.split(';').forEach(c => {
-            document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
-          });
-          localStorage.clear();
-          sessionStorage.clear();
-          window.location.href = '/';
-        }}
-        className="fixed top-4 right-4 z-[999999] px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-mono text-[10px] font-bold uppercase rounded border border-red-400/30 transition-all pointer-events-auto"
-        style={{ pointerEvents: 'auto', position: 'fixed' }}
-      >
-        RESET MATRIZ
-      </button>
-
       {/* Upper persistent Navigation Bar (Shown on dashboard only) */}
       <AnimatePresence>
         {currentStage === 'dashboard' && isNavVisible && (

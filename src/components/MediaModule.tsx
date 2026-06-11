@@ -180,7 +180,7 @@ export const MediaModule: React.FC = () => {
     if (m.type === 'trailer') return null;
 
     const numericId = String(m.id).replace(/\D/g, '');
-    const dbMatch = null;
+    const dbMatch = indexedDbCatalog.find(dbItem => String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, ''));
 
     if (currentUser?.ddi === '+55') {
       let isDublado = false;
@@ -985,8 +985,76 @@ export const MediaModule: React.FC = () => {
     return `/api/media/${typePath}/${numericId}?${params.toString()}`;
   };
 
-   const [moviesList, setMoviesList] = useState<Movie[]>(CINEMA_ROSTER);
+   const [moviesList, setMoviesList] = useState<Movie[]>([]);
+  const [indexedDbCatalog, setIndexedDbCatalog] = useState<any[]>([]);
   const [showReconnectButton, setShowReconnectButton] = useState(false);
+
+  // Watchdog for reconnection button - 10 seconds timeout
+  useEffect(() => {
+    if (indexedDbCatalog.length > 0) {
+      setShowReconnectButton(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      if (indexedDbCatalog.length === 0) {
+        setShowReconnectButton(true);
+      }
+    }, 10000);
+
+    return () => clearTimeout(timer);
+  }, [indexedDbCatalog.length]);
+
+  const fetchIndexedCatalog = async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    try {
+      const res = await fetch('/api/media/catalog/active', { signal: controller.signal });
+      clearTimeout(timeoutId);
+      const data = await res.json();
+      if (data.success && data.active_titles && data.active_titles.length > 0) {
+        setIndexedDbCatalog(data.active_titles);
+        if (moviesList.length === 0) {
+          setMoviesList(data.active_titles);
+        }
+      } else {
+        throw new Error("Catálogo indisponível ou vazio na API");
+      }
+    } catch (err) {
+      clearTimeout(timeoutId);
+      console.error("Falha ao sincronizar catálogo do INVIS, aplicando MOCK_MOVIES de resiliência:", err);
+      
+      // Fallback para evitar tela preta
+      const mappedMockTitles = (MOCK_MOVIES || []).map(m => {
+        const numericId = String(m.id).replace(/\D/g, "");
+        return {
+          title_id: `tmdb-${numericId}`,
+          media_type: m.type === 'serie' ? 'tv' : 'movie',
+          stream_url: m.videoUrl || '',
+          tracks_data: {
+            title: m.title,
+            overview: m.overview,
+            poster_path: m.posterUrl,
+            backdrop_path: m.posterUrl,
+            audio_languages: ["pt-BR", "en-US"]
+          }
+        };
+      });
+      setIndexedDbCatalog(mappedMockTitles);
+      if (moviesList.length === 0) {
+        setMoviesList(MOCK_MOVIES);
+      }
+    }
+  };
+
+  // Busca os títulos reais no banco ao montar o componente com retry/sincronia reativa de 30 segundos
+  useEffect(() => {
+    fetchIndexedCatalog();
+    const interval = setInterval(() => {
+      fetchIndexedCatalog();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
@@ -1044,7 +1112,7 @@ export const MediaModule: React.FC = () => {
         setDuration(0);
         setAvailableAudioTracks([]); // Reseta faixas de áudios mapeadas para o novo vídeo
         
-        const numericId = selectedMovie.id.replace(/\D/g, '');
+        const numericId = selectedMovie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
         const typePath = (selectedMovie.type === 'serie' || selectedMovie.type === 'tv') ? 'tv' : 'movie';
         
         let extractionUrl = `/api/media/${typePath}/${numericId}`;
@@ -1376,6 +1444,7 @@ export const MediaModule: React.FC = () => {
               });
               return combined;
             });
+            fetchIndexedCatalog(); // Sincronizo de forma reativa e instantânea
           }
         }
       } catch (err) {
@@ -1457,21 +1526,101 @@ export const MediaModule: React.FC = () => {
     }));
   };
 
-  // Dynamic mapping of database index (with CINEMA_ROSTER fallback) and moviesList to Movie Objects (single source of truth)
+  // Dynamic mapping of database index (indexedDbCatalog) and moviesList to Movie Objects (single source of truth)
   const mappedMovies = React.useMemo(() => {
-    const list: Movie[] = [...CINEMA_ROSTER];
-    const seenIds = new Set<string>(CINEMA_ROSTER.map(item => item.id));
+    const list: Movie[] = [];
+    const seenIds = new Set<string>();
 
-    (moviesList || []).forEach((m) => {
-      if (!m || !m.id) return;
-      if (m.id && !seenIds.has(m.id)) {
-        seenIds.add(m.id);
-        list.push(m);
+    // 1. Process items from moviesList and enrich with database matches
+    moviesList.forEach((m) => {
+      const numericId = String(m.id).replace(/\D/g, "");
+      const dbMatch = indexedDbCatalog.find(
+        (dbItem) => String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')
+      );
+
+      let enriched: Movie;
+      if (dbMatch) {
+        const mediaType = dbMatch.media_type === "tv" || dbMatch.media_type === "serie" ? "serie" : "filme";
+        enriched = {
+          ...m,
+          id: `tmdb-${numericId}`,
+          type: mediaType,
+          audioLanguages: dbMatch.tracks_data?.audio_languages || m.audioLanguages || ["PT-BR", "EN"],
+          streamUrl: dbMatch.stream_url || m.streamUrl
+        };
+      } else {
+        enriched = {
+          ...m,
+          id: m.id.startsWith("c") || m.id.startsWith("s") || m.id.startsWith("p") ? m.id : `tmdb-${numericId}`
+        };
+      }
+
+      if (enriched.id && !seenIds.has(enriched.id)) {
+        seenIds.add(enriched.id);
+        list.push(enriched);
       }
     });
 
+    // 2. Add database items that are not present in moviesList
+    indexedDbCatalog.forEach((dbItem) => {
+      const numericId = String(dbItem.title_id).replace(/\D/g, "");
+      const finalId = `tmdb-${numericId}`;
+
+      if (seenIds.has(finalId)) return;
+
+      const mediaType = dbItem.media_type === "tv" || dbItem.media_type === "serie" ? "serie" : "filme";
+      const title = dbItem.tracks_data?.title || dbItem.tracks_data?.name || `Título #${numericId}`;
+      const overview = dbItem.tracks_data?.overview || "Título indexado de forma resiliente no banco Supabase pelo crawler INVIS.";
+      const posterPath = dbItem.tracks_data?.poster_path || dbItem.tracks_data?.posterUrl;
+      const posterUrl = posterPath 
+        ? (posterPath.startsWith("http") ? posterPath : `https://image.tmdb.org/t/p/w500${posterPath}`)
+        : `https://images.unsplash.com/photo-1542204172-e7052809186d?w=500&auto=format&fit=crop&q=80`;
+
+      const backdropPath = dbItem.tracks_data?.backdrop_path || dbItem.tracks_data?.backdropUrl;
+      const backdropUrl = backdropPath
+        ? (backdropPath.startsWith("http") ? backdropPath : `https://image.tmdb.org/t/p/w1280${backdropPath}`)
+        : `https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1200&auto=format&fit=crop&q=40`;
+
+      let platform: "netflix" | "disney" | "hbo" | "prime" | "globoplay" = "netflix";
+      const dbPlatform = dbItem.tracks_data?.platform?.toLowerCase();
+      if (dbPlatform?.includes("netflix")) platform = "netflix";
+      else if (dbPlatform?.includes("disney")) platform = "disney";
+      else if (dbPlatform?.includes("hbo")) platform = "hbo";
+      else if (dbPlatform?.includes("prime")) platform = "prime";
+      else if (dbPlatform?.includes("globoplay")) platform = "globoplay";
+      else {
+        const idx = parseInt(numericId) || 0;
+        const platforms: ("netflix" | "disney" | "hbo" | "prime" | "globoplay")[] = ["netflix", "disney", "hbo", "prime", "globoplay"];
+        platform = platforms[idx % platforms.length];
+      }
+
+      const rating = dbItem.tracks_data?.rating || dbItem.tracks_data?.vote_average || 8.0;
+      const category = dbItem.tracks_data?.category || (mediaType === "serie" ? "Série" : "Filme");
+
+      const item: Movie = {
+        id: finalId,
+        title,
+        year: dbItem.tracks_data?.release_date ? new Date(dbItem.tracks_data.release_date).getFullYear() : 2024,
+        posterUrl,
+        backdropUrl,
+        overview,
+        videoUrl: "https://www.youtube.com/embed/gCcx85zlye4",
+        type: mediaType,
+        status: true,
+        category,
+        platform,
+        rating,
+        audioLanguages: dbItem.tracks_data?.audio_languages || ["PT-BR", "EN"],
+        totalDuration: dbItem.tracks_data?.runtime ? `${dbItem.tracks_data.runtime}m` : "120m",
+        streamUrl: dbItem.stream_url
+      };
+
+      seenIds.add(finalId);
+      list.push(item);
+    });
+
     return list;
-  }, [moviesList]);
+  }, [indexedDbCatalog, moviesList]);
 
   // Active Timer to cycle featured trailers in background every 7 seconds
   useEffect(() => {
@@ -1483,7 +1632,32 @@ export const MediaModule: React.FC = () => {
   }, [expandedSection, selectedMovie, mappedMovies]);
 
   const memoizedCategories = React.useMemo(() => {
-    const strictCatalog = mappedMovies;
+    const filterByDbExistenceAndDdi = (m: Movie) => {
+      if (m.id.startsWith("c") || m.id.startsWith("s") || m.id.startsWith("p")) {
+        return true;
+      }
+      const numericId = String(m.id).replace(/\D/g, '');
+      const dbMatch = indexedDbCatalog.find(dbItem => 
+        String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')
+      );
+
+      if (!dbMatch) {
+        if (searchQuery.trim() !== "") {
+          return true; // Exibe resultados de busca retornados da API do TMDB mesmo se não indexados
+        }
+        return false;
+      }
+
+      // Filtro DDI: Se o usuário for DDI +55, não oculte o filme na vitrine se ele não for dublado; em vez disso, exiba-o com o selo 'LEGENDADO' para que o catálogo nunca pareça vazio.
+      if (currentUser?.ddi === '+55') {
+        return true;
+      }
+
+      return true;
+    };
+
+    // Aplica o filtro mestre sobre o catálogo indexado (Source of Truth)
+    const strictCatalog = mappedMovies.filter(filterByDbExistenceAndDdi);
 
     return {
       filtered: strictCatalog.filter(m => {
@@ -1507,7 +1681,7 @@ export const MediaModule: React.FC = () => {
       prime: strictCatalog.filter(m => m.platform === 'prime'),
       globoplay: strictCatalog.filter(m => m.platform === 'globoplay')
     };
-  }, [moviesList, searchQuery, currentUser, selectedCategory, scopeFiltering, mappedMovies]);
+  }, [moviesList, indexedDbCatalog, searchQuery, currentUser, selectedCategory, scopeFiltering, mappedMovies]);
 
   // Return titles straight from backend which supports batching naturally ~50
   const getExpandedTitlesForCategory = (category: string) => {
@@ -3149,20 +3323,63 @@ export const MediaModule: React.FC = () => {
                   className="space-y-6 flex-1 overflow-y-auto no-scrollbar pr-1 flex flex-col"
                   onScroll={handleContainerScroll}
                 >
-                  {mappedMovies.length === 0 ? (
+                  {indexedDbCatalog.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center py-20 px-4 text-center my-auto min-h-[400px]">
-                      <div className="relative w-16 h-16 mb-4">
-                        <span className="absolute inset-0 w-full h-full rounded-full border-2 border-cyan-500/10" />
-                        <span className="absolute inset-0 w-full h-full rounded-full border-2 border-t-cyan-500 animate-spin" />
-                        <span className="absolute inset-[3px] rounded-full border border-purple-500/10" />
-                        <span className="absolute inset-[3px] rounded-full border-t border-purple-500 animate-spin" style={{ animationDuration: '1.2s' }} />
-                      </div>
-                      <p className="text-xs font-mono font-black text-cyan-400 tracking-[0.2em] animate-pulse uppercase">
-                        SINCRONIZANDO SATÉLITES...
-                      </p>
-                      <p className="text-[9px] text-zinc-400 mt-1.5 font-mono tracking-widest uppercase">
-                        Conectando ao banco de dados físico
-                      </p>
+                      {showReconnectButton ? (
+                        <div className="flex flex-col items-center justify-center max-w-xs mx-auto space-y-4">
+                          <p className="text-xs font-mono font-black text-rose-500 tracking-[0.2em] uppercase">
+                            SINAL PARCIALMENTE RESTRITO
+                          </p>
+                          <p className="text-[10px] text-zinc-400 font-mono text-center leading-relaxed">
+                            O satélite de sincronização do banco de dados físico excedeu o tempo limite. Deseja reatar conexão ou usar dados locais?
+                          </p>
+                          <button
+                            id="btn-reconnect-satellite"
+                            onClick={() => {
+                              setShowReconnectButton(false);
+                              // Força o uso imediato dos dados locais / MOCK_MOVIES para não deixar a tela preta e tenta sincronizar
+                              const mappedMockTitles = (MOCK_MOVIES || []).map(m => {
+                                const numericId = String(m.id).replace(/\D/g, "");
+                                return {
+                                  title_id: `tmdb-${numericId}`,
+                                  media_type: m.type === 'serie' ? 'tv' : 'movie',
+                                  stream_url: m.videoUrl || '',
+                                  tracks_data: {
+                                    title: m.title,
+                                    overview: m.overview,
+                                    poster_path: m.posterUrl,
+                                    backdrop_path: m.posterUrl,
+                                    audio_languages: ["pt-BR", "en-US"]
+                                  }
+                                };
+                              });
+                              setIndexedDbCatalog(mappedMockTitles);
+                              if (moviesList.length === 0) {
+                                setMoviesList(MOCK_MOVIES);
+                              }
+                              fetchIndexedCatalog();
+                            }}
+                            className="px-4 py-2 text-[10px] font-mono font-bold bg-cyan-950/80 hover:bg-cyan-500 hover:text-black text-cyan-400 border border-cyan-500/30 rounded-lg shadow-lg shadow-cyan-500/10 transition-all duration-300 transform active:scale-95 uppercase tracking-widest cursor-pointer"
+                          >
+                            RECONECTAR SATÉLITE
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="relative w-16 h-16 mb-4">
+                            <span className="absolute inset-0 w-full h-full rounded-full border-2 border-cyan-500/10" />
+                            <span className="absolute inset-0 w-full h-full rounded-full border-2 border-t-cyan-500 animate-spin" />
+                            <span className="absolute inset-[3px] rounded-full border border-purple-500/10" />
+                            <span className="absolute inset-[3px] rounded-full border-t border-purple-500 animate-spin" style={{ animationDuration: '1.2s' }} />
+                          </div>
+                          <p className="text-xs font-mono font-black text-cyan-400 tracking-[0.2em] animate-pulse uppercase">
+                            SINCRONIZANDO SATÉLITES...
+                          </p>
+                          <p className="text-[9px] text-zinc-400 mt-1.5 font-mono tracking-widest uppercase">
+                            Conectando ao banco de dados físico
+                          </p>
+                        </>
+                      )}
                     </div>
                   ) : (
                     <>

@@ -91,13 +91,15 @@ export const LockScreen: React.FC = () => {
         }}
       />
 
+      {/* Vignette-pulse Overlay */}
+      <div className="absolute inset-0 pointer-events-none vignette-pulse" />
+
       {/* Language Selector Indicator in lock stage */}
-      <div className="absolute top-6 right-6 z-[9999]" style={{ pointerEvents: 'auto', zIndex: 9999, position: 'relative' }}>
+      <div className="absolute top-6 right-6 z-50">
         <button 
           id="btn_lang_toggle"
           onClick={() => setLangDrawerOpen(!isLangDrawerOpen)}
-          className="flex items-center gap-2 px-4 py-2 rounded-full border border-cyan-500/30 bg-black/40 hover:bg-black/80 transition-all text-sm outline-none cursor-pointer z-[9999]"
-          style={{ pointerEvents: 'auto', zIndex: 9999, position: 'relative' }}
+          className="flex items-center gap-2 px-4 py-2 rounded-full border border-cyan-500/30 bg-black/40 hover:bg-black/80 transition-all text-sm outline-none cursor-pointer"
         >
           <Languages className="w-4 h-4 text-[#00c8ff]" />
           <span>{languagesList.find(l => l.code === language)?.flag}</span>
@@ -113,15 +115,8 @@ export const LockScreen: React.FC = () => {
         className="z-10 flex flex-col items-center justify-center text-center px-4"
       >
         {/* Realístic SVG Lock (Cadeado Matemático) */}
-        <div 
-          className="relative w-48 h-48 md:w-56 md:h-56 mb-8 flex items-center justify-center z-[9999]" 
-          style={{ pointerEvents: 'auto', zIndex: 9999, position: 'relative' }}
-        >
-          <svg 
-            viewBox="0 0 200 200" 
-            className="w-full h-full filter drop-shadow-[0_0_20px_rgba(0,200,255,0.4)] overflow-visible cursor-pointer"
-            style={{ pointerEvents: 'auto', zIndex: 9999, position: 'relative' }}
-          >
+        <div className="relative w-48 h-48 md:w-56 md:h-56 mb-8 flex items-center justify-center">
+          <svg viewBox="0 0 200 200" className="w-full h-full filter drop-shadow-[0_0_20px_rgba(0,200,255,0.4)] overflow-visible">
             <defs>
               <linearGradient id="metal-grad" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#1a1a40" />
@@ -163,7 +158,6 @@ export const LockScreen: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 className="cursor-pointer"
                 onClick={handleAccess}
-                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
               >
                 <path d="M100,105 A15,15 0 0,1 115,120" stroke="#00FF80" fill="none" strokeWidth="2" strokeLinecap="round" />
                 <path d="M90,102 A25,25 0 0,1 125,125" stroke="#00FF80" fill="none" strokeWidth="2" opacity="0.7" />
@@ -237,8 +231,7 @@ export const LockScreen: React.FC = () => {
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={handleAccess}
-                  className="relative w-20 h-20 rounded-full border-2 border-[#00FF80] flex items-center justify-center cursor-pointer overflow-hidden bg-black/40 hover:bg-black/70 transition-all shadow-[0_0_20px_rgba(0,255,128,0.2)] focus:outline-none z-[9999]"
-                  style={{ pointerEvents: 'auto', zIndex: 9999, position: 'relative' }}
+                  className="relative w-20 h-20 rounded-full border-2 border-[#00FF80] flex items-center justify-center cursor-pointer overflow-hidden bg-black/40 hover:bg-black/70 transition-all shadow-[0_0_20px_rgba(0,255,128,0.2)] focus:outline-none"
                 >
                   {/* Fingerprint subtle shine */}
                   <span className="absolute inset-0 bg-gradient-to-tr from-cyan-500/10 via-transparent to-emerald-500/20 animate-pulse" />
@@ -250,8 +243,7 @@ export const LockScreen: React.FC = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setLangDrawerOpen(true)}
-                  className="relative px-6 py-3 rounded-xl border border-cyan-500/50 flex items-center justify-center gap-3 cursor-pointer overflow-hidden bg-cyan-950/30 hover:bg-cyan-900/50 transition-all shadow-[0_0_20px_rgba(0,200,255,0.2)] focus:outline-none z-[9999]"
-                  style={{ pointerEvents: 'auto', zIndex: 9999, position: 'relative' }}
+                  className="relative px-6 py-3 rounded-xl border border-cyan-500/50 flex items-center justify-center gap-3 cursor-pointer overflow-hidden bg-cyan-950/30 hover:bg-cyan-900/50 transition-all shadow-[0_0_20px_rgba(0,200,255,0.2)] focus:outline-none"
                 >
                   <Globe className="w-5 h-5 text-cyan-400" />
                   <span className="font-mono text-xs text-white uppercase tracking-widest">Select Language</span>

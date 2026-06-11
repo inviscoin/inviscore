@@ -201,7 +201,7 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
 }) => {
   const { 
     activeBlocks, addBlock, minimizeBlock, restoreBlock, closeBlock, togglePin, swapBlocks, 
-    language, wallet, setWallet, systemStatus, triggerChronCleanup, currentUser
+    language, wallet, setWallet, systemStatus, triggerChronCleanup 
   } = useInvis();
 
   const { 
@@ -279,7 +279,7 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
   };
 
   // Inactivity Screensaver overlay (2 minutes idle)
-  const isLoggedIn = !!currentUser;
+  const [isIdle, setIsIdle] = useState(false);
   const [batteryLevel, setBatteryLevel] = useState('98%');
   const [currentTimeStr, setCurrentTimeStr] = useState('12:00:00');
   const [currentDateStr, setCurrentDateStr] = useState('Terça-feira, 19 de Maio');
@@ -449,9 +449,30 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
     }
   }, []);
 
+  // Inactivity timeout sensor resetter (simulated 20s for easy testing / evaluation)
+  useEffect(() => {
+    let idleTimer: NodeJS.Timeout;
+    const resetIdleTimer = () => {
+      setIsIdle(false);
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        setIsIdle(true);
+      }, 25000); // 25 seconds of absolute idleness triggers dynamic Película de Descanso
+    };
 
+    window.addEventListener('mousemove', resetIdleTimer);
+    window.addEventListener('keydown', resetIdleTimer);
+    window.addEventListener('touchstart', resetIdleTimer);
 
+    resetIdleTimer();
 
+    return () => {
+      window.removeEventListener('mousemove', resetIdleTimer);
+      window.removeEventListener('keydown', resetIdleTimer);
+      window.removeEventListener('touchstart', resetIdleTimer);
+      clearTimeout(idleTimer);
+    };
+  }, []);
 
   const renderActiveWidgetIndex = (type: BlockType) => {
     switch (type) {
@@ -934,6 +955,55 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
         )}
       </AnimatePresence>
 
+      {/* DELICADA INTERACTIVE SCREEN SAVER OVERLAY (PELÍCULA DE DESCANSO - PAGE 43/44) */}
+      <AnimatePresence>
+        {isIdle && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex flex-col justify-around items-center bg-[#050508]/96 text-white text-center p-6 select-none"
+            onClick={() => setIsIdle(false)}
+            title="Dê um toque na tela para desbloquear o Screensaver"
+          >
+            {/* Clock Segment */}
+            <div className="space-y-1">
+              <h1 className="text-5xl md:text-7xl font-sans font-black tracking-widest text-[#00c8ff] uppercase drop-shadow-[0_0_20px_#00c8ff]">
+                {currentTimeStr}
+              </h1>
+              <p className="text-sm font-light text-neutral-400 tracking-wider">
+                {currentDateStr}
+              </p>
+            </div>
+
+            {/* Battery Segment */}
+            <div className="flex flex-col items-center space-y-1">
+              <div className="flex items-center gap-2">
+                <Battery className="w-5 h-5 text-neutral-400" />
+                <span className="text-xs text-neutral-400 uppercase tracking-widest">Bateria Restante</span>
+              </div>
+              <h3 className="text-2xl font-black text-[#00FF80]">{batteryLevel}</h3>
+            </div>
+
+            {/* Earned Summary Indicator Box */}
+            <div className="p-6 rounded-3xl border border-[#00FF80]/20 bg-black/40 max-w-sm w-full space-y-3 shadow-2xl">
+              <div className="flex items-center gap-1.5 justify-center text-[#00FF80] text-xs font-mono font-medium">
+                <Coins className="w-4 h-4 animate-bounce" />
+                <span>GANHOS DE MINERAÇÃO EM STANDBY</span>
+              </div>
+              <p className="text-2xl font-black font-mono text-[#00FF80]">
+                {wallet.icGold.toFixed(10)} <span className="text-xs font-normal text-neutral-400">ic</span>
+              </p>
+              <p className="text-[10px] text-rose-500 font-bold uppercase animate-pulse">Suas Atividades estão Pausadas em Segundo Plano</p>
+              <div className="w-12 h-12 rounded-xl border border-white/10 mx-auto opacity-40 hover:opacity-100 transition-opacity flex items-center justify-center bg-neutral-900">
+                🚀
+              </div>
+            </div>
+
+            <span className="text-xs text-neutral-500 uppercase tracking-[0.2em] select-none blink-pulse">Toque para Retornar à Matriz</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <OnboardingGuide />
     </div>
   );

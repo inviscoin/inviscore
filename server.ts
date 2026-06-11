@@ -1203,16 +1203,15 @@ async function startServer() {
       console.log('[DEBUG] Tentando buscar mídias para DDI:', req.query.ddi);
       const { type, id } = req.params;
       
-      const cleanId = id.replace(/\D/g, '');
-      const cleanType = String(type).trim().toLowerCase();
-      let normalizedType = 'movie';
-      if (cleanType === 'filme' || cleanType === 'movie') {
+      // Normalizador de tipo: se for 'filme' -> 'movie', se for 'serie' -> 'tv'
+      let normalizedType = type;
+      if (type === 'filme') {
         normalizedType = 'movie';
-      } else if (cleanType === 'serie' || cleanType === 'tv') {
+      } else if (type === 'serie') {
         normalizedType = 'tv';
       }
       
-      const numericId = cleanId;
+      const cleanId = String(id).replace(/\D/g, '');
       const userDdi = String(req.query.ddi || "+55"); // Captura o DDI enviado pelo front
       
       const season = req.query.s ? parseInt(String(req.query.s)) : null;
@@ -1229,13 +1228,13 @@ async function startServer() {
 
       let mediaSource = null;
 
-      // 1. Busca em media_catalog direto no banco aplicando numericId (supports tmdb- prefix)
+      // 1. Busca em media_catalog direto no banco aplicando cleanId
       if (!mediaSource) {
         try {
           const { data, error } = await supabase
             .from("media_catalog")
             .select("*")
-            .in("title_id", [numericId, `tmdb-${numericId}`])
+            .eq("title_id", cleanId)
             .eq("media_type", catalogType)
             .maybeSingle();
 
@@ -1253,13 +1252,13 @@ async function startServer() {
         }
       }
 
-      // 3. Busca em invis_media_sources aplicando numericId
+      // 3. Busca em invis_media_sources aplicando cleanId
       if (!mediaSource) {
         try {
           let query = supabase
             .from("invis_media_sources")
             .select("*")
-            .eq("media_id", numericId)
+            .eq("media_id", cleanId)
             .eq("media_type", sourcesType);
 
           if (!isMovie) {
@@ -1283,17 +1282,7 @@ async function startServer() {
       }
 
       if (!mediaSource || !mediaSource.stream_url) {
-        // Fallback resiliente de sinal para garantir que o catálogo não pare e evite erro 404
-        mediaSource = {
-          stream_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-          audio_languages: ['pt-BR', 'en-US'],
-          resolution: "1080p Ultra HD (Sinal de Emergência)",
-          subtitles: [],
-          tracks_data: { 
-            title: "Sinal Emergencial", 
-            audio_languages: ['pt-BR', 'en-US'] 
-          }
-        };
+        return res.status(404).json({ success: false, error: "SINAL INDISPONÍVEL" });
       }
 
       // Determina a trilha prioritária antes de enviar ao Player [5]
