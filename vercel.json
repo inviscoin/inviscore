@@ -3,6 +3,21 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [{ "source": "/api/(.*)", "destination": "/api/index" }],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-src 'self' https://vidsrc.me https://embed.su https://vidsrc.cc https://vidsrc.pro https://superflixapi.dev https://*.vidsrc.me https://*.embed.su https://*.livekit.cloud;"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        }
+      ]
+    }
+  ],
   "functions": {
     "api/index.ts": {
       "includeFiles": "server.ts"

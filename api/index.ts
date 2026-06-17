@@ -1,7 +1,5 @@
 import server from "../server";
 
 export default async function (req: any, res: any) {
-  // If the server exports a default async function, await it.
-  const app = await (server.default || server)(req, res);
-  return app;
+  return server(req, res);
 }

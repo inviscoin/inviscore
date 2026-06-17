@@ -1,15 +1,47 @@
-import React, { useState, useEffect, useRef } from 'react';
-import Hls from 'hls.js';
-import { useInvis, MOCK_MOVIES } from '../context/InvisContext';
-import { usePipSync } from '../hooks/usePipSync';
-import { Movie } from '../types';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Volume1, Sun, Clock, 
-  Info, AlertCircle, Heart, Film, Share2, Compass, CheckCircle2, 
-  RotateCcw, RotateCw, Eye, Search, Maximize2, Scissors, Music, Tv, ShieldAlert, Star,
-  RefreshCw, AlertTriangle, Terminal, ThumbsUp, ArrowLeft, MonitorSmartphone, MessageSquare, Type, Settings, Users
-} from 'lucide-react';
+import React, { useState, useEffect, useRef } from "react";
+import Hls from "hls.js";
+import { useInvis, MOCK_MOVIES } from "../context/InvisContext";
+import { usePipSync } from "../hooks/usePipSync";
+import { Movie } from "../types";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  VolumeX,
+  Volume1,
+  Sun,
+  Clock,
+  Info,
+  AlertCircle,
+  Heart,
+  Film,
+  Share2,
+  Compass,
+  CheckCircle2,
+  RotateCcw,
+  RotateCw,
+  Eye,
+  Search,
+  Maximize2,
+  Scissors,
+  Music,
+  Tv,
+  ShieldAlert,
+  Star,
+  RefreshCw,
+  AlertTriangle,
+  Terminal,
+  ThumbsUp,
+  ArrowLeft,
+  MonitorSmartphone,
+  MessageSquare,
+  Type,
+  Settings,
+  Users,
+} from "lucide-react";
 
 // SPEC 1: Dynamic High-Fidelity Mock Collections
 interface VideoClip {
@@ -17,57 +49,67 @@ interface VideoClip {
   title: string;
   duration: string;
   thumbnailUrl: string;
-  status: 'online' | 'monitored' | 'offline';
+  status: "online" | "monitored" | "offline";
   description: string;
   tags: string[];
 }
 
 const MOCK_CLIPS: VideoClip[] = [
   {
-    id: 'c1',
-    title: 'INVIS Multi-Agent Synapses Live Feed',
-    duration: '03:45',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&auto=format&fit=crop&q=80',
-    status: 'online',
-    description: 'Fluxo contínuo de dados gerados pelos robôs de mineração na rede de Cloud Run e Supabase.',
-    tags: ['ia', 'mining', 'realtime']
+    id: "c1",
+    title: "INVIS Multi-Agent Synapses Live Feed",
+    duration: "03:45",
+    thumbnailUrl:
+      "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&auto=format&fit=crop&q=80",
+    status: "online",
+    description:
+      "Fluxo contínuo de dados gerados pelos robôs de mineração na rede de Cloud Run e Supabase.",
+    tags: ["ia", "mining", "realtime"],
   },
   {
-    id: 'c2',
-    title: 'Cyberpunk Lo-Fi Chillbeats for Hackers',
-    duration: '15:20',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&auto=format&fit=crop&q=80',
-    status: 'monitored',
-    description: 'Sintetizadores pulsantes de baixa frequência para manter as ondas cerebrais sincronizadas.',
-    tags: ['lofi', 'synth', 'focus']
+    id: "c2",
+    title: "Cyberpunk Lo-Fi Chillbeats for Hackers",
+    duration: "15:20",
+    thumbnailUrl:
+      "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&auto=format&fit=crop&q=80",
+    status: "monitored",
+    description:
+      "Sintetizadores pulsantes de baixa frequência para manter as ondas cerebrais sincronizadas.",
+    tags: ["lofi", "synth", "focus"],
   },
   {
-    id: 'c3',
-    title: 'Virtual Mars Genesis-8 Propulsion Glitch',
-    duration: '06:12',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&auto=format&fit=crop&q=80',
-    status: 'offline',
-    description: 'Logs recuperados do simulador mostrando desvio gravitacional em órbita elíptica.',
-    tags: ['sci-fi', 'log', 'mars']
+    id: "c3",
+    title: "Virtual Mars Genesis-8 Propulsion Glitch",
+    duration: "06:12",
+    thumbnailUrl:
+      "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&auto=format&fit=crop&q=80",
+    status: "offline",
+    description:
+      "Logs recuperados do simulador mostrando desvio gravitacional em órbita elíptica.",
+    tags: ["sci-fi", "log", "mars"],
   },
   {
-    id: 'c4',
-    title: 'Quantum Teleportation & Lattice Keys',
-    duration: '04:15',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&auto=format&fit=crop&q=80',
-    status: 'online',
-    description: 'Explicação detalhada sobre acoplamento de spins e canais criptográficos tolerantes a ruídos.',
-    tags: ['quantum', 'security', 'tech']
+    id: "c4",
+    title: "Quantum Teleportation & Lattice Keys",
+    duration: "04:15",
+    thumbnailUrl:
+      "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&auto=format&fit=crop&q=80",
+    status: "online",
+    description:
+      "Explicação detalhada sobre acoplamento de spins e canais criptográficos tolerantes a ruídos.",
+    tags: ["quantum", "security", "tech"],
   },
   {
-    id: 'c5',
-    title: 'Deep Abyss Bioluminescence Echo Study',
-    duration: '08:40',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&auto=format&fit=crop&q=80',
-    status: 'online',
-    description: 'Escanografia sonar de profundas fendas marinhas capturando assinaturas fotônicas primárias.',
-    tags: ['ocean', 'sonar', 'relax']
-  }
+    id: "c5",
+    title: "Deep Abyss Bioluminescence Echo Study",
+    duration: "08:40",
+    thumbnailUrl:
+      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&auto=format&fit=crop&q=80",
+    status: "online",
+    description:
+      "Escanografia sonar de profundas fendas marinhas capturando assinaturas fotônicas primárias.",
+    tags: ["ocean", "sonar", "relax"],
+  },
 ];
 
 interface Song {
@@ -81,53 +123,72 @@ interface Song {
 
 const MOCK_SONGS: Song[] = [
   {
-    id: 's1',
-    title: 'Artificial Dopamine',
-    artist: 'Invis Core Orchestra',
+    id: "s1",
+    title: "Artificial Dopamine",
+    artist: "Invis Core Orchestra",
     duration: 160,
-    coverUrl: 'https://images.unsplash.com/photo-1614149162883-504ce4d13909?w=400&auto=format&fit=crop&q=80',
+    coverUrl:
+      "https://images.unsplash.com/photo-1614149162883-504ce4d13909?w=400&auto=format&fit=crop&q=80",
     lyrics: [
-      { t: 0, text: '[Instrumental Waves Pulsing]' },
-      { t: 5, text: 'Codificando as sombras da madrugada digital...' },
-      { t: 10, text: 'O silêncio se disfaz como cobre reluzente...' },
-      { t: 15, text: 'Dois cliques na moeda, a roleta começa a girar...' },
-      { t: 20, text: 'Inviscore flui de volta ao núcleo persistente...' },
-      { t: 25, text: '[Equalizador Neon com Picos de Energia]' },
-      { t: 30, text: 'Sentindo a eletricidade correndo nas nossas mãos...' },
-      { t: 40, text: 'Dopamina pura em tempo real...' },
-      { t: 55, text: '[Sinfonia de Sintetizador 3D]' },
-      { t: 80, text: 'Pontes flutuantes ligando a Terra à nuvem...' },
-      { t: 100, text: 'Glow neon roxo cruzando a retina...' },
-      { t: 120, text: 'Ativando os canais satélites agora...' },
-      { t: 140, text: 'Sincronizados e infinitos no vácuo de Marte...' },
-      { t: 155, text: '[Outro - Circuito Desligando]' }
-    ]
+      { t: 0, text: "[Instrumental Waves Pulsing]" },
+      { t: 5, text: "Codificando as sombras da madrugada digital..." },
+      { t: 10, text: "O silêncio se disfaz como cobre reluzente..." },
+      { t: 15, text: "Dois cliques na moeda, a roleta começa a girar..." },
+      { t: 20, text: "Inviscore flui de volta ao núcleo persistente..." },
+      { t: 25, text: "[Equalizador Neon com Picos de Energia]" },
+      { t: 30, text: "Sentindo a eletricidade correndo nas nossas mãos..." },
+      { t: 40, text: "Dopamina pura em tempo real..." },
+      { t: 55, text: "[Sinfonia de Sintetizador 3D]" },
+      { t: 80, text: "Pontes flutuantes ligando a Terra à nuvem..." },
+      { t: 100, text: "Glow neon roxo cruzando a retina..." },
+      { t: 120, text: "Ativando os canais satélites agora..." },
+      { t: 140, text: "Sincronizados e infinitos no vácuo de Marte..." },
+      { t: 155, text: "[Outro - Circuito Desligando]" },
+    ],
   },
   {
-    id: 's2',
-    title: 'Resonance Cascade',
-    artist: 'Cyber Shaman',
+    id: "s2",
+    title: "Resonance Cascade",
+    artist: "Cyber Shaman",
     duration: 180,
-    coverUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400&auto=format&fit=crop&q=80',
+    coverUrl:
+      "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400&auto=format&fit=crop&q=80",
     lyrics: [
-      { t: 0, text: '[Heavy Synth Resonance Intro]' },
-      { t: 8, text: 'Trilhas de circuitos integrados acendendo...' },
-      { t: 18, text: 'Uma raposa vigia o galinheiro lá fora...' },
-      { t: 28, text: 'WebRTC sinalizando frequências no ar...' },
-      { t: 38, text: 'Ondas espectrais roxas iluminando o terminal...' },
-      { t: 48, text: '[Solo de Guitarra Holográfica]' },
-      { t: 70, text: 'Processamento digital de alta fidelidade...' },
-      { t: 90, text: 'Nível VIP ativado por telemetria...' },
-      { t: 120, text: 'BPM subindo aos limites da rede...' },
-      { t: 150, text: 'Relaxamento profundo induzido por máquina...' },
-      { t: 175, text: '[Fade Out]' }
-    ]
-  }
+      { t: 0, text: "[Heavy Synth Resonance Intro]" },
+      { t: 8, text: "Trilhas de circuitos integrados acendendo..." },
+      { t: 18, text: "Uma raposa vigia o galinheiro lá fora..." },
+      { t: 28, text: "WebRTC sinalizando frequências no ar..." },
+      { t: 38, text: "Ondas espectrais roxas iluminando o terminal..." },
+      { t: 48, text: "[Solo de Guitarra Holográfica]" },
+      { t: 70, text: "Processamento digital de alta fidelidade..." },
+      { t: 90, text: "Nível VIP ativado por telemetria..." },
+      { t: 120, text: "BPM subindo aos limites da rede..." },
+      { t: 150, text: "Relaxamento profundo induzido por máquina..." },
+      { t: 175, text: "[Fade Out]" },
+    ],
+  },
 ];
 
 export const MediaModule: React.FC = () => {
-  const { currentUser, closeBlock, addTransaction, mediaSubTab, setMediaHubSelectorOpen, addBlock, activeBlocks, mediaResumeTrigger, swapBlocks, setMediaIsPlaying } = useInvis();
-  const { isMediaPipMode, togglePipMode, isTransitioning, showPipModal, setShowPipModal } = usePipSync();
+  const {
+    currentUser,
+    closeBlock,
+    addTransaction,
+    mediaSubTab,
+    setMediaHubSelectorOpen,
+    addBlock,
+    activeBlocks,
+    mediaResumeTrigger,
+    swapBlocks,
+    setMediaIsPlaying,
+  } = useInvis();
+  const {
+    isMediaPipMode,
+    togglePipMode,
+    isTransitioning,
+    showPipModal,
+    setShowPipModal,
+  } = usePipSync();
   const [selectedEmbedServer, setSelectedEmbedServer] = useState<number>(0);
 
   const hlsInstanceRef = useRef<Hls | null>(null);
@@ -136,40 +197,65 @@ export const MediaModule: React.FC = () => {
   const changeAudioTrack = (trackIndex: number) => {
     if (hlsInstanceRef.current) {
       hlsInstanceRef.current.audioTrack = trackIndex;
-      console.log(`[INVIS PLAYER] Faixa de áudio alterada para o índice: ${trackIndex}`);
+      console.log(
+        `[INVIS PLAYER] Faixa de áudio alterada para o índice: ${trackIndex}`,
+      );
     }
   };
 
   // Helper to determine if a media item is in a foreign language under user's DDI
   const isMovieEstrangeiroByDdi = (m: Movie) => {
-    const ddi = currentUser?.ddi?.trim() || '';
-    let userLangCode = 'PT-BR';
-    
-    if (ddi === '+55') userLangCode = 'PT-BR';
-    else if (['+54', '+56', '+34', '+52', '+57', '+51', '+58', '+593', '+595', '+598', '+502', '+503', '+504', '+505', '+506', '+507', '+1939', '+1787'].includes(ddi)) userLangCode = 'ES';
-    else if (ddi === '+86' || ddi === '+852' || ddi === '+853') userLangCode = 'ZH';
-    else if (ddi === '+81') userLangCode = 'JA';
-    else if (ddi === '+82') userLangCode = 'KO';
-    else if (ddi === '+33') userLangCode = 'FR';
-    else if (ddi === '+49') userLangCode = 'DE';
-    else if (ddi === '+39') userLangCode = 'IT';
+    const ddi = currentUser?.ddi?.trim() || "";
+    let userLangCode = "PT-BR";
+
+    if (ddi === "+55") userLangCode = "PT-BR";
+    else if (
+      [
+        "+54",
+        "+56",
+        "+34",
+        "+52",
+        "+57",
+        "+51",
+        "+58",
+        "+593",
+        "+595",
+        "+598",
+        "+502",
+        "+503",
+        "+504",
+        "+505",
+        "+506",
+        "+507",
+        "+1939",
+        "+1787",
+      ].includes(ddi)
+    )
+      userLangCode = "ES";
+    else if (ddi === "+86" || ddi === "+852" || ddi === "+853")
+      userLangCode = "ZH";
+    else if (ddi === "+81") userLangCode = "JA";
+    else if (ddi === "+82") userLangCode = "KO";
+    else if (ddi === "+33") userLangCode = "FR";
+    else if (ddi === "+49") userLangCode = "DE";
+    else if (ddi === "+39") userLangCode = "IT";
     else {
-      if (typeof navigator !== 'undefined') {
+      if (typeof navigator !== "undefined") {
         const navLang = navigator.language.toLowerCase();
-        if (navLang.startsWith('pt')) userLangCode = 'PT-BR';
-        else if (navLang.startsWith('es')) userLangCode = 'ES';
-        else if (navLang.startsWith('zh')) userLangCode = 'ZH';
-        else if (navLang.startsWith('ja')) userLangCode = 'JA';
-        else if (navLang.startsWith('ko')) userLangCode = 'KO';
-        else if (navLang.startsWith('fr')) userLangCode = 'FR';
-        else if (navLang.startsWith('de')) userLangCode = 'DE';
-        else if (navLang.startsWith('it')) userLangCode = 'IT';
-        else userLangCode = 'EN';
+        if (navLang.startsWith("pt")) userLangCode = "PT-BR";
+        else if (navLang.startsWith("es")) userLangCode = "ES";
+        else if (navLang.startsWith("zh")) userLangCode = "ZH";
+        else if (navLang.startsWith("ja")) userLangCode = "JA";
+        else if (navLang.startsWith("ko")) userLangCode = "KO";
+        else if (navLang.startsWith("fr")) userLangCode = "FR";
+        else if (navLang.startsWith("de")) userLangCode = "DE";
+        else if (navLang.startsWith("it")) userLangCode = "IT";
+        else userLangCode = "EN";
       } else {
-        userLangCode = 'EN';
+        userLangCode = "EN";
       }
     }
-    
+
     if (m.audioLanguages && m.audioLanguages.length > 0) {
       return !m.audioLanguages.includes(userLangCode);
     }
@@ -177,23 +263,38 @@ export const MediaModule: React.FC = () => {
   };
 
   const renderAudioBadge = (m: Movie) => {
-    if (m.type === 'trailer') return null;
+    if (m.type === "trailer") return null;
 
-    const numericId = String(m.id).replace(/\D/g, '');
-    const dbMatch = indexedDbCatalog.find(dbItem => String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, ''));
+    if (catalogLoaded && indexedDbCatalog.length === 0) {
+      return null; // DB_TIMEOUT degraded mode sem badges
+    }
 
-    if (currentUser?.ddi === '+55') {
+    const numericId = String(m.id).replace(/\D/g, "");
+    const dbMatch = indexedDbCatalog.find(
+      (dbItem) =>
+        String(dbItem.title_id).replace(/\D/g, "") ===
+        String(m.id).replace(/\D/g, ""),
+    );
+
+    if (currentUser?.ddi === "+55") {
       let isDublado = false;
       const audioSources: any[] = [];
       if (dbMatch) {
-        const dbLangs = dbMatch.tracks_data?.audio_languages || dbMatch.audio_languages || dbMatch.audioLanguages || [];
+        const dbLangs =
+          dbMatch.tracks_data?.audio_languages ||
+          dbMatch.audio_languages ||
+          dbMatch.audioLanguages ||
+          [];
         audioSources.push(...dbLangs);
       }
       if (m.audioLanguages) {
         audioSources.push(...m.audioLanguages);
       }
       const audioLangs = audioSources.map((l: any) => String(l).toLowerCase());
-      isDublado = audioLangs.some((l: string) => l.includes('pt') || l.includes('por') || l.includes('dub'));
+      isDublado = audioLangs.some(
+        (l: string) =>
+          l.includes("pt") || l.includes("por") || l.includes("dub"),
+      );
 
       if (isDublado) {
         return (
@@ -231,32 +332,34 @@ export const MediaModule: React.FC = () => {
 
   // Turn off PIP automatically if this is the only block left
   useEffect(() => {
-    const visibleCount = activeBlocks.filter(b => !b.minimized).length;
+    const visibleCount = activeBlocks.filter((b) => !b.minimized).length;
     if (visibleCount === 1 && isMediaPipMode) {
       togglePipMode(false);
     }
   }, [activeBlocks, isMediaPipMode, togglePipMode]);
 
   // Expanded Hub Section: 'clips' (YouTube Style), 'music' (Audio Hub), 'movies' (Netflix Hub), or null (Interactive Menu Modal)
-  const [expandedSection, setExpandedSection] = useState<'clips' | 'music' | 'movies' | null>(() => {
-    if (mediaSubTab === 'videotube') return 'clips';
-    if (mediaSubTab === 'movies') return 'movies';
-    if (mediaSubTab === 'music') return 'music';
+  const [expandedSection, setExpandedSection] = useState<
+    "clips" | "music" | "movies" | null
+  >(() => {
+    if (mediaSubTab === "videotube") return "clips";
+    if (mediaSubTab === "movies") return "movies";
+    if (mediaSubTab === "music") return "music";
     return null;
   });
 
   // Synchronize dynamic tab selection from overlay with internal state
   useEffect(() => {
-    if (mediaSubTab === 'videotube') {
-      setExpandedSection('clips');
-    } else if (mediaSubTab === 'movies') {
-      setExpandedSection('movies');
-    } else if (mediaSubTab === 'music') {
-      setExpandedSection('music');
+    if (mediaSubTab === "videotube") {
+      setExpandedSection("clips");
+    } else if (mediaSubTab === "movies") {
+      setExpandedSection("movies");
+    } else if (mediaSubTab === "music") {
+      setExpandedSection("music");
     }
   }, [mediaSubTab]);
 
-  const isCompact = activeBlocks.filter(b => !b.minimized).length > 1;
+  const isCompact = activeBlocks.filter((b) => !b.minimized).length > 1;
 
   // General state for visual animations
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
@@ -265,23 +368,25 @@ export const MediaModule: React.FC = () => {
   const handleOuterBackdropClick = (e: React.MouseEvent) => {
     // Only dismiss if the click is truly on the outer background and no section is maximized or player is open
     if (e.target === e.currentTarget && expandedSection === null) {
-      closeBlock('media');
+      closeBlock("media");
     }
   };
 
   // --- GENERAL SECURITY & CODING INTEGRITY (SPEC PAGE 19: HARDENING) ---
   useEffect(() => {
-    if (expandedSection === 'movies') {
+    if (expandedSection === "movies") {
       const handleKeyDown = (e: KeyboardEvent) => {
         // Blocks F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S
         if (
-          e.code === 'F12' ||
-          (e.ctrlKey && e.shiftKey && e.code === 'KeyI') ||
-          (e.ctrlKey && e.code === 'KeyU') ||
-          (e.ctrlKey && e.code === 'KeyS')
+          e.code === "F12" ||
+          (e.ctrlKey && e.shiftKey && e.code === "KeyI") ||
+          (e.ctrlKey && e.code === "KeyU") ||
+          (e.ctrlKey && e.code === "KeyS")
         ) {
           e.preventDefault();
-          alert('Sinal do Sistema: Modo de Proteção Ativo. Ofuscação de origem ativada.');
+          alert(
+            "Sinal do Sistema: Modo de Proteção Ativo. Ofuscação de origem ativada.",
+          );
         }
       };
 
@@ -289,11 +394,11 @@ export const MediaModule: React.FC = () => {
         e.preventDefault();
       };
 
-      window.addEventListener('keydown', handleKeyDown);
-      window.addEventListener('contextmenu', handleContextMenu);
+      window.addEventListener("keydown", handleKeyDown);
+      window.addEventListener("contextmenu", handleContextMenu);
       return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-        window.removeEventListener('contextmenu', handleContextMenu);
+        window.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("contextmenu", handleContextMenu);
       };
     }
   }, [expandedSection]);
@@ -310,7 +415,7 @@ export const MediaModule: React.FC = () => {
   const [hoveredClipId, setHoveredClipId] = useState<string | null>(null);
   const [showVolumeIndicator, setShowVolumeIndicator] = useState(false);
   const [showBrightnessIndicator, setShowBrightnessIndicator] = useState(false);
-  const [clipCategory, setClipCategory] = useState<string>('Tendências');
+  const [clipCategory, setClipCategory] = useState<string>("Tendências");
   const [npcMiningActive, setNpcMiningActive] = useState(false);
   const [showClipMetadataDrawer, setShowClipMetadataDrawer] = useState(false);
   const [adminMenuClip, setAdminMenuClip] = useState<VideoClip | null>(null);
@@ -323,7 +428,7 @@ export const MediaModule: React.FC = () => {
     let interval: NodeJS.Timeout;
     if (clipPlaying && selectedClip && !showBumperAd) {
       interval = setInterval(() => {
-        setClipProgress(prev => (prev >= 100 ? 0 : prev + 1));
+        setClipProgress((prev) => (prev >= 100 ? 0 : prev + 1));
       }, 3000);
     }
     return () => clearInterval(interval);
@@ -332,7 +437,7 @@ export const MediaModule: React.FC = () => {
   useEffect(() => {
     if (showBumperAd) {
       const countdown = setInterval(() => {
-        setBumperCountdown(prev => {
+        setBumperCountdown((prev) => {
           if (prev <= 1) {
             setShowBumperAd(false);
             return 6;
@@ -375,13 +480,14 @@ export const MediaModule: React.FC = () => {
       const newMined: VideoClip = {
         id: `c_mined_${Date.now()}`,
         title: `Clube Privado: Sinais de ${clipCategory}`,
-        duration: '05:40',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&auto=format&fit=crop&q=80',
-        status: 'monitored',
+        duration: "05:40",
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&auto=format&fit=crop&q=80",
+        status: "monitored",
         description: `Link de streaming exposto coletado automaticamente pelos mineradores virtuais de IA baseados no canal ${clipCategory}.`,
-        tags: ['npc-mine', 'satelite', 'inviscore']
+        tags: ["npc-mine", "satelite", "inviscore"],
       };
-      setClipsList(prev => [newMined, ...prev]);
+      setClipsList((prev) => [newMined, ...prev]);
     }, 2500);
   };
 
@@ -393,7 +499,7 @@ export const MediaModule: React.FC = () => {
   const [songProgress, setSongProgress] = useState(0);
   const [songVolume, setSongVolume] = useState(70);
   const [isBuffering, setIsBuffering] = useState(false);
-  const [musicMood, setMusicMood] = useState('foco'); // 'foco' | 'relaxamento' | 'energia'
+  const [musicMood, setMusicMood] = useState("foco"); // 'foco' | 'relaxamento' | 'energia'
   const currentSong = MOCK_SONGS[activeSongIndex];
 
   // Song progress timeline simulation
@@ -401,7 +507,7 @@ export const MediaModule: React.FC = () => {
     let interval: NodeJS.Timeout;
     if (songPlaying && !isBuffering) {
       interval = setInterval(() => {
-        setSongProgress(prev => {
+        setSongProgress((prev) => {
           if (prev >= currentSong.duration) {
             // Next track
             handleNextSong();
@@ -419,7 +525,7 @@ export const MediaModule: React.FC = () => {
     setIsBuffering(true);
     setTimeout(() => {
       setIsBuffering(false);
-      setActiveSongIndex(prev => (prev + 1) % MOCK_SONGS.length);
+      setActiveSongIndex((prev) => (prev + 1) % MOCK_SONGS.length);
       setSongProgress(0);
     }, 1500); // 3D Buffering rings delay simulation
   };
@@ -429,7 +535,9 @@ export const MediaModule: React.FC = () => {
     setIsBuffering(true);
     setTimeout(() => {
       setIsBuffering(false);
-      setActiveSongIndex(prev => (prev - 1 + MOCK_SONGS.length) % MOCK_SONGS.length);
+      setActiveSongIndex(
+        (prev) => (prev - 1 + MOCK_SONGS.length) % MOCK_SONGS.length,
+      );
       setSongProgress(0);
     }, 1500);
   };
@@ -450,9 +558,9 @@ export const MediaModule: React.FC = () => {
   // horizontal swipe simulated gesture on volume adjust
   const handleMusicVolumeScroll = (e: React.WheelEvent) => {
     if (e.deltaY > 0) {
-      setSongVolume(prev => Math.max(0, prev - 5));
+      setSongVolume((prev) => Math.max(0, prev - 5));
     } else {
-      setSongVolume(prev => Math.min(100, prev + 5));
+      setSongVolume((prev) => Math.min(100, prev + 5));
     }
     triggerHaptic(10);
   };
@@ -460,7 +568,7 @@ export const MediaModule: React.FC = () => {
   // Get current active line of synced lyrics
   const getCurrentLyricText = () => {
     const items = currentSong.lyrics;
-    let activeText = '';
+    let activeText = "";
     for (let i = 0; i < items.length; i++) {
       if (songProgress >= items[i].t) {
         activeText = items[i].text;
@@ -474,7 +582,7 @@ export const MediaModule: React.FC = () => {
   // =========================================================================
   // Expanded Cinema Roster Database for maximum visual and functional fidelity
   const CINEMA_ROSTER: (Movie & {
-    platform?: 'netflix' | 'disney' | 'hbo' | 'prime' | 'globoplay';
+    platform?: "netflix" | "disney" | "hbo" | "prime" | "globoplay";
     category?: string;
     rating?: number;
     isFavorite?: boolean;
@@ -484,479 +592,554 @@ export const MediaModule: React.FC = () => {
   })[] = [
     // 6 Real Trailers for auto selection playing
     {
-      id: '335984',
-      title: 'Blade Runner 2049',
+      id: "335984",
+      title: "Blade Runner 2049",
       year: 2017,
-      posterUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=80',
-      overview: 'Oficial K desenterra um segredo há muito enterrado que tem o potencial de mergulhar o que restou da sociedade no caos total.',
-      videoUrl: 'https://www.youtube.com/embed/gCcx85zlye4',
-      type: 'trailer',
+      posterUrl:
+        "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Oficial K desenterra um segredo há muito enterrado que tem o potencial de mergulhar o que restou da sociedade no caos total.",
+      videoUrl: "https://www.youtube.com/embed/gCcx85zlye4",
+      type: "trailer",
       status: true,
-      platform: 'netflix',
-      category: 'Cyberpunk',
+      platform: "netflix",
+      category: "Cyberpunk",
       rating: 8.4,
       isFavorite: true,
       continueProgress: 45,
-      totalDuration: '164m',
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      totalDuration: "164m",
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '157336',
-      title: 'Interstellar',
+      id: "157336",
+      title: "Interstellar",
       year: 2014,
-      posterUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=500&auto=format&fit=crop&q=80',
-      overview: 'Uma equipe de exploradores viaja através de um buraco de minhoca no espaço na tentativa de garantir a sobrevivência da humanidade.',
-      videoUrl: 'https://www.youtube.com/embed/zSWdZVtXT7E',
-      type: 'trailer',
+      posterUrl:
+        "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Uma equipe de exploradores viaja através de um buraco de minhoca no espaço na tentativa de garantir a sobrevivência da humanidade.",
+      videoUrl: "https://www.youtube.com/embed/zSWdZVtXT7E",
+      type: "trailer",
       status: true,
-      platform: 'hbo',
-      category: 'Sci-Fi',
+      platform: "hbo",
+      category: "Sci-Fi",
       rating: 8.7,
       isFavorite: true,
       continueProgress: 75,
-      totalDuration: '169m',
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      totalDuration: "169m",
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '574974',
-      title: 'The Matrix Resurrections',
+      id: "574974",
+      title: "The Matrix Resurrections",
       year: 2021,
-      posterUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&auto=format&fit=crop&q=80',
-      overview: 'Neo vive uma vida normal sob a identidade de Thomas A. Anderson antes de ser puxado de volta para as fendas da simulação.',
-      videoUrl: 'https://www.youtube.com/embed/9ix7TMcY-Hs',
-      type: 'trailer',
+      posterUrl:
+        "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Neo vive uma vida normal sob a identidade de Thomas A. Anderson antes de ser puxado de volta para as fendas da simulação.",
+      videoUrl: "https://www.youtube.com/embed/9ix7TMcY-Hs",
+      type: "trailer",
       status: true,
-      platform: 'netflix',
-      category: 'Cyberpunk',
+      platform: "netflix",
+      category: "Cyberpunk",
       rating: 6.7,
       isFavorite: false,
       continueProgress: 20,
-      totalDuration: '148m',
-      audioLanguages: ['EN']
+      totalDuration: "148m",
+      audioLanguages: ["EN"],
     },
     {
-      id: '693134',
-      title: 'Dune: Part Two',
+      id: "693134",
+      title: "Dune: Part Two",
       year: 2024,
-      posterUrl: 'https://images.unsplash.com/photo-1547483238-f400e65ccd56?w=500&auto=format&fit=crop&q=80',
-      overview: 'Paul Atreides se une a Chani e aos Fremen enquanto busca vingança contra os conspiradores que destruíram sua família.',
-      videoUrl: 'https://www.youtube.com/embed/U2Qp5pL38gY',
-      type: 'trailer',
+      posterUrl:
+        "https://images.unsplash.com/photo-1547483238-f400e65ccd56?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Paul Atreides se une a Chani e aos Fremen enquanto busca vingança contra os conspiradores que destruíram sua família.",
+      videoUrl: "https://www.youtube.com/embed/U2Qp5pL38gY",
+      type: "trailer",
       status: true,
-      platform: 'hbo',
-      category: 'Sci-Fi',
+      platform: "hbo",
+      category: "Sci-Fi",
       rating: 8.6,
       isFavorite: true,
       continueProgress: 10,
-      totalDuration: '166m',
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      totalDuration: "166m",
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '361743',
-      title: 'Top Gun: Maverick',
+      id: "361743",
+      title: "Top Gun: Maverick",
       year: 2022,
-      posterUrl: 'https://images.unsplash.com/photo-1519074002996-a69e7ac46a42?w=500&auto=format&fit=crop&q=80',
-      overview: 'Após mais de trinta anos de serviço como um dos principais aviadores da Marinha, Pete Mitchell está de volta testando caças hiper sônicos.',
-      videoUrl: 'https://www.youtube.com/embed/g4U4BQW9OEk',
-      type: 'trailer',
+      posterUrl:
+        "https://images.unsplash.com/photo-1519074002996-a69e7ac46a42?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Após mais de trinta anos de serviço como um dos principais aviadores da Marinha, Pete Mitchell está de volta testando caças hiper sônicos.",
+      videoUrl: "https://www.youtube.com/embed/g4U4BQW9OEk",
+      type: "trailer",
       status: true,
-      platform: 'prime',
-      category: 'Ação',
+      platform: "prime",
+      category: "Ação",
       rating: 8.3,
       isFavorite: false,
       continueProgress: 90,
-      totalDuration: '130m',
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      totalDuration: "130m",
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '105248',
-      title: 'Cyberpunk: Edgerunners',
+      id: "105248",
+      title: "Cyberpunk: Edgerunners",
       year: 2022,
-      posterUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&auto=format&fit=crop&q=80',
-      overview: 'Um garoto de rua tentando sobreviver em uma cidade do futuro obcecada por tecnologia e modificação corporal se torna um mercenário.',
-      videoUrl: 'https://www.youtube.com/embed/JtqIas3bYhg',
-      type: 'trailer',
+      posterUrl:
+        "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Um garoto de rua tentando sobreviver em uma cidade do futuro obcecada por tecnologia e modificação corporal se torna um mercenário.",
+      videoUrl: "https://www.youtube.com/embed/JtqIas3bYhg",
+      type: "trailer",
       status: true,
-      platform: 'netflix',
-      category: 'Animes',
+      platform: "netflix",
+      category: "Animes",
       rating: 8.6,
       isFavorite: true,
       continueProgress: 55,
-      totalDuration: '10 eps',
-      audioLanguages: ['JA', 'PT-BR', 'EN']
+      totalDuration: "10 eps",
+      audioLanguages: ["JA", "PT-BR", "EN"],
     },
- 
+
     // Netflix Blockbuster Shelf
     {
-      id: '66732',
-      title: 'Stranger Things',
+      id: "66732",
+      title: "Stranger Things",
       year: 2022,
-      posterUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&auto=format&fit=crop&q=80',
-      overview: 'Quando um garoto desaparece, uma cidade pequena descobre um mistério envolvendo experimentos secretos e forças sobrenaturais.',
-      videoUrl: 'https://www.youtube.com/embed/b9EkMc79ZSU',
-      type: 'serie',
+      posterUrl:
+        "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Quando um garoto desaparece, uma cidade pequena descobre um mistério envolvendo experimentos secretos e forças sobrenaturais.",
+      videoUrl: "https://www.youtube.com/embed/b9EkMc79ZSU",
+      type: "serie",
       status: true,
-      platform: 'netflix',
-      category: 'Sci-Fi',
+      platform: "netflix",
+      category: "Sci-Fi",
       rating: 8.7,
       isFavorite: true,
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '42009',
-      title: 'Black Mirror',
+      id: "42009",
+      title: "Black Mirror",
       year: 2023,
-      posterUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=500&auto=format&fit=crop&q=80',
-      overview: 'Antologia de ficção científica que explora um futuro de alta tecnologia onde as maiores inovações colidem com nossos instintos.',
-      videoUrl: 'https://www.youtube.com/embed/V0XRf_XbeN8',
-      type: 'serie',
+      posterUrl:
+        "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Antologia de ficção científica que explora um futuro de alta tecnologia onde as maiores inovações colidem com nossos instintos.",
+      videoUrl: "https://www.youtube.com/embed/V0XRf_XbeN8",
+      type: "serie",
       status: true,
-      platform: 'netflix',
-      category: 'Sci-Fi',
+      platform: "netflix",
+      category: "Sci-Fi",
       rating: 8.8,
       isFavorite: true,
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '70523',
-      title: 'Dark',
+      id: "70523",
+      title: "Dark",
       year: 2020,
-      posterUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&auto=format&fit=crop&q=80',
-      overview: 'O desaparecimento de duas crianças em uma cidade alemã expõe as relações fraturadas entre quatro famílias e fendas no tempo.',
-      videoUrl: 'https://www.youtube.com/embed/ESEUoa-utUM',
-      type: 'serie',
+      posterUrl:
+        "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "O desaparecimento de duas crianças em uma cidade alemã expõe as relações fraturadas entre quatro famílias e fendas no tempo.",
+      videoUrl: "https://www.youtube.com/embed/ESEUoa-utUM",
+      type: "serie",
       status: true,
-      platform: 'netflix',
-      category: 'Sci-Fi',
+      platform: "netflix",
+      category: "Sci-Fi",
       rating: 8.8,
       isFavorite: false,
       continueProgress: 40,
-      audioLanguages: ['DE', 'PT-BR', 'EN']
+      audioLanguages: ["DE", "PT-BR", "EN"],
     },
     {
-      id: '1901',
-      title: 'Cyberpunk Run',
+      id: "1901",
+      title: "Cyberpunk Run",
       year: 2025,
-      posterUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=80',
-      overview: 'Corridas cibernéticas clandestinas e perigosas sob o teto chuvoso de megalópoles sob o controle das megacorporações.',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      type: 'filme',
+      posterUrl:
+        "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Corridas cibernéticas clandestinas e perigosas sob o teto chuvoso de megalópoles sob o controle das megacorporações.",
+      videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      type: "filme",
       status: true,
-      platform: 'netflix',
-      category: 'Cyberpunk',
+      platform: "netflix",
+      category: "Cyberpunk",
       rating: 7.9,
       isFavorite: true,
-      audioLanguages: ['EN', 'PT-BR']
+      audioLanguages: ["EN", "PT-BR"],
     },
     {
-      id: '74204',
-      title: 'Mindhunter',
+      id: "74204",
+      title: "Mindhunter",
       year: 2019,
-      posterUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500&auto=format&fit=crop&q=80',
-      overview: 'Dois agentes do FBI expandem as fronteiras da ciência criminal entrevistando assassinos em série presos para resolver casos ativos.',
-      videoUrl: 'https://www.youtube.com/embed/oD8Z9MIdGg0',
-      type: 'serie',
+      posterUrl:
+        "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Dois agentes do FBI expandem as fronteiras da ciência criminal entrevistando assassinos em série presos para resolver casos ativos.",
+      videoUrl: "https://www.youtube.com/embed/oD8Z9MIdGg0",
+      type: "serie",
       status: true,
-      platform: 'netflix',
-      category: 'Suspense',
+      platform: "netflix",
+      category: "Suspense",
       rating: 8.6,
       isFavorite: false,
-      audioLanguages: ['EN']
+      audioLanguages: ["EN"],
     },
 
     // Disney+ Roster
     {
-      id: '82856',
-      title: 'The Mandalorian',
+      id: "82856",
+      title: "The Mandalorian",
       year: 2023,
-      posterUrl: 'https://images.unsplash.com/photo-1593085512500-5d55148d6f0d?w=500&auto=format&fit=crop&q=80',
-      overview: 'As viagens de um caçador de recompensas solitário nos confins da galáxia, longe da autoridade della Nova República.',
-      videoUrl: 'https://www.youtube.com/embed/aOC8E8z_ifw',
-      type: 'serie',
+      posterUrl:
+        "https://images.unsplash.com/photo-1593085512500-5d55148d6f0d?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "As viagens de um caçador de recompensas solitário nos confins da galáxia, longe da autoridade della Nova República.",
+      videoUrl: "https://www.youtube.com/embed/aOC8E8z_ifw",
+      type: "serie",
       status: true,
-      platform: 'disney',
-      category: 'Sci-Fi',
+      platform: "disney",
+      category: "Sci-Fi",
       rating: 8.7,
       isFavorite: true,
       continueProgress: 88,
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '84958',
-      title: 'Loki',
+      id: "84958",
+      title: "Loki",
       year: 2023,
-      posterUrl: 'https://images.unsplash.com/photo-1601987177651-8edfe6c20009?w=500&auto=format&fit=crop&q=80',
-      overview: 'O Deus da Trapaça é capturado pela Autoridade de Variância Temporal e forçado a consertar as linhas do tempo quebradas.',
-      videoUrl: 'https://www.youtube.com/embed/nW948Va-7sg',
-      type: 'serie',
+      posterUrl:
+        "https://images.unsplash.com/photo-1601987177651-8edfe6c20009?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "O Deus da Trapaça é capturado pela Autoridade de Variância Temporal e forçado a consertar as linhas do tempo quebradas.",
+      videoUrl: "https://www.youtube.com/embed/nW948Va-7sg",
+      type: "serie",
       status: true,
-      platform: 'disney',
-      category: 'Aventura',
+      platform: "disney",
+      category: "Aventura",
       rating: 8.2,
       isFavorite: false,
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '83867',
-      title: 'Andor',
+      id: "83867",
+      title: "Andor",
       year: 2022,
-      posterUrl: 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=500&auto=format&fit=crop&q=80',
-      overview: 'Em uma era repleta de perigos, enganos e intrigas, Cassian Andor embarca no caminho que o transformará em um herói rebelde.',
-      videoUrl: 'https://www.youtube.com/embed/cKOegY_LaBc',
-      type: 'serie',
+      posterUrl:
+        "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Em uma era repleta de perigos, enganos e intrigas, Cassian Andor embarca no caminho que o transformará em um herói rebelde.",
+      videoUrl: "https://www.youtube.com/embed/cKOegY_LaBc",
+      type: "serie",
       status: true,
-      platform: 'disney',
-      category: 'Sci-Fi',
+      platform: "disney",
+      category: "Sci-Fi",
       rating: 8.4,
       isFavorite: false,
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '10681',
-      title: 'WALL-E',
+      id: "10681",
+      title: "WALL-E",
       year: 2008,
-      posterUrl: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=500&auto=format&fit=crop&q=80',
-      overview: 'No futuro, um pequeno robô coletor de lixo embarca acidentalmente em uma jornada espacial que decidirá o destino da humanidade.',
-      videoUrl: 'https://www.youtube.com/embed/CZ1CATHer_A',
-      type: 'filme',
+      posterUrl:
+        "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "No futuro, um pequeno robô coletor de lixo embarca acidentalmente em uma jornada espacial que decidirá o destino da humanidade.",
+      videoUrl: "https://www.youtube.com/embed/CZ1CATHer_A",
+      type: "filme",
       status: true,
-      platform: 'disney',
-      category: 'Animes',
+      platform: "disney",
+      category: "Animes",
       rating: 8.4,
       isFavorite: true,
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '76600',
-      title: 'Avatar: O Caminho da Água',
+      id: "76600",
+      title: "Avatar: O Caminho da Água",
       year: 2022,
-      posterUrl: 'https://images.unsplash.com/photo-1500627869374-13cd993b1115?w=500&auto=format&fit=crop&q=80',
-      overview: "Jake Sully vive com sua família em Pandora. Quando uma ameaça familiar retorna, ele deve trabalhar com o exército Na'vi para proteger seu planeta.",
-      videoUrl: 'https://www.youtube.com/embed/d9MyW72ELq0',
-      type: 'filme',
+      posterUrl:
+        "https://images.unsplash.com/photo-1500627869374-13cd993b1115?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Jake Sully vive com sua família em Pandora. Quando uma ameaça familiar retorna, ele deve trabalhar com o exército Na'vi para proteger seu planeta.",
+      videoUrl: "https://www.youtube.com/embed/d9MyW72ELq0",
+      type: "filme",
       status: true,
-      platform: 'disney',
-      category: 'Aventura',
+      platform: "disney",
+      category: "Aventura",
       rating: 7.6,
       isFavorite: false,
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
 
     // HBO Max Roster
     {
-      id: '100088',
-      title: 'The Last of Us',
+      id: "100088",
+      title: "The Last of Us",
       year: 2023,
-      posterUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&auto=format&fit=crop&q=80',
-      overview: 'Joel e Ellie, conectados pela brutalidade do mundo em que vivem, são forçados a suportar circunstâncias implacáveis em uma América pós-apocalíptica.',
-      videoUrl: 'https://www.youtube.com/embed/uLtkt8BonwM',
-      type: 'serie',
+      posterUrl:
+        "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Joel e Ellie, conectados pela brutalidade do mundo em que vivem, são forçados a suportar circunstâncias implacáveis em uma América pós-apocalíptica.",
+      videoUrl: "https://www.youtube.com/embed/uLtkt8BonwM",
+      type: "serie",
       status: true,
-      platform: 'hbo',
-      category: 'Drama',
+      platform: "hbo",
+      category: "Drama",
       rating: 8.8,
       isFavorite: true,
       continueProgress: 35,
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '94997',
-      title: 'A Casa do Dragão',
+      id: "94997",
+      title: "A Casa do Dragão",
       year: 2022,
-      posterUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=80',
-      overview: 'A história da família Targaryen reinando sobre os Sete Reinos de Westeros 200 anos antes dos eventos de Guerra dos Tronos.',
-      videoUrl: 'https://www.youtube.com/embed/DotnIuSTK30',
-      type: 'serie',
+      posterUrl:
+        "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "A história da família Targaryen reinando sobre os Sete Reinos de Westeros 200 anos antes dos eventos de Guerra dos Tronos.",
+      videoUrl: "https://www.youtube.com/embed/DotnIuSTK30",
+      type: "serie",
       status: true,
-      platform: 'hbo',
-      category: 'Aventura',
+      platform: "hbo",
+      category: "Aventura",
       rating: 8.4,
       isFavorite: false,
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '1399',
-      title: 'Game of Thrones',
+      id: "1399",
+      title: "Game of Thrones",
       year: 2011,
-      posterUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&auto=format&fit=crop&q=80',
-      overview: 'Nove famílias nobres lutam pelo controle das terras míticas de Westeros, enquanto um antigo inimigo retorna após estar adormecido por milênios.',
-      videoUrl: 'https://www.youtube.com/embed/KPLYYLDt_m0',
-      type: 'serie',
+      posterUrl:
+        "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Nove famílias nobres lutam pelo controle das terras míticas de Westeros, enquanto um antigo inimigo retorna após estar adormecido por milênios.",
+      videoUrl: "https://www.youtube.com/embed/KPLYYLDt_m0",
+      type: "serie",
       status: true,
-      platform: 'hbo',
-      category: 'Drama',
+      platform: "hbo",
+      category: "Drama",
       rating: 9.2,
       isFavorite: true,
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '76331',
-      title: 'Succession',
+      id: "76331",
+      title: "Succession",
       year: 2023,
-      posterUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=500&auto=format&fit=crop&q=80',
-      overview: 'A saga de uma família multimilionária disfuncional proprietária de um império de mídia global lutando pelo trono do patriarca.',
-      videoUrl: 'https://www.youtube.com/embed/t3M-t_E9Z1w',
-      type: 'serie',
+      posterUrl:
+        "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "A saga de uma família multimilionária disfuncional proprietária de um império de mídia global lutando pelo trono do patriarca.",
+      videoUrl: "https://www.youtube.com/embed/t3M-t_E9Z1w",
+      type: "serie",
       status: true,
-      platform: 'hbo',
-      category: 'Drama',
+      platform: "hbo",
+      category: "Drama",
       rating: 8.9,
       isFavorite: false,
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '475557',
-      title: 'Coringa',
+      id: "475557",
+      title: "Coringa",
       year: 2019,
-      posterUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&auto=format&fit=crop&q=80',
-      overview: 'Arthur Fleck, um comediante de stand-up fracassado e isolado, mergulha em uma espiral de loucura e violência que inspira uma revolta em Gotham City.',
-      videoUrl: 'https://www.youtube.com/embed/t433PEQGEb4',
-      type: 'filme',
+      posterUrl:
+        "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Arthur Fleck, um comediante de stand-up fracassado e isolado, mergulha em uma espiral de loucura e violência que inspira uma revolta em Gotham City.",
+      videoUrl: "https://www.youtube.com/embed/t433PEQGEb4",
+      type: "filme",
       status: true,
-      platform: 'hbo',
-      category: 'Drama',
+      platform: "hbo",
+      category: "Drama",
       rating: 8.4,
       isFavorite: false,
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
 
     // Prime Video Roster
     {
-      id: '76479',
-      title: 'The Boys',
+      id: "76479",
+      title: "The Boys",
       year: 2024,
-      posterUrl: 'https://images.unsplash.com/photo-1569003339405-ea396a5a8a90?w=500&auto=format&fit=crop&q=80',
-      overview: 'Um grupo de vigilantes se propõe a derrubar super-heróis corruptos que abusam de seus superpoderes sob a gestão da corporação Vought.',
-      videoUrl: 'https://www.youtube.com/embed/M1BhU70p_n0',
-      type: 'serie',
+      posterUrl:
+        "https://images.unsplash.com/photo-1569003339405-ea396a5a8a90?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Um grupo de vigilantes se propõe a derrubar super-heróis corruptos que abusam de seus superpoderes sob a gestão da corporação Vought.",
+      videoUrl: "https://www.youtube.com/embed/M1BhU70p_n0",
+      type: "serie",
       status: true,
-      platform: 'prime',
-      category: 'Ação',
+      platform: "prime",
+      category: "Ação",
       rating: 8.7,
       isFavorite: true,
       continueProgress: 65,
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '126308',
-      title: 'Fallout',
+      id: "126308",
+      title: "Fallout",
       year: 2024,
-      posterUrl: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=500&auto=format&fit=crop&q=80',
-      overview: 'Em um futuro pós-apocalíptico retrofuturista, os residentes dos luxuosos abrigos nucleares subterrâneos retornam à superfície arrasada e bizarra.',
-      videoUrl: 'https://www.youtube.com/embed/V-mugWDc094',
-      type: 'serie',
+      posterUrl:
+        "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Em um futuro pós-apocalíptico retrofuturista, os residentes dos luxuosos abrigos nucleares subterrâneos retornam à superfície arrasada e bizarra.",
+      videoUrl: "https://www.youtube.com/embed/V-mugWDc094",
+      type: "serie",
       status: true,
-      platform: 'prime',
-      category: 'Sci-Fi',
+      platform: "prime",
+      category: "Sci-Fi",
       rating: 8.5,
       isFavorite: true,
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '95557',
-      title: 'Invincible',
+      id: "95557",
+      title: "Invincible",
       year: 2023,
-      posterUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&auto=format&fit=crop&q=80',
-      overview: 'Um jovem herói herda superpoderes brutais e descobre que seu lendário pai extraterrestre oculta segredos de conquista assustadores.',
-      videoUrl: 'https://www.youtube.com/embed/tM0sU8VyjY0',
-      type: 'serie',
+      posterUrl:
+        "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Um jovem herói herda superpoderes brutais e descobre que seu lendário pai extraterrestre oculta segredos de conquista assustadores.",
+      videoUrl: "https://www.youtube.com/embed/tM0sU8VyjY0",
+      type: "serie",
       status: true,
-      platform: 'prime',
-      category: 'Animes',
+      platform: "prime",
+      category: "Animes",
       rating: 8.7,
       isFavorite: false,
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
     {
-      id: '119416',
-      title: 'Reacher',
+      id: "119416",
+      title: "Reacher",
       year: 2023,
-      posterUrl: 'https://images.unsplash.com/photo-1519074002996-a69e7ac46a42?w=500&auto=format&fit=crop&q=80',
-      overview: 'Jack Reacher, um ex-policial militar veterano desabrigado e durão, viaja pelos EUA e é puxado de volta a conspirações locais.',
-      videoUrl: 'https://www.youtube.com/embed/GSycMV_v05M',
-      type: 'serie',
+      posterUrl:
+        "https://images.unsplash.com/photo-1519074002996-a69e7ac46a42?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Jack Reacher, um ex-policial militar veterano desabrigado e durão, viaja pelos EUA e é puxado de volta a conspirações locais.",
+      videoUrl: "https://www.youtube.com/embed/GSycMV_v05M",
+      type: "serie",
       status: true,
-      platform: 'prime',
-      category: 'Ação',
+      platform: "prime",
+      category: "Ação",
       rating: 8.1,
       isFavorite: false,
-      audioLanguages: ['PT-BR', 'EN', 'ES']
+      audioLanguages: ["PT-BR", "EN", "ES"],
     },
 
     // Globoplay Roster
     {
-      id: '111812',
-      title: 'Justiça',
+      id: "111812",
+      title: "Justiça",
       year: 2024,
-      posterUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500&auto=format&fit=crop&q=80',
-      overview: 'Quatro personagens independentes são presos no mesmo dia e soltos sete anos mais tarde, buscando vingança ou justiça pessoal.',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      type: 'serie',
+      posterUrl:
+        "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Quatro personagens independentes são presos no mesmo dia e soltos sete anos mais tarde, buscando vingança ou justiça pessoal.",
+      videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      type: "serie",
       status: true,
-      platform: 'globoplay',
-      category: 'Drama',
+      platform: "globoplay",
+      category: "Drama",
       rating: 8.4,
       isFavorite: true,
       continueProgress: 50,
-      audioLanguages: ['PT-BR']
+      audioLanguages: ["PT-BR"],
     },
     {
-      id: '35894',
-      title: 'O Auto da Compadecida',
+      id: "35894",
+      title: "O Auto da Compadecida",
       year: 2000,
-      posterUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&auto=format&fit=crop&q=80',
-      overview: 'As engenhosas trapaças e mentiras de João Grilo e Chicó para sobrevivir no sertão nordestino culminam em um julgamento divino impagável.',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      type: 'filme',
+      posterUrl:
+        "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "As engenhosas trapaças e mentiras de João Grilo e Chicó para sobrevivir no sertão nordestino culminam em um julgamento divino impagável.",
+      videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      type: "filme",
       status: true,
-      platform: 'globoplay',
-      category: 'Aventura',
+      platform: "globoplay",
+      category: "Aventura",
       rating: 8.8,
       isFavorite: true,
-      audioLanguages: ['PT-BR']
+      audioLanguages: ["PT-BR"],
     },
     {
-      id: '598',
-      title: 'Cidade de Deus',
+      id: "598",
+      title: "Cidade de Deus",
       year: 2002,
-      posterUrl: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=500&auto=format&fit=crop&q=80',
-      overview: 'Nas favelas do Rio de Janeiro, dois garotos seguem caminhos opostos: um se esforça para se tornar fotógrafo comercial, o outro um barão das drogas.',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      type: 'filme',
+      posterUrl:
+        "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=500&auto=format&fit=crop&q=80",
+      overview:
+        "Nas favelas do Rio de Janeiro, dois garotos seguem caminhos opostos: um se esforça para se tornar fotógrafo comercial, o outro um barão das drogas.",
+      videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      type: "filme",
       status: true,
-      platform: 'globoplay',
-      category: 'Drama',
+      platform: "globoplay",
+      category: "Drama",
       rating: 8.6,
       isFavorite: false,
-      audioLanguages: ['PT-BR']
-    }
+      audioLanguages: ["PT-BR"],
+    },
   ];
 
   // Helper utility to get the preferred language according to user DDI
   const getDefaultLanguageByDdi = (ddi?: string) => {
-    const d = ddi?.trim() || '';
-    if (d === '+55') return 'PT-BR';
-    const spanishDdis = ['+54', '+56', '+34', '+52', '+57', '+51', '+58', '+593', '+595', '+598', '+502', '+503', '+504', '+505', '+506', '+507', '+1939', '+1787'];
-    if (spanishDdis.includes(d)) return 'ES';
-    if (d === '+86' || d === '+852' || d === '+853') return 'ZH';
-    if (d === '+81') return 'JA';
-    if (d === '+82') return 'KO';
-    if (d === '+33') return 'FR';
-    if (d === '+49') return 'DE';
-    if (d === '+39') return 'IT';
+    const d = ddi?.trim() || "";
+    if (d === "+55") return "PT-BR";
+    const spanishDdis = [
+      "+54",
+      "+56",
+      "+34",
+      "+52",
+      "+57",
+      "+51",
+      "+58",
+      "+593",
+      "+595",
+      "+598",
+      "+502",
+      "+503",
+      "+504",
+      "+505",
+      "+506",
+      "+507",
+      "+1939",
+      "+1787",
+    ];
+    if (spanishDdis.includes(d)) return "ES";
+    if (d === "+86" || d === "+852" || d === "+853") return "ZH";
+    if (d === "+81") return "JA";
+    if (d === "+82") return "KO";
+    if (d === "+33") return "FR";
+    if (d === "+49") return "DE";
+    if (d === "+39") return "IT";
 
-    if (typeof navigator !== 'undefined') {
+    if (typeof navigator !== "undefined") {
       const navLang = navigator.language.toLowerCase();
-      if (navLang.startsWith('pt')) return 'PT-BR';
-      if (navLang.startsWith('es')) return 'ES';
-      if (navLang.startsWith('zh')) return 'ZH';
-      if (navLang.startsWith('ja')) return 'JA';
-      if (navLang.startsWith('ko')) return 'KO';
-      if (navLang.startsWith('fr')) return 'FR';
-      if (navLang.startsWith('de')) return 'DE';
-      if (navLang.startsWith('it')) return 'IT';
+      if (navLang.startsWith("pt")) return "PT-BR";
+      if (navLang.startsWith("es")) return "ES";
+      if (navLang.startsWith("zh")) return "ZH";
+      if (navLang.startsWith("ja")) return "JA";
+      if (navLang.startsWith("ko")) return "KO";
+      if (navLang.startsWith("fr")) return "FR";
+      if (navLang.startsWith("de")) return "DE";
+      if (navLang.startsWith("it")) return "IT";
     }
-    return 'EN';
+    return "EN";
   };
 
   // DETERMINISTICO: Conexão direta com CDN própria no Supabase
@@ -965,28 +1148,32 @@ export const MediaModule: React.FC = () => {
     season: number,
     episode: number,
     audio: string,
-    subtitle: string
+    subtitle: string,
   ) => {
-    const numericId = movie.id?.replace("movie_", "").replace("tv_", "").replace("tmdb-", "") || "0";
-    const typePath = movie.type === 'serie' ? 'tv' : 'movie';
+    const numericId =
+      movie.id?.replace("movie_", "").replace("tv_", "").replace("tmdb-", "") ||
+      "0";
+    const typePath = movie.type === "serie" ? "tv" : "movie";
     const params = new URLSearchParams();
-    
-    if (movie.type === 'serie') {
-      params.append('s', season.toString());
-      params.append('e', episode.toString());
+
+    if (movie.type === "serie") {
+      params.append("s", season.toString());
+      params.append("e", episode.toString());
     }
-    
-    const audioCode = audio.toLowerCase().split('-')[0];
-    const subCode = subtitle === 'OFF' ? '' : subtitle.toLowerCase().split('-')[0];
-    
-    if (audioCode) params.append('audio', audioCode);
-    if (subCode) params.append('sub', subCode);
+
+    const audioCode = audio.toLowerCase().split("-")[0];
+    const subCode =
+      subtitle === "OFF" ? "" : subtitle.toLowerCase().split("-")[0];
+
+    if (audioCode) params.append("audio", audioCode);
+    if (subCode) params.append("sub", subCode);
 
     return `/api/media/${typePath}/${numericId}?${params.toString()}`;
   };
 
-   const [moviesList, setMoviesList] = useState<Movie[]>([]);
+  const [moviesList, setMoviesList] = useState<Movie[]>([]);
   const [indexedDbCatalog, setIndexedDbCatalog] = useState<any[]>([]);
+  const [catalogLoaded, setCatalogLoaded] = useState(false);
   const [showReconnectButton, setShowReconnectButton] = useState(false);
 
   // Watchdog for reconnection button - 10 seconds timeout
@@ -1006,44 +1193,25 @@ export const MediaModule: React.FC = () => {
 
   const fetchIndexedCatalog = async () => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const res = await fetch('/api/media/catalog/active', { signal: controller.signal });
+      const res = await fetch("/api/media/catalog/active", {
+        signal: controller.signal,
+      });
       clearTimeout(timeoutId);
       const data = await res.json();
-      if (data.success && data.active_titles && data.active_titles.length > 0) {
-        setIndexedDbCatalog(data.active_titles);
-        if (moviesList.length === 0) {
-          setMoviesList(data.active_titles);
-        }
+      if (data.items && data.items.length > 0) {
+        setIndexedDbCatalog(data.items);
       } else {
-        throw new Error("Catálogo indisponível ou vazio na API");
+        setIndexedDbCatalog([]);
       }
     } catch (err) {
       clearTimeout(timeoutId);
-      console.error("Falha ao sincronizar catálogo do INVIS, aplicando MOCK_MOVIES de resiliência:", err);
-      
-      // Fallback para evitar tela preta
-      const mappedMockTitles = (MOCK_MOVIES || []).map(m => {
-        const numericId = String(m.id).replace(/\D/g, "");
-        return {
-          title_id: `tmdb-${numericId}`,
-          media_type: m.type === 'serie' ? 'tv' : 'movie',
-          stream_url: m.videoUrl || '',
-          tracks_data: {
-            title: m.title,
-            overview: m.overview,
-            poster_path: m.posterUrl,
-            backdrop_path: m.posterUrl,
-            audio_languages: ["pt-BR", "en-US"]
-          }
-        };
-      });
-      setIndexedDbCatalog(mappedMockTitles);
-      if (moviesList.length === 0) {
-        setMoviesList(MOCK_MOVIES);
-      }
+      console.error("Falha ao sincronizar catálogo do INVIS:", err);
+      setIndexedDbCatalog([]);
+    } finally {
+      setCatalogLoaded(true);
     }
   };
 
@@ -1068,12 +1236,14 @@ export const MediaModule: React.FC = () => {
   const [movieProgress, setMovieProgress] = useState(35);
   const [movieVolume, setMovieVolume] = useState(85);
   const [movieSpeed, setMovieSpeed] = useState<number>(1);
-  const [movieAudioLang, setMovieAudioLang] = useState<string>('PT-BR');
-  const [movieSubtitle, setMovieSubtitle] = useState<'OFF' | 'PT-BR' | 'EN' | 'ES'>('OFF');
+  const [movieAudioLang, setMovieAudioLang] = useState<string>("PT-BR");
+  const [movieSubtitle, setMovieSubtitle] = useState<
+    "OFF" | "PT-BR" | "EN" | "ES"
+  >("OFF");
   const [wasPausedByScroll, setWasPausedByScroll] = useState(false);
   const [activeMediaAlert, setActiveMediaAlert] = useState<string | null>(null);
   const [bouncerStreamData, setBouncerStreamData] = useState<any>(null);
-  const [movieAudioTrack, setMovieAudioTrack] = useState('pt-BR'); 
+  const [movieAudioTrack, setMovieAudioTrack] = useState("pt-BR");
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
 
@@ -1082,13 +1252,14 @@ export const MediaModule: React.FC = () => {
     if (selectedMovie) {
       const initialLang = getDefaultLanguageByDdi(currentUser?.ddi);
       const movieAudioLangs = selectedMovie.audioLanguages || [];
-      const supportsNativeAudio = movieAudioLangs.length === 0 || movieAudioLangs.includes(initialLang);
+      const supportsNativeAudio =
+        movieAudioLangs.length === 0 || movieAudioLangs.includes(initialLang);
 
       if (supportsNativeAudio) {
         setMovieAudioLang(initialLang);
-        setMovieSubtitle('OFF');
+        setMovieSubtitle("OFF");
       } else {
-        const fallbackAudio = movieAudioLangs[0] || 'EN';
+        const fallbackAudio = movieAudioLangs[0] || "EN";
         setMovieAudioLang(fallbackAudio);
         setMovieSubtitle(initialLang as any);
       }
@@ -1100,29 +1271,37 @@ export const MediaModule: React.FC = () => {
     if (!selectedMovie || !moviePlaying) return;
 
     setBouncerStreamData({
-      status: 'active',
-      source_type: 'video',
-      stream_url: '',
-      server_health: { "0": true }
+      status: "active",
+      source_type: "video",
+      stream_url: "",
+      server_health: { "0": true },
     });
-    
+
     const fetchStream = async () => {
       try {
         setIsVideoBuffering(true);
         setDuration(0);
         setAvailableAudioTracks([]); // Reseta faixas de áudios mapeadas para o novo vídeo
-        
-        const numericId = selectedMovie.id.replace("movie_", "").replace("tv_", "").replace("tmdb-", "");
-        const typePath = (selectedMovie.type === 'serie' || selectedMovie.type === 'tv') ? 'tv' : 'movie';
-        
+
+        const numericId = selectedMovie.id
+          .replace("movie_", "")
+          .replace("tv_", "")
+          .replace("tmdb-", "");
+        const typePath =
+          selectedMovie.type === "serie" || selectedMovie.type === "tv"
+            ? "tv"
+            : "movie";
+
         let extractionUrl = `/api/media/${typePath}/${numericId}`;
         const params = new URLSearchParams();
-        if (selectedMovie.type === 'serie' || selectedMovie.type === 'tv') {
-          params.append('s', selectedSeason.toString());
-          params.append('e', selectedEpisode.toString());
+        if (selectedMovie.type === "serie" || selectedMovie.type === "tv") {
+          params.append("s", selectedSeason.toString());
+          params.append("e", selectedEpisode.toString());
         }
-        if (movieAudioLang) params.append('audio', movieAudioLang.toLowerCase().split('-')[0]);
-        if (movieSubtitle && movieSubtitle !== 'OFF') params.append('sub', movieSubtitle.toLowerCase().split('-')[0]);
+        if (movieAudioLang)
+          params.append("audio", movieAudioLang.toLowerCase().split("-")[0]);
+        if (movieSubtitle && movieSubtitle !== "OFF")
+          params.append("sub", movieSubtitle.toLowerCase().split("-")[0]);
 
         const queryString = params.toString();
         if (queryString) {
@@ -1133,7 +1312,7 @@ export const MediaModule: React.FC = () => {
         if (!res.ok) {
           throw new Error(`Mídia Não Indexada: Status ${res.status}`);
         }
-        
+
         const fetchedData = await res.json();
 
         if (!fetchedData || !fetchedData.stream_url) {
@@ -1141,26 +1320,30 @@ export const MediaModule: React.FC = () => {
         }
 
         setBouncerStreamData(fetchedData);
-        setActiveServer('principal');
+        setActiveServer("principal");
 
         if (movieVideoRef.current) {
-          if (fetchedData.stream_url.includes('.mp4') || fetchedData.source_type === 'mp4') {
+          if (
+            fetchedData.stream_url.includes(".mp4") ||
+            fetchedData.source_type === "mp4"
+          ) {
             // Reprodução direta de MP4
             movieVideoRef.current.src = fetchedData.stream_url;
             movieVideoRef.current.load();
-            movieVideoRef.current.play()
+            movieVideoRef.current
+              .play()
               .then(() => setIsVideoBuffering(false))
-              .catch(() => { 
-                setIsVideoBuffering(false); 
+              .catch(() => {
+                setIsVideoBuffering(false);
                 setMovieIsPlaying(false);
-                setActiveMediaAlert("CLIQUE NO PLAY PARA INICIAR"); 
+                setActiveMediaAlert("CLIQUE NO PLAY PARA INICIAR");
               });
           } else if (Hls.isSupported()) {
             // Reprodução de M3U8 via HLS com configurações de alta qualidade e resiliência
             if (hlsInstanceRef.current) {
               hlsInstanceRef.current.destroy();
             }
-            
+
             const hls = new Hls({
               maxBufferSize: 60 * 1022 * 1022, // Buffer de 60MB para estabilidade absoluta
               maxBufferLength: 60,
@@ -1169,12 +1352,12 @@ export const MediaModule: React.FC = () => {
               abrEwmaDefaultEstimate: 5000000,
               capLevelToPlayerSize: true,
             });
-            
+
             hlsInstanceRef.current = hls; // Salva na referência persistente para acesso de interatividade
-            
+
             hls.loadSource(fetchedData.stream_url);
             hls.attachMedia(movieVideoRef.current);
-            
+
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
               // Extrai as faixas de áudio nativas do arquivo .m3u8
               if (hls.audioTracks && hls.audioTracks.length > 0) {
@@ -1185,16 +1368,21 @@ export const MediaModule: React.FC = () => {
               // o sistema deve forçar a ativação da legenda PT-BR no primeiro frame, utilizando o evento MANIFEST_PARSED do HLS.js.
               const isEstrangeiro = isMovieEstrangeiroByDdi(selectedMovie);
               if (isEstrangeiro) {
-                setMovieSubtitle('PT-BR');
+                setMovieSubtitle("PT-BR");
                 if (hls.subtitleTracks && hls.subtitleTracks.length > 0) {
-                  const ptSubIndex = hls.subtitleTracks.findIndex(track => 
-                    track.lang?.toLowerCase().includes('pt') || 
-                    track.name?.toLowerCase().includes('pt') ||
-                    track.name?.toLowerCase().includes('por')
+                  const ptSubIndex = hls.subtitleTracks.findIndex(
+                    (track) =>
+                      track.lang?.toLowerCase().includes("pt") ||
+                      track.name?.toLowerCase().includes("pt") ||
+                      track.name?.toLowerCase().includes("por"),
                   );
                   if (ptSubIndex !== -1) {
                     hls.subtitleTrack = ptSubIndex;
-                    console.log("[INVIS PLAYER] Player Masking: Ativando legenda PT-BR (índice", ptSubIndex, ")");
+                    console.log(
+                      "[INVIS PLAYER] Player Masking: Ativando legenda PT-BR (índice",
+                      ptSubIndex,
+                      ")",
+                    );
                   } else {
                     hls.subtitleTrack = 0; // fallback para a primeira legenda
                   }
@@ -1202,35 +1390,50 @@ export const MediaModule: React.FC = () => {
               }
 
               // Ajusta trilha de áudio inicial se disponível no manifesto HLS
-              if (currentUser?.ddi === '+55' && hls.audioTracks && hls.audioTracks.length > 0) {
-                const targetAudioIndex = hls.audioTracks.findIndex(track => 
-                  track.lang?.toLowerCase().includes('pt') || 
-                  track.name?.toLowerCase().includes('pt') ||
-                  track.name?.toLowerCase().includes('por') ||
-                  track.name?.toLowerCase().includes('dub')
+              if (
+                currentUser?.ddi === "+55" &&
+                hls.audioTracks &&
+                hls.audioTracks.length > 0
+              ) {
+                const targetAudioIndex = hls.audioTracks.findIndex(
+                  (track) =>
+                    track.lang?.toLowerCase().includes("pt") ||
+                    track.name?.toLowerCase().includes("pt") ||
+                    track.name?.toLowerCase().includes("por") ||
+                    track.name?.toLowerCase().includes("dub"),
                 );
                 if (targetAudioIndex !== -1) {
                   hls.audioTrack = targetAudioIndex;
-                  console.log("[PLAYER NATIVO] Forçando trilha PT/DUB para DDI +55 (índice ", targetAudioIndex, ")");
+                  console.log(
+                    "[PLAYER NATIVO] Forçando trilha PT/DUB para DDI +55 (índice ",
+                    targetAudioIndex,
+                    ")",
+                  );
                 }
               } else if (hls.audioTracks.length > 1) {
-                const targetLanguageLower = movieAudioLang.toLowerCase().split('-')[0];
-                const targetAudioIndex = hls.audioTracks.findIndex(track => 
-                  track.lang?.toLowerCase().includes(targetLanguageLower) || 
-                  track.name?.toLowerCase().includes(targetLanguageLower) ||
-                  (targetLanguageLower === 'pt' && (track.name?.toLowerCase().includes('dub') || track.lang?.toLowerCase().includes('por')))
+                const targetLanguageLower = movieAudioLang
+                  .toLowerCase()
+                  .split("-")[0];
+                const targetAudioIndex = hls.audioTracks.findIndex(
+                  (track) =>
+                    track.lang?.toLowerCase().includes(targetLanguageLower) ||
+                    track.name?.toLowerCase().includes(targetLanguageLower) ||
+                    (targetLanguageLower === "pt" &&
+                      (track.name?.toLowerCase().includes("dub") ||
+                        track.lang?.toLowerCase().includes("por"))),
                 );
                 if (targetAudioIndex !== -1) {
                   hls.audioTrack = targetAudioIndex;
                 }
               }
 
-              movieVideoRef.current?.play()
+              movieVideoRef.current
+                ?.play()
                 .then(() => setIsVideoBuffering(false))
-                .catch(() => { 
-                  setIsVideoBuffering(false); 
+                .catch(() => {
+                  setIsVideoBuffering(false);
                   setMovieIsPlaying(false);
-                  setActiveMediaAlert("CLIQUE NO PLAY PARA INICIAR"); 
+                  setActiveMediaAlert("CLIQUE NO PLAY PARA INICIAR");
                 });
             });
 
@@ -1241,13 +1444,18 @@ export const MediaModule: React.FC = () => {
                 setActiveMediaAlert("SINAL INDISPONÍVEL EM NOSSA CDN");
               }
             });
-          } else if (movieVideoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+          } else if (
+            movieVideoRef.current.canPlayType("application/vnd.apple.mpegurl")
+          ) {
             // Safari nativo
             movieVideoRef.current.src = fetchedData.stream_url;
             movieVideoRef.current.load();
-            movieVideoRef.current.play()
+            movieVideoRef.current
+              .play()
               .then(() => setIsVideoBuffering(false))
-              .catch(() => { setIsVideoBuffering(false); });
+              .catch(() => {
+                setIsVideoBuffering(false);
+              });
           }
         }
       } catch (err: any) {
@@ -1258,21 +1466,32 @@ export const MediaModule: React.FC = () => {
         setActiveMediaAlert("SINAL INDISPONÍVEL");
       }
     };
-    
+
     fetchStream();
-    
+
     return () => {
       if (hlsInstanceRef.current) {
         hlsInstanceRef.current.destroy();
         hlsInstanceRef.current = null;
       }
     };
-  }, [selectedMovie, moviePlaying, selectedSeason, selectedEpisode, movieAudioLang, movieSubtitle]);
-  const [abrMode, setAbrMode] = useState<'1080p' | '720p' | '480p'>('1080p');
+  }, [
+    selectedMovie,
+    moviePlaying,
+    selectedSeason,
+    selectedEpisode,
+    movieAudioLang,
+    movieSubtitle,
+  ]);
+  const [abrMode, setAbrMode] = useState<"1080p" | "720p" | "480p">("1080p");
   const [showMovieControls, setShowMovieControls] = useState(true);
-  const [continueWatchingTime, setContinueWatchingTime] = useState<number | null>(45); // simulated resume timestamp
+  const [continueWatchingTime, setContinueWatchingTime] = useState<
+    number | null
+  >(45); // simulated resume timestamp
   const [showAntiIdleCheck, setShowAntiIdleCheck] = useState(false);
-  const [activeServer, setActiveServer] = useState<'principal' | 'alternativo' | 'backup' | 'trailer'>('principal');
+  const [activeServer, setActiveServer] = useState<
+    "principal" | "alternativo" | "backup" | "trailer"
+  >("principal");
 
   // HTML5 Video Player state hooks and reference tracking
   const movieVideoRef = useRef<HTMLVideoElement>(null);
@@ -1283,32 +1502,39 @@ export const MediaModule: React.FC = () => {
 
   // Player behavior and options selections states
   const [useInternalPlayer, setUseInternalPlayer] = useState<boolean>(true);
-  const [activePlayerMenu, setActivePlayerMenu] = useState<'audio' | 'subtitle' | 'speed' | 'quality' | null>(null);
-  const [episodeCovers, setEpisodeCovers] = useState<Record<string, string>>({});
+  const [activePlayerMenu, setActivePlayerMenu] = useState<
+    "audio" | "subtitle" | "speed" | "quality" | null
+  >(null);
+  const [episodeCovers, setEpisodeCovers] = useState<Record<string, string>>(
+    {},
+  );
 
   // Utility to grab actual frames from the video as episode thumbnails
-  const extractVideoFrame = (videoUrl: string, t: number = 5): Promise<string> => {
+  const extractVideoFrame = (
+    videoUrl: string,
+    t: number = 5,
+  ): Promise<string> => {
     return new Promise((resolve) => {
-      const video = document.createElement('video');
+      const video = document.createElement("video");
       video.src = videoUrl;
-      video.crossOrigin = 'anonymous';
+      video.crossOrigin = "anonymous";
       video.currentTime = t;
       video.muted = true;
       video.playsInline = true;
-      
+
       const timeout = setTimeout(() => {
-        resolve('');
+        resolve("");
       }, 3500);
 
       video.onseeked = () => {
         try {
-          const canvas = document.createElement('canvas');
+          const canvas = document.createElement("canvas");
           canvas.width = 300;
           canvas.height = 170;
-          const ctx = canvas.getContext('2d');
+          const ctx = canvas.getContext("2d");
           if (ctx) {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
             clearTimeout(timeout);
             resolve(dataUrl);
             return;
@@ -1316,12 +1542,12 @@ export const MediaModule: React.FC = () => {
         } catch (e) {
           console.warn("Failed to extract canvas frame:", e);
         }
-        resolve('');
+        resolve("");
       };
 
       video.onerror = () => {
         clearTimeout(timeout);
-        resolve('');
+        resolve("");
       };
     });
   };
@@ -1329,32 +1555,42 @@ export const MediaModule: React.FC = () => {
   const getDynamicEpisodesForSelectedMovie = () => {
     if (!selectedMovie) return [];
     const baseTitle = selectedMovie.title;
-    const isSerie = selectedMovie.type === 'serie';
+    const isSerie = selectedMovie.type === "serie";
     return [
       {
         id: `${selectedMovie.id}_ep1`,
         title: isSerie ? `T1:E1 - Origem Cósmica` : `Capítulo I: Introdução`,
-        duration: isSerie ? '45min' : '15min',
+        duration: isSerie ? "45min" : "15min",
         desc: `As primeiras e inesperadas fendas na rede criptografada de ${baseTitle} começam a aparecer.`,
         seekTime: 4,
-        defaultThumb: selectedMovie.posterUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=300&auto=format&fit=crop&q=80'
+        defaultThumb:
+          selectedMovie.posterUrl ||
+          "https://images.unsplash.com/photo-1518770660439-4636190af475?w=300&auto=format&fit=crop&q=80",
       },
       {
         id: `${selectedMovie.id}_ep2`,
-        title: isSerie ? `T1:E2 - Transmissão Aberta` : `Capítulo II: Descoberta`,
-        duration: isSerie ? '52min' : '22min',
+        title: isSerie
+          ? `T1:E2 - Transmissão Aberta`
+          : `Capítulo II: Descoberta`,
+        duration: isSerie ? "52min" : "22min",
         desc: `Estruturas de sincronia e alocações de largura de banda são desafiadas pelo fluxo de ${baseTitle}.`,
         seekTime: 8,
-        defaultThumb: selectedMovie.posterUrl || 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&auto=format&fit=crop&q=80'
+        defaultThumb:
+          selectedMovie.posterUrl ||
+          "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&auto=format&fit=crop&q=80",
       },
       {
         id: `${selectedMovie.id}_ep3`,
-        title: isSerie ? `T1:E3 - Criptozoico de Dados` : `Capítulo III: Resolução`,
-        duration: isSerie ? '48min' : '18min',
+        title: isSerie
+          ? `T1:E3 - Criptozoico de Dados`
+          : `Capítulo III: Resolução`,
+        duration: isSerie ? "48min" : "18min",
         desc: `O despertar crucial do sistema e a consolidação de registros confidenciais de ${baseTitle} revelados.`,
         seekTime: 12,
-        defaultThumb: selectedMovie.posterUrl || 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=300&auto=format&fit=crop&q=80'
-      }
+        defaultThumb:
+          selectedMovie.posterUrl ||
+          "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=300&auto=format&fit=crop&q=80",
+      },
     ];
   };
 
@@ -1366,18 +1602,20 @@ export const MediaModule: React.FC = () => {
       if (episodeCovers[ep.id]) return;
       const frameUrl = await extractVideoFrame(videoUrl, ep.seekTime);
       if (frameUrl) {
-        setEpisodeCovers(prev => ({ ...prev, [ep.id]: frameUrl }));
+        setEpisodeCovers((prev) => ({ ...prev, [ep.id]: frameUrl }));
       }
     });
   }, [selectedMovie]);
 
   // UI state variables for filters
-  const [scopeFiltering, setScopeFiltering] = useState<'filme' | 'serie' | 'todos'>('todos');
-  const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
+  const [scopeFiltering, setScopeFiltering] = useState<
+    "filme" | "serie" | "todos"
+  >("todos");
+  const [selectedCategory, setSelectedCategory] = useState<string>("Todos");
   const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
   const [activeTrailerIndex, setActiveTrailerIndex] = useState(0);
   const [trailerMovieId, setTrailerMovieId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [includeAdult, setIncludeAdult] = useState(false);
 
   // Floating suggestion focus overlay state
@@ -1385,8 +1623,18 @@ export const MediaModule: React.FC = () => {
 
   // States for block mode and expanded vertical layouts of category shelves
   // const [isMediaPipMode, setIsMediaPipMode] = useState(false); (mapped to context)
-  
-  const [expandedSessionGrid, setExpandedSessionGrid] = useState<'favorites' | 'continue' | 'suggestions' | 'netflix' | 'disney' | 'hbo' | 'prime' | 'globoplay' | null>(null);
+
+  const [expandedSessionGrid, setExpandedSessionGrid] = useState<
+    | "favorites"
+    | "continue"
+    | "suggestions"
+    | "netflix"
+    | "disney"
+    | "hbo"
+    | "prime"
+    | "globoplay"
+    | null
+  >(null);
 
   // Progressive limits for horizontal/vertical lazy loading - initialized to 30 for complete pre-loading
   const [visiblePostersCount, setVisiblePostersCount] = useState(60);
@@ -1424,21 +1672,28 @@ export const MediaModule: React.FC = () => {
     const timer = setTimeout(async () => {
       try {
         // Save search keyword to local history for recommendations
-        const searchHistory = JSON.parse(localStorage.getItem('invis_search_history') || '[]');
+        const searchHistory = JSON.parse(
+          localStorage.getItem("invis_search_history") || "[]",
+        );
         if (!searchHistory.includes(searchQuery.toLowerCase())) {
           searchHistory.unshift(searchQuery.toLowerCase());
-          localStorage.setItem('invis_search_history', JSON.stringify(searchHistory.slice(0, 10)));
+          localStorage.setItem(
+            "invis_search_history",
+            JSON.stringify(searchHistory.slice(0, 10)),
+          );
         }
 
-        const resp = await fetch(`/api/tmdb/search?query=${encodeURIComponent(searchQuery)}&include_adult=${includeAdult}`);
+        const resp = await fetch(
+          `/api/tmdb/search?query=${encodeURIComponent(searchQuery)}&include_adult=${includeAdult}`,
+        );
         if (resp.ok) {
           const results = await resp.json();
           if (results && results.length > 0) {
             // merge results with moviesList securely to avoid duplicate indexes
-            setMoviesList(prev => {
+            setMoviesList((prev) => {
               const combined = [...prev];
               results.forEach((item: Movie) => {
-                if (!combined.some(m => m.id === item.id)) {
+                if (!combined.some((m) => m.id === item.id)) {
                   combined.push(item);
                 }
               });
@@ -1463,20 +1718,24 @@ export const MediaModule: React.FC = () => {
     triggerHaptic(30);
 
     try {
-      const response = await fetch(`/api/tmdb/details?id=${movie.id}&type=${movie.type}`);
+      const response = await fetch(
+        `/api/tmdb/details?id=${movie.id}&type=${movie.type}`,
+      );
       if (response.ok) {
         const details = await response.json();
-        
+
         const mergedMovie = {
           ...movie,
           actors: details.actors,
           production: details.production,
           totalDuration: details.duration,
           videoUrl: details.videoUrl || movie.videoUrl,
-          streamUrl: details.streamUrl || movie.streamUrl
+          streamUrl: details.streamUrl || movie.streamUrl,
         };
 
-        setMoviesList(prev => prev.map(m => m.id === movie.id ? mergedMovie : m));
+        setMoviesList((prev) =>
+          prev.map((m) => (m.id === movie.id ? mergedMovie : m)),
+        );
         setSelectedMovie(mergedMovie);
       }
     } catch (err) {
@@ -1489,41 +1748,50 @@ export const MediaModule: React.FC = () => {
   // Toggle favorite trigger with catalog synchronization
   const toggleFavoriteMovie = (id: string) => {
     triggerHaptic(30);
-    const updatedFavorites = JSON.parse(localStorage.getItem('invis_favorites') || '[]');
+    const updatedFavorites = JSON.parse(
+      localStorage.getItem("invis_favorites") || "[]",
+    );
     const isFav = updatedFavorites.includes(id);
-    
+
     if (isFav) {
-      localStorage.setItem('invis_favorites', JSON.stringify(updatedFavorites.filter((fid: string) => fid !== id)));
+      localStorage.setItem(
+        "invis_favorites",
+        JSON.stringify(updatedFavorites.filter((fid: string) => fid !== id)),
+      );
     } else {
       updatedFavorites.push(id);
-      localStorage.setItem('invis_favorites', JSON.stringify(updatedFavorites));
+      localStorage.setItem("invis_favorites", JSON.stringify(updatedFavorites));
     }
 
-    setMoviesList(prev => prev.map(m => {
-      if (m.id === id) {
-        const updated = { ...m, isFavorite: !isFav };
-        if (selectedMovie && selectedMovie.id === id) {
-          setSelectedMovie(updated);
+    setMoviesList((prev) =>
+      prev.map((m) => {
+        if (m.id === id) {
+          const updated = { ...m, isFavorite: !isFav };
+          if (selectedMovie && selectedMovie.id === id) {
+            setSelectedMovie(updated);
+          }
+          return updated;
         }
-        return updated;
-      }
-      return m;
-    }));
+        return m;
+      }),
+    );
   };
 
   // Like movie to raise trend in Invis system
   const likeMovie = (id: string) => {
     triggerHaptic(35);
-    setMoviesList(prev => prev.map(m => {
-      if (m.id === id) {
-        const updated = { ...m, likes: (m.likes || 100) + 1 };
-        if (selectedMovie && selectedMovie.id === id) {
-          setSelectedMovie(updated);
+    setMoviesList((prev) =>
+      prev.map((m) => {
+        if (m.id === id) {
+          const updated = { ...m, likes: (m.likes || 100) + 1 };
+          if (selectedMovie && selectedMovie.id === id) {
+            setSelectedMovie(updated);
+          }
+          return updated;
         }
-        return updated;
-      }
-      return m;
-    }));
+        return m;
+      }),
+    );
   };
 
   // Dynamic mapping of database index (indexedDbCatalog) and moviesList to Movie Objects (single source of truth)
@@ -1535,23 +1803,32 @@ export const MediaModule: React.FC = () => {
     moviesList.forEach((m) => {
       const numericId = String(m.id).replace(/\D/g, "");
       const dbMatch = indexedDbCatalog.find(
-        (dbItem) => String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')
+        (dbItem) =>
+          String(dbItem.title_id).replace(/\D/g, "") ===
+          String(m.id).replace(/\D/g, ""),
       );
 
       let enriched: Movie;
       if (dbMatch) {
-        const mediaType = dbMatch.media_type === "tv" || dbMatch.media_type === "serie" ? "serie" : "filme";
+        const mediaType =
+          dbMatch.media_type === "tv" || dbMatch.media_type === "serie"
+            ? "serie"
+            : "filme";
         enriched = {
           ...m,
           id: `tmdb-${numericId}`,
           type: mediaType,
-          audioLanguages: dbMatch.tracks_data?.audio_languages || m.audioLanguages || ["PT-BR", "EN"],
-          streamUrl: dbMatch.stream_url || m.streamUrl
+          audioLanguages: dbMatch.tracks_data?.audio_languages ||
+            m.audioLanguages || ["PT-BR", "EN"],
+          streamUrl: dbMatch.stream_url || m.streamUrl,
         };
       } else {
         enriched = {
           ...m,
-          id: m.id.startsWith("c") || m.id.startsWith("s") || m.id.startsWith("p") ? m.id : `tmdb-${numericId}`
+          id:
+            m.id.startsWith("c") || m.id.startsWith("s") || m.id.startsWith("p")
+              ? m.id
+              : `tmdb-${numericId}`,
         };
       }
 
@@ -1568,20 +1845,35 @@ export const MediaModule: React.FC = () => {
 
       if (seenIds.has(finalId)) return;
 
-      const mediaType = dbItem.media_type === "tv" || dbItem.media_type === "serie" ? "serie" : "filme";
-      const title = dbItem.tracks_data?.title || dbItem.tracks_data?.name || `Título #${numericId}`;
-      const overview = dbItem.tracks_data?.overview || "Título indexado de forma resiliente no banco Supabase pelo crawler INVIS.";
-      const posterPath = dbItem.tracks_data?.poster_path || dbItem.tracks_data?.posterUrl;
-      const posterUrl = posterPath 
-        ? (posterPath.startsWith("http") ? posterPath : `https://image.tmdb.org/t/p/w500${posterPath}`)
+      const mediaType =
+        dbItem.media_type === "tv" || dbItem.media_type === "serie"
+          ? "serie"
+          : "filme";
+      const title =
+        dbItem.tracks_data?.title ||
+        dbItem.tracks_data?.name ||
+        `Título #${numericId}`;
+      const overview =
+        dbItem.tracks_data?.overview ||
+        "Título indexado de forma resiliente no banco Supabase pelo crawler INVIS.";
+      const posterPath =
+        dbItem.tracks_data?.poster_path || dbItem.tracks_data?.posterUrl;
+      const posterUrl = posterPath
+        ? posterPath.startsWith("http")
+          ? posterPath
+          : `https://image.tmdb.org/t/p/w500${posterPath}`
         : `https://images.unsplash.com/photo-1542204172-e7052809186d?w=500&auto=format&fit=crop&q=80`;
 
-      const backdropPath = dbItem.tracks_data?.backdrop_path || dbItem.tracks_data?.backdropUrl;
+      const backdropPath =
+        dbItem.tracks_data?.backdrop_path || dbItem.tracks_data?.backdropUrl;
       const backdropUrl = backdropPath
-        ? (backdropPath.startsWith("http") ? backdropPath : `https://image.tmdb.org/t/p/w1280${backdropPath}`)
+        ? backdropPath.startsWith("http")
+          ? backdropPath
+          : `https://image.tmdb.org/t/p/w1280${backdropPath}`
         : `https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1200&auto=format&fit=crop&q=40`;
 
-      let platform: "netflix" | "disney" | "hbo" | "prime" | "globoplay" = "netflix";
+      let platform: "netflix" | "disney" | "hbo" | "prime" | "globoplay" =
+        "netflix";
       const dbPlatform = dbItem.tracks_data?.platform?.toLowerCase();
       if (dbPlatform?.includes("netflix")) platform = "netflix";
       else if (dbPlatform?.includes("disney")) platform = "disney";
@@ -1590,17 +1882,28 @@ export const MediaModule: React.FC = () => {
       else if (dbPlatform?.includes("globoplay")) platform = "globoplay";
       else {
         const idx = parseInt(numericId) || 0;
-        const platforms: ("netflix" | "disney" | "hbo" | "prime" | "globoplay")[] = ["netflix", "disney", "hbo", "prime", "globoplay"];
+        const platforms: (
+          | "netflix"
+          | "disney"
+          | "hbo"
+          | "prime"
+          | "globoplay"
+        )[] = ["netflix", "disney", "hbo", "prime", "globoplay"];
         platform = platforms[idx % platforms.length];
       }
 
-      const rating = dbItem.tracks_data?.rating || dbItem.tracks_data?.vote_average || 8.0;
-      const category = dbItem.tracks_data?.category || (mediaType === "serie" ? "Série" : "Filme");
+      const rating =
+        dbItem.tracks_data?.rating || dbItem.tracks_data?.vote_average || 8.0;
+      const category =
+        dbItem.tracks_data?.category ||
+        (mediaType === "serie" ? "Série" : "Filme");
 
       const item: Movie = {
         id: finalId,
         title,
-        year: dbItem.tracks_data?.release_date ? new Date(dbItem.tracks_data.release_date).getFullYear() : 2024,
+        year: dbItem.tracks_data?.release_date
+          ? new Date(dbItem.tracks_data.release_date).getFullYear()
+          : 2024,
         posterUrl,
         backdropUrl,
         overview,
@@ -1611,8 +1914,10 @@ export const MediaModule: React.FC = () => {
         platform,
         rating,
         audioLanguages: dbItem.tracks_data?.audio_languages || ["PT-BR", "EN"],
-        totalDuration: dbItem.tracks_data?.runtime ? `${dbItem.tracks_data.runtime}m` : "120m",
-        streamUrl: dbItem.stream_url
+        totalDuration: dbItem.tracks_data?.runtime
+          ? `${dbItem.tracks_data.runtime}m`
+          : "120m",
+        streamUrl: dbItem.stream_url,
       };
 
       seenIds.add(finalId);
@@ -1624,33 +1929,54 @@ export const MediaModule: React.FC = () => {
 
   // Active Timer to cycle featured trailers in background every 7 seconds
   useEffect(() => {
-    if (expandedSection !== 'movies' || selectedMovie !== null) return;
+    if (expandedSection !== "movies" || selectedMovie !== null) return;
     const interval = setInterval(() => {
-      setActiveTrailerIndex(prev => (prev + 1) % Math.min(10, mappedMovies.length || 10));
+      setActiveTrailerIndex(
+        (prev) => (prev + 1) % Math.min(10, mappedMovies.length || 10),
+      );
     }, 7000);
     return () => clearInterval(interval);
   }, [expandedSection, selectedMovie, mappedMovies]);
 
   const memoizedCategories = React.useMemo(() => {
     const filterByDbExistenceAndDdi = (m: Movie) => {
-      if (m.id.startsWith("c") || m.id.startsWith("s") || m.id.startsWith("p")) {
+      if (
+        m.id.startsWith("c") ||
+        m.id.startsWith("s") ||
+        m.id.startsWith("p")
+      ) {
         return true;
       }
-      const numericId = String(m.id).replace(/\D/g, '');
-      const dbMatch = indexedDbCatalog.find(dbItem => 
-        String(dbItem.title_id).replace(/\D/g, '') === String(m.id).replace(/\D/g, '')
+
+      if (catalogLoaded && indexedDbCatalog.length === 0) {
+        return true;
+      }
+
+      const dbMatch = indexedDbCatalog.find(
+        (dbItem) =>
+          String(dbItem.title_id).replace(/\D/g, "") ===
+          String(m.id).replace(/\D/g, ""),
       );
 
       if (!dbMatch) {
         if (searchQuery.trim() !== "") {
-          return true; // Exibe resultados de busca retornados da API do TMDB mesmo se não indexados
+          return true; // Exibe resultados de busca retornados da API do TMDB
         }
         return false;
       }
 
-      // Filtro DDI: Se o usuário for DDI +55, não oculte o filme na vitrine se ele não for dublado; em vez disso, exiba-o com o selo 'LEGENDADO' para que o catálogo nunca pareça vazio.
-      if (currentUser?.ddi === '+55') {
-        return true;
+      if (currentUser?.ddi === "+55") {
+        const hasQuery = searchQuery.trim() !== "";
+        if (hasQuery) {
+          return true;
+        }
+
+        const audioLangs = m.audioLanguages || dbMatch.audio_languages || [];
+        const hasPt = audioLangs
+          .map((l: string) => String(l).toLowerCase())
+          .some((l: string) => l.includes("pt"));
+
+        return hasPt;
       }
 
       return true;
@@ -1660,28 +1986,50 @@ export const MediaModule: React.FC = () => {
     const strictCatalog = mappedMovies.filter(filterByDbExistenceAndDdi);
 
     return {
-      filtered: strictCatalog.filter(m => {
-        const matchQuery = searchQuery ? m.title.toLowerCase().includes(searchQuery.toLowerCase()) || m.overview.toLowerCase().includes(searchQuery.toLowerCase()) : true;
-        const matchCategory = selectedCategory !== 'Todos' ? (m as any).category === selectedCategory || m.category === selectedCategory : true;
-        const matchScope = scopeFiltering !== 'todos' ? m.type === scopeFiltering : true;
+      filtered: strictCatalog.filter((m) => {
+        const matchQuery = searchQuery
+          ? m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            m.overview.toLowerCase().includes(searchQuery.toLowerCase())
+          : true;
+        const matchCategory =
+          selectedCategory !== "Todos"
+            ? (m as any).category === selectedCategory ||
+              m.category === selectedCategory
+            : true;
+        const matchScope =
+          scopeFiltering !== "todos" ? m.type === scopeFiltering : true;
         return matchQuery && matchCategory && matchScope && m.status;
       }),
-      favorites: strictCatalog.filter(m => {
-        const favs = JSON.parse(localStorage.getItem('invis_favorites') || '[]');
+      favorites: strictCatalog.filter((m) => {
+        const favs = JSON.parse(
+          localStorage.getItem("invis_favorites") || "[]",
+        );
         return m.status && favs.includes(m.id);
       }),
-      continue: strictCatalog.filter(m => {
-        const progress = JSON.parse(localStorage.getItem('invis_continue') || '{}');
+      continue: strictCatalog.filter((m) => {
+        const progress = JSON.parse(
+          localStorage.getItem("invis_continue") || "{}",
+        );
         return m.status && progress[m.id];
       }),
-      suggestions: strictCatalog.filter(m => m.status && m.rating !== undefined && m.rating >= 8.2),
-      netflix: strictCatalog.filter(m => m.platform === 'netflix'),
-      disney: strictCatalog.filter(m => m.platform === 'disney'),
-      hbo: strictCatalog.filter(m => m.platform === 'hbo'),
-      prime: strictCatalog.filter(m => m.platform === 'prime'),
-      globoplay: strictCatalog.filter(m => m.platform === 'globoplay')
+      suggestions: strictCatalog.filter(
+        (m) => m.status && m.rating !== undefined && m.rating >= 8.2,
+      ),
+      netflix: strictCatalog.filter((m) => m.platform === "netflix"),
+      disney: strictCatalog.filter((m) => m.platform === "disney"),
+      hbo: strictCatalog.filter((m) => m.platform === "hbo"),
+      prime: strictCatalog.filter((m) => m.platform === "prime"),
+      globoplay: strictCatalog.filter((m) => m.platform === "globoplay"),
     };
-  }, [moviesList, indexedDbCatalog, searchQuery, currentUser, selectedCategory, scopeFiltering, mappedMovies]);
+  }, [
+    moviesList,
+    indexedDbCatalog,
+    searchQuery,
+    currentUser,
+    selectedCategory,
+    scopeFiltering,
+    mappedMovies,
+  ]);
 
   // Return titles straight from backend which supports batching naturally ~50
   const getExpandedTitlesForCategory = (category: string) => {
@@ -1700,61 +2048,64 @@ export const MediaModule: React.FC = () => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
     if (scrollTop + clientHeight > scrollHeight - 220) {
       scrollCountRef.current += 1;
-      
+
       // Preload more into horizontal limits dynamically (+60 titles!)
-      setFavoritesLimit(prev => prev + 60);
-      setContinueWatchingLimit(prev => prev + 60);
-      setSuggestionsLimit(prev => prev + 60);
-      setNetflixLimit(prev => prev + 60);
-      setDisneyLimit(prev => prev + 60);
-      setHboLimit(prev => prev + 60);
-      setPrimeLimit(prev => prev + 60);
-      setGloboplayLimit(prev => prev + 60);
+      setFavoritesLimit((prev) => prev + 60);
+      setContinueWatchingLimit((prev) => prev + 60);
+      setSuggestionsLimit((prev) => prev + 60);
+      setNetflixLimit((prev) => prev + 60);
+      setDisneyLimit((prev) => prev + 60);
+      setHboLimit((prev) => prev + 60);
+      setPrimeLimit((prev) => prev + 60);
+      setGloboplayLimit((prev) => prev + 60);
 
       // Increase main catalog search grid limits
       const totalMatch = memoizedCategories.filtered.length;
 
       if (visiblePostersCount < totalMatch) {
-         setVisiblePostersCount(prev => Math.min(totalMatch, prev + 60));
+        setVisiblePostersCount((prev) => Math.min(totalMatch, prev + 60));
       }
       triggerHaptic(10);
     }
   };
 
   // Infinite Scroll Handler for Horizontal Categories
-  const handleHorizontalScroll = (e: React.UIEvent<HTMLDivElement>, category: string) => {
+  const handleHorizontalScroll = (
+    e: React.UIEvent<HTMLDivElement>,
+    category: string,
+  ) => {
     const { scrollLeft, scrollWidth, clientWidth } = e.currentTarget;
     if (scrollLeft + clientWidth > scrollWidth * 0.6) {
-      if (category === 'favorites' && favoritesLimit < 120) {
-        setFavoritesLimit(prev => Math.min(180, prev + 60));
+      if (category === "favorites" && favoritesLimit < 120) {
+        setFavoritesLimit((prev) => Math.min(180, prev + 60));
         triggerHaptic(10);
       }
-      if (category === 'continue' && continueWatchingLimit < 120) {
-        setContinueWatchingLimit(prev => Math.min(180, prev + 60));
+      if (category === "continue" && continueWatchingLimit < 120) {
+        setContinueWatchingLimit((prev) => Math.min(180, prev + 60));
         triggerHaptic(10);
       }
-      if (category === 'suggestions' && suggestionsLimit < 120) {
-        setSuggestionsLimit(prev => Math.min(180, prev + 60));
+      if (category === "suggestions" && suggestionsLimit < 120) {
+        setSuggestionsLimit((prev) => Math.min(180, prev + 60));
         triggerHaptic(10);
       }
-      if (category === 'netflix' && netflixLimit < 120) {
-        setNetflixLimit(prev => Math.min(180, prev + 60));
+      if (category === "netflix" && netflixLimit < 120) {
+        setNetflixLimit((prev) => Math.min(180, prev + 60));
         triggerHaptic(10);
       }
-      if (category === 'disney' && disneyLimit < 120) {
-        setDisneyLimit(prev => Math.min(180, prev + 60));
+      if (category === "disney" && disneyLimit < 120) {
+        setDisneyLimit((prev) => Math.min(180, prev + 60));
         triggerHaptic(10);
       }
-      if (category === 'hbo' && hboLimit < 120) {
-        setHboLimit(prev => Math.min(180, prev + 60));
+      if (category === "hbo" && hboLimit < 120) {
+        setHboLimit((prev) => Math.min(180, prev + 60));
         triggerHaptic(10);
       }
-      if (category === 'prime' && primeLimit < 120) {
-        setPrimeLimit(prev => Math.min(180, prev + 60));
+      if (category === "prime" && primeLimit < 120) {
+        setPrimeLimit((prev) => Math.min(180, prev + 60));
         triggerHaptic(10);
       }
-      if (category === 'globoplay' && globoplayLimit < 120) {
-        setGloboplayLimit(prev => Math.min(180, prev + 60));
+      if (category === "globoplay" && globoplayLimit < 120) {
+        setGloboplayLimit((prev) => Math.min(180, prev + 60));
         triggerHaptic(10);
       }
     }
@@ -1769,48 +2120,60 @@ export const MediaModule: React.FC = () => {
   const [crawlerLogs, setCrawlerLogs] = useState<string[]>([]);
   const [healthCheckProgress, setHealthCheckProgress] = useState(0);
   const [healthCheckLogs, setHealthCheckLogs] = useState<string[]>([]);
-  const [scrapedPendingSources, setScrapedPendingSources] = useState<{
-    id: string;
-    title: string;
-    year: number;
-    videoUrl: string;
-    posterUrl: string;
-    overview: string;
-    type: 'filme' | 'serie' | 'trailer';
-  }[]>([
+  const [scrapedPendingSources, setScrapedPendingSources] = useState<
     {
-      id: 'p1',
-      title: 'Inception',
+      id: string;
+      title: string;
+      year: number;
+      videoUrl: string;
+      posterUrl: string;
+      overview: string;
+      type: "filme" | "serie" | "trailer";
+    }[]
+  >([
+    {
+      id: "p1",
+      title: "Inception",
       year: 2010,
-      videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
-      posterUrl: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&auto=format&fit=crop&q=80',
-      overview: 'Dom Cobb é um ladrão habilidoso que rouba segredos de dentro do subconsciente durante o estado de sono.',
-      type: 'filme'
+      videoUrl: "https://www.youtube.com/embed/YoHD9XEInc0",
+      posterUrl:
+        "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&auto=format&fit=crop&q=80",
+      overview:
+        "Dom Cobb é um ladrão habilidoso que rouba segredos de dentro do subconsciente durante o estado de sono.",
+      type: "filme",
     },
     {
-      id: 'p2',
-      title: 'The Matrix Resurrections',
+      id: "p2",
+      title: "The Matrix Resurrections",
       year: 2021,
-      videoUrl: 'https://www.youtube.com/embed/9ix7TMcY-Hs',
-      posterUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=400&auto=format&fit=crop&q=80',
-      overview: 'Retorne ao mundo de duas realidades: uma, a vida cotidiana; a outra, o que está por trás dela.',
-      type: 'serie'
-    }
+      videoUrl: "https://www.youtube.com/embed/9ix7TMcY-Hs",
+      posterUrl:
+        "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=400&auto=format&fit=crop&q=80",
+      overview:
+        "Retorne ao mundo de duas realidades: uma, a vida cotidiana; a outra, o que está por trás dela.",
+      type: "serie",
+    },
   ]);
 
   // Form states matching Bloco 5 Custom fields
-  const [formTitle, setFormTitle] = useState('');
+  const [formTitle, setFormTitle] = useState("");
   const [formYear, setFormYear] = useState(2026);
-  const [formPosterUrl, setFormPosterUrl] = useState('');
-  const [formVideoUrl, setFormVideoUrl] = useState('');
-  const [formType, setFormType] = useState<'filme' | 'serie' | 'trailer'>('filme');
+  const [formPosterUrl, setFormPosterUrl] = useState("");
+  const [formVideoUrl, setFormVideoUrl] = useState("");
+  const [formType, setFormType] = useState<"filme" | "serie" | "trailer">(
+    "filme",
+  );
 
   // Manual Play Test controller states
   const [playTestUrl, setPlayTestUrl] = useState<string | null>(null);
   const [isPlayingTest, setIsPlayingTest] = useState(false);
 
   // Real Crawler & Metadata Indexer (Bloco 2 & 3: Web Scraper + TMDB API Sync)
-  const runCrawler = async (targetTitle: string, targetYear: number, type: 'filme' | 'serie' | 'trailer' = 'filme') => {
+  const runCrawler = async (
+    targetTitle: string,
+    targetYear: number,
+    type: "filme" | "serie" | "trailer" = "filme",
+  ) => {
     if (!targetTitle.trim()) return;
 
     setIsCrawling(true);
@@ -1819,24 +2182,32 @@ export const MediaModule: React.FC = () => {
 
     const log = (text: string) => {
       const safeText = text.replace(/error/gi, "e-rror");
-      setCrawlerLogs(prev => [...prev, safeText]);
+      setCrawlerLogs((prev) => [...prev, safeText]);
       triggerHaptic(10);
     };
 
     try {
-      log(`[EXTRACTOR ENGINE] Iniciando varredura para: "${targetTitle.toUpperCase()}"...`);
-      await new Promise(res => setTimeout(res, 600));
+      log(
+        `[EXTRACTOR ENGINE] Iniciando varredura para: "${targetTitle.toUpperCase()}"...`,
+      );
+      await new Promise((res) => setTimeout(res, 600));
 
-      log(`[TMDb Sync] Querying endpoints: search/multi?query=${encodeURIComponent(targetTitle)}`);
-      const searchRes = await fetch(`/api/tmdb/search?query=${encodeURIComponent(targetTitle)}`);
-      
+      log(
+        `[TMDb Sync] Querying endpoints: search/multi?query=${encodeURIComponent(targetTitle)}`,
+      );
+      const searchRes = await fetch(
+        `/api/tmdb/search?query=${encodeURIComponent(targetTitle)}`,
+      );
+
       if (!searchRes.ok) {
         throw new Error("Falha na comunicação com os servidores TMDb.");
       }
-      
+
       const searchData = await searchRes.json();
       if (!searchData || searchData.length === 0) {
-        log(`[TMDb ERROR] Nenhum título mapeado no TMDb correspondente a '${targetTitle}'.`);
+        log(
+          `[TMDb ERROR] Nenhum título mapeado no TMDb correspondente a '${targetTitle}'.`,
+        );
         log(`[AVISO] Varredura abortada por falta de conformidade canônica.`);
         setIsCrawling(false);
         return;
@@ -1844,24 +2215,40 @@ export const MediaModule: React.FC = () => {
 
       const match = searchData[0];
       log(`[TMDb OK] Resposta canônica recebida. Id TMDB: ${match.id}`);
-      await new Promise(res => setTimeout(res, 600));
+      await new Promise((res) => setTimeout(res, 600));
 
       log(`[CRAWLER] Iniciando Raspagem de Embeds...`);
-      log(`[SCRAPER] Capturando streams de mirrors estruturados para id: ${match.id}`);
-      await new Promise(res => setTimeout(res, 700));
+      log(
+        `[SCRAPER] Capturando streams de mirrors estruturados para id: ${match.id}`,
+      );
+      await new Promise((res) => setTimeout(res, 700));
 
       // Query full details (Cast actors, duration, trailers, streaming url mapping)
-      const detailsRes = await fetch(`/api/tmdb/details?id=${match.id}&type=${type}`);
-      let details = { duration: "120m", production: "Não Informada", actors: ["Direto de TMDB"], videoUrl: "", streamUrl: "" };
-      
+      const detailsRes = await fetch(
+        `/api/tmdb/details?id=${match.id}&type=${type}`,
+      );
+      let details = {
+        duration: "120m",
+        production: "Não Informada",
+        actors: ["Direto de TMDB"],
+        videoUrl: "",
+        streamUrl: "",
+      };
+
       if (detailsRes.ok) {
         details = await detailsRes.json();
-        log(`[SCRAPER] Sinal de streaming obtido com sucesso via mirrors resilientes!`);
-        log(`[NORMALIZAÇÃO OK] Match: '${match.title}' (${match.year}) bate com indexação canonical.`);
+        log(
+          `[SCRAPER] Sinal de streaming obtido com sucesso via mirrors resilientes!`,
+        );
+        log(
+          `[NORMALIZAÇÃO OK] Match: '${match.title}' (${match.year}) bate com indexação canonical.`,
+        );
       }
 
       log(`[STATUS DE SINAL] Sucesso: [STATUS: READY_FOR_METADATA] definido!`);
-      log(`[BANCO SQL DIRECT] Sincronização concluída. Adicionando '${match.title}' de forma definitiva ao catálogo.`);
+      log(
+        `[BANCO SQL DIRECT] Sincronização concluída. Adicionando '${match.title}' de forma definitiva ao catálogo.`,
+      );
 
       // Register the newly crawled movie
       const newMo: Movie = {
@@ -1870,7 +2257,8 @@ export const MediaModule: React.FC = () => {
         year: match.year,
         posterUrl: match.posterUrl,
         overview: match.overview,
-        videoUrl: details.videoUrl || "https://www.youtube.com/embed/dQw4w9WgXcQ",
+        videoUrl:
+          details.videoUrl || "https://www.youtube.com/embed/dQw4w9WgXcQ",
         streamUrl: details.streamUrl,
         type: type,
         status: true,
@@ -1881,12 +2269,12 @@ export const MediaModule: React.FC = () => {
         production: details.production,
         totalDuration: details.duration,
         likes: match.likes || 150,
-        trendDays: 5
+        trendDays: 5,
       };
 
       // Push into moviesList
-      setMoviesList(prev => {
-        if (prev.some(m => m.id === newMo.id)) return prev;
+      setMoviesList((prev) => {
+        if (prev.some((m) => m.id === newMo.id)) return prev;
         return [newMo, ...prev];
       });
 
@@ -1898,7 +2286,7 @@ export const MediaModule: React.FC = () => {
       setFormType(newMo.type);
 
       // Add to crawled pending list so they can play test it
-      setScrapedPendingSources(prev => [
+      setScrapedPendingSources((prev) => [
         {
           id: `sc_test_${match.id}`,
           title: newMo.title,
@@ -1906,13 +2294,14 @@ export const MediaModule: React.FC = () => {
           videoUrl: newMo.videoUrl,
           posterUrl: newMo.posterUrl,
           overview: newMo.overview,
-          type: newMo.type
+          type: newMo.type,
         },
-        ...prev
+        ...prev,
       ]);
-
     } catch (err: any) {
-      log(`[ERRO CRÍTICO] Falha catastrófica no processo de raspagem: ${err.message}`);
+      log(
+        `[ERRO CRÍTICO] Falha catastrófica no processo de raspagem: ${err.message}`,
+      );
     } finally {
       setIsCrawling(false);
     }
@@ -1925,15 +2314,18 @@ export const MediaModule: React.FC = () => {
     setHealthCheckLogs([]);
     triggerHaptic(50);
 
-    setHealthCheckLogs(prev => [...prev, `[HEALTH CHECK INICIADO] Conectando com o bouncer backend para auditoria com o Cloud Worker remoto...`]);
+    setHealthCheckLogs((prev) => [
+      ...prev,
+      `[HEALTH CHECK INICIADO] Conectando com o bouncer backend para auditoria com o Cloud Worker remoto...`,
+    ]);
     setHealthCheckProgress(25);
 
     try {
       const response = await fetch("/api/bouncer/validate-all", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
-        }
+          "Content-Type": "application/json",
+        },
       });
       const data = await response.json();
       setHealthCheckProgress(75);
@@ -1943,16 +2335,18 @@ export const MediaModule: React.FC = () => {
         if (data.logs && data.logs.length > 0) {
           data.logs.forEach((log: string, idx: number) => {
             setTimeout(() => {
-              setHealthCheckLogs(prev => [...prev, log]);
+              setHealthCheckLogs((prev) => [...prev, log]);
             }, idx * 150);
           });
         }
 
         // Atualiza a prateleira local de filmes no HUD dinamicamente em tempo real (Fase 2: Data Vault Status sync)
         if (data.updatedMovies && data.updatedMovies.length > 0) {
-          setMoviesList(prev => {
-            return prev.map(movie => {
-              const matchesMatch = data.updatedMovies.find((um: any) => um.id === movie.id);
+          setMoviesList((prev) => {
+            return prev.map((movie) => {
+              const matchesMatch = data.updatedMovies.find(
+                (um: any) => um.id === movie.id,
+              );
               if (matchesMatch) {
                 return { ...movie, status: matchesMatch.status };
               }
@@ -1961,10 +2355,16 @@ export const MediaModule: React.FC = () => {
           });
         }
       } else {
-        setHealthCheckLogs(prev => [...prev, `[ERRO] Falha ao processar requisição no resolvedor central.`]);
+        setHealthCheckLogs((prev) => [
+          ...prev,
+          `[ERRO] Falha ao processar requisição no resolvedor central.`,
+        ]);
       }
     } catch (err: any) {
-      setHealthCheckLogs(prev => [...prev, `[ERRO DE CONEXÃO] Falha no handshake: ${err.message}`]);
+      setHealthCheckLogs((prev) => [
+        ...prev,
+        `[ERRO DE CONEXÃO] Falha no handshake: ${err.message}`,
+      ]);
     } finally {
       setTimeout(() => {
         setHealthCheckProgress(100);
@@ -1989,11 +2389,14 @@ export const MediaModule: React.FC = () => {
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (moviePlaying) {
-      timer = setTimeout(() => {
-        setShowAntiIdleCheck(true);
-        setMoviePlaying(false); // Pause on lock
-        triggerHaptic(60);
-      }, 5 * 60 * 60 * 1000);
+      timer = setTimeout(
+        () => {
+          setShowAntiIdleCheck(true);
+          setMoviePlaying(false); // Pause on lock
+          triggerHaptic(60);
+        },
+        5 * 60 * 60 * 1000,
+      );
     }
     return () => clearTimeout(timer);
   }, [moviePlaying]);
@@ -2003,7 +2406,11 @@ export const MediaModule: React.FC = () => {
     let interval: NodeJS.Timeout;
     if (moviePlaying) {
       interval = setInterval(() => {
-        const qualities: ('1080p' | '720p' | '480p')[] = ['1080p', '720p', '480p'];
+        const qualities: ("1080p" | "720p" | "480p")[] = [
+          "1080p",
+          "720p",
+          "480p",
+        ];
         const randomQ = qualities[Math.floor(Math.random() * qualities.length)];
         setAbrMode(randomQ);
       }, 10000);
@@ -2034,7 +2441,7 @@ export const MediaModule: React.FC = () => {
     setMovieProgress(continueWatchingTime ? 45 : 0);
     triggerHaptic(30);
 
-    const currentMediaIndex = activeBlocks.findIndex(b => b.type === 'media');
+    const currentMediaIndex = activeBlocks.findIndex((b) => b.type === "media");
     if (currentMediaIndex > 0) {
       swapBlocks(currentMediaIndex, 0);
     }
@@ -2072,7 +2479,7 @@ export const MediaModule: React.FC = () => {
   useEffect(() => {
     if (!moviePlaying) return;
     const video = movieVideoRef.current;
-    const playerBlock = document.getElementById('youtube-player-block');
+    const playerBlock = document.getElementById("youtube-player-block");
     if (!playerBlock) return;
 
     const observer = new IntersectionObserver(
@@ -2095,7 +2502,7 @@ export const MediaModule: React.FC = () => {
       },
       {
         threshold: [0.0, 0.95, 1.0],
-      }
+      },
     );
 
     observer.observe(playerBlock);
@@ -2113,9 +2520,12 @@ export const MediaModule: React.FC = () => {
 
       // Save continue watching progress selectively (every ~5 seconds)
       if (Math.floor(video.currentTime) % 5 === 0 && selectedMovie) {
-        const progressObj = JSON.parse(localStorage.getItem('invis_continue') || '{}');
-        progressObj[selectedMovie.id] = (video.currentTime / video.duration) * 100;
-        localStorage.setItem('invis_continue', JSON.stringify(progressObj));
+        const progressObj = JSON.parse(
+          localStorage.getItem("invis_continue") || "{}",
+        );
+        progressObj[selectedMovie.id] =
+          (video.currentTime / video.duration) * 100;
+        localStorage.setItem("invis_continue", JSON.stringify(progressObj));
       }
     }
   };
@@ -2125,29 +2535,37 @@ export const MediaModule: React.FC = () => {
     if (video) {
       setDuration(video.duration);
       video.volume = movieVolume / 100;
-      
+
       // Load exact progress from local storage
       if (selectedMovie) {
-         const progressObj = JSON.parse(localStorage.getItem('invis_continue') || '{}');
-         const savedPct = progressObj[selectedMovie.id];
-         if (savedPct) {
-            video.currentTime = (savedPct / 100) * video.duration;
-         }
+        const progressObj = JSON.parse(
+          localStorage.getItem("invis_continue") || "{}",
+        );
+        const savedPct = progressObj[selectedMovie.id];
+        if (savedPct) {
+          video.currentTime = (savedPct / 100) * video.duration;
+        }
       }
     }
   };
 
   const handleMovieEnded = () => {
     // Continuous Playback: O sistema deve colocar o próximo vídeo da lista de favoritos para tocar
-    const favorites = (memoizedCategories && memoizedCategories.favorites) ? memoizedCategories.favorites : mappedMovies.filter(m => (m as any).isFavorite && m.status);
-    
+    const favorites =
+      memoizedCategories && memoizedCategories.favorites
+        ? memoizedCategories.favorites
+        : mappedMovies.filter((m) => (m as any).isFavorite && m.status);
+
     if (favorites.length > 0) {
       // Find current selected movie in favorites
-      const currentIndex = favorites.findIndex(m => m.id === selectedMovie?.id);
-      const nextMovie = currentIndex >= 0 && currentIndex < favorites.length - 1 
-        ? favorites[currentIndex + 1] 
-        : favorites[0];
-        
+      const currentIndex = favorites.findIndex(
+        (m) => m.id === selectedMovie?.id,
+      );
+      const nextMovie =
+        currentIndex >= 0 && currentIndex < favorites.length - 1
+          ? favorites[currentIndex + 1]
+          : favorites[0];
+
       if (nextMovie && nextMovie.id !== selectedMovie?.id) {
         startMoviePlayback(nextMovie);
       } else {
@@ -2169,29 +2587,88 @@ export const MediaModule: React.FC = () => {
   };
 
   const getActiveSubtitleText = () => {
-    if (movieSubtitle === 'OFF') return '';
+    if (movieSubtitle === "OFF") return "";
     const tracks = [
-      { tStart: 1, tEnd: 4, text: { 'PT-BR': '[Música eletrônica de abertura]', 'EN': '[Opening electronic music]', 'ES': '[Música electrónica de apertura]' } },
-      { tStart: 4, tEnd: 8, text: { 'PT-BR': 'O sinal de transmissão criptografado foi estabelecido.', 'EN': 'The encrypted broadcast signal has been established.', 'ES': 'La señal de transmisión encriptada ha sido establecida.' } },
-      { tStart: 8, tEnd: 12, text: { 'PT-BR': 'Aviso: Todos os dados da sessão estão protegidos.', 'EN': 'Warning: All session data is fully protected.', 'ES': 'Advertencia: Todos los datos de la sesión están protegidos.' } },
-      { tStart: 12, tEnd: 16, text: { 'PT-BR': 'Aproveite a experiência sonora de última geração.', 'EN': 'Enjoy the next-generation audio experience.', 'ES': 'Disfrute de la experiencia de audio de próxima generación.' } },
-      { tStart: 16, tEnd: 20, text: { 'PT-BR': 'Use os controles inferiores para áudio, legenda e velocidade.', 'EN': 'Use the lower controls for audio, subtitle and progress speed.', 'ES': 'Use los controles inferiores para audio, subtítulos y velocidad.' } },
-      { tStart: 21, tEnd: 25, text: { 'PT-BR': '[Efeito ultra sônico pulsante]', 'EN': '[Pulsing ultrasonic effect]', 'ES': '[Efecto ultrasónico pulsante]' } },
-      { tStart: 25, tEnd: 30, text: { 'PT-BR': 'Bem-vindo ao Hub de Mídia INVIS Cinema.', 'EN': 'Welcome to the INVIS Cinema Media Hub.', 'ES': 'Bienvenido al Centro de Medios de Cine INVIS.' } }
+      {
+        tStart: 1,
+        tEnd: 4,
+        text: {
+          "PT-BR": "[Música eletrônica de abertura]",
+          EN: "[Opening electronic music]",
+          ES: "[Música electrónica de apertura]",
+        },
+      },
+      {
+        tStart: 4,
+        tEnd: 8,
+        text: {
+          "PT-BR": "O sinal de transmissão criptografado foi estabelecido.",
+          EN: "The encrypted broadcast signal has been established.",
+          ES: "La señal de transmisión encriptada ha sido establecida.",
+        },
+      },
+      {
+        tStart: 8,
+        tEnd: 12,
+        text: {
+          "PT-BR": "Aviso: Todos os dados da sessão estão protegidos.",
+          EN: "Warning: All session data is fully protected.",
+          ES: "Advertencia: Todos los datos de la sesión están protegidos.",
+        },
+      },
+      {
+        tStart: 12,
+        tEnd: 16,
+        text: {
+          "PT-BR": "Aproveite a experiência sonora de última geração.",
+          EN: "Enjoy the next-generation audio experience.",
+          ES: "Disfrute de la experiencia de audio de próxima generación.",
+        },
+      },
+      {
+        tStart: 16,
+        tEnd: 20,
+        text: {
+          "PT-BR":
+            "Use os controles inferiores para áudio, legenda e velocidade.",
+          EN: "Use the lower controls for audio, subtitle and progress speed.",
+          ES: "Use los controles inferiores para audio, subtítulos y velocidad.",
+        },
+      },
+      {
+        tStart: 21,
+        tEnd: 25,
+        text: {
+          "PT-BR": "[Efeito ultra sônico pulsante]",
+          EN: "[Pulsing ultrasonic effect]",
+          ES: "[Efecto ultrasónico pulsante]",
+        },
+      },
+      {
+        tStart: 25,
+        tEnd: 30,
+        text: {
+          "PT-BR": "Bem-vindo ao Hub de Mídia INVIS Cinema.",
+          EN: "Welcome to the INVIS Cinema Media Hub.",
+          ES: "Bienvenido al Centro de Medios de Cine INVIS.",
+        },
+      },
     ];
-    const match = tracks.find(track => currentTime >= track.tStart && currentTime <= track.tEnd);
-    return match ? match.text[movieSubtitle] : '';
+    const match = tracks.find(
+      (track) => currentTime >= track.tStart && currentTime <= track.tEnd,
+    );
+    return match ? match.text[movieSubtitle] : "";
   };
 
   const showAlert = (text: string) => {
     setActiveMediaAlert(text);
     setTimeout(() => {
-      setActiveMediaAlert(prev => prev === text ? null : prev);
+      setActiveMediaAlert((prev) => (prev === text ? null : prev));
     }, 1800);
   };
 
   const getMovieVideoSrc = (movie: Movie | null) => {
-    if (!movie) return '';
+    if (!movie) return "";
     return "";
   };
 
@@ -2199,26 +2676,27 @@ export const MediaModule: React.FC = () => {
     if (isNaN(timeInSeconds)) return "00:00";
     const minutes = Math.floor(timeInSeconds / 60);
     const seconds = Math.floor(timeInSeconds % 60);
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   };
 
   const { listTrailers, listSeries, listFilmes } = React.useMemo(() => {
     return {
-      listTrailers: mappedMovies.filter(m => m.type === 'trailer' && m.status),
-      listSeries: mappedMovies.filter(m => m.type === 'serie' && m.status),
-      listFilmes: mappedMovies.filter(m => m.type === 'filme' && m.status)
+      listTrailers: mappedMovies.filter(
+        (m) => m.type === "trailer" && m.status,
+      ),
+      listSeries: mappedMovies.filter((m) => m.type === "serie" && m.status),
+      listFilmes: mappedMovies.filter((m) => m.type === "filme" && m.status),
     };
   }, [mappedMovies]);
 
   // End of modules logics
   return (
-    <div 
-      id="media_module_container" 
+    <div
+      id="media_module_container"
       onClick={handleOuterBackdropClick}
       className="w-full h-full min-h-[500px] flex items-center justify-center bg-black text-neutral-200 p-2 font-sans relative overflow-hidden select-none"
     >
       <AnimatePresence mode="wait">
-        
         {/* =========================================================================
             SESSÃO EXPANDIDA - PENDENCIA DE SELEÇÃO DE SUBTAB
             ========================================================================= */}
@@ -2235,7 +2713,8 @@ export const MediaModule: React.FC = () => {
               CONECTANDO AO REPRODUTOR DE STREAMING...
             </span>
             <p className="text-[10px] text-zinc-500 text-center uppercase tracking-wider max-w-xs">
-              Mapeamento de órbita ativo. Por favor selecione a sessão desejada no menu de hubs.
+              Mapeamento de órbita ativo. Por favor selecione a sessão desejada
+              no menu de hubs.
             </p>
           </motion.div>
         )}
@@ -2243,7 +2722,7 @@ export const MediaModule: React.FC = () => {
         {/* =========================================================================
             SESSÃO EXPANDIDA A: HUD DE CLIPS (YOUTUBE INVIS CLIENTE)
             ========================================================================= */}
-        {expandedSection === 'clips' && (
+        {expandedSection === "clips" && (
           <motion.div
             key="clips-max-satelite"
             initial={{ opacity: 0 }}
@@ -2254,39 +2733,48 @@ export const MediaModule: React.FC = () => {
             {/* Header / Submenu Filters */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-3 py-1 bg-black/40 border border-white/5 rounded-2xl gap-3">
               <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => { 
-                    triggerHaptic(20); 
-                    setExpandedSection(null); 
-                    setSelectedClip(null); 
+                <button
+                  onClick={() => {
+                    triggerHaptic(20);
+                    setExpandedSection(null);
+                    setSelectedClip(null);
                     setMediaHubSelectorOpen(true);
-                    closeBlock('media');
+                    closeBlock("media");
                   }}
                   className="p-1 px-3 text-xs bg-red-950/40 hover:bg-red-900/50 border border-red-500/20 rounded-lg text-red-400 font-mono flex items-center gap-1 cursor-pointer"
                 >
                   ◀ VOLTAR
                 </button>
                 <div className="text-left">
-                  <span className="text-[9px] font-mono text-neutral-500 uppercase tracking-widest block font-bold">ÓRBITA SATÉLITE</span>
-                  <h3 className="text-xs font-black text-rose-500 uppercase tracking-wider">HUD DE CLIPS & VÍDEOS</h3>
+                  <span className="text-[9px] font-mono text-neutral-500 uppercase tracking-widest block font-bold">
+                    ÓRBITA SATÉLITE
+                  </span>
+                  <h3 className="text-xs font-black text-rose-500 uppercase tracking-wider">
+                    HUD DE CLIPS & VÍDEOS
+                  </h3>
                 </div>
               </div>
 
               {/* Dynamic Categories selector bar (SPEC PAGE 3) */}
               <div className="flex gap-1.5 max-w-full overflow-x-auto no-scrollbar py-1">
-                {['Tendências', 'Novos no INVIS', 'Metadados Recentes'].map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => { triggerHaptic(15); setClipCategory(cat); }}
-                    className={`px-3 py-1 font-mono text-[9px] tracking-wider uppercase rounded-full border transition-all cursor-pointer whitespace-nowrap ${
-                      clipCategory === cat 
-                        ? 'bg-rose-500/10 border-rose-500 text-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.25)]' 
-                        : 'bg-white/5 border-transparent text-zinc-400 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
+                {["Tendências", "Novos no INVIS", "Metadados Recentes"].map(
+                  (cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => {
+                        triggerHaptic(15);
+                        setClipCategory(cat);
+                      }}
+                      className={`px-3 py-1 font-mono text-[9px] tracking-wider uppercase rounded-full border transition-all cursor-pointer whitespace-nowrap ${
+                        clipCategory === cat
+                          ? "bg-rose-500/10 border-rose-500 text-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.25)]"
+                          : "bg-white/5 border-transparent text-zinc-400 hover:text-white hover:bg-white/10"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ),
+                )}
               </div>
             </div>
 
@@ -2303,26 +2791,32 @@ export const MediaModule: React.FC = () => {
                   {/* Grid of cards flutuantes in layout assímetrico masonry structure (SPEC PAGE 3) */}
                   <div className="columns-1 sm:columns-2 md:columns-3 gap-3 space-y-3">
                     {clipsList.map((clip) => (
-                      <div 
+                      <div
                         key={clip.id}
                         onMouseEnter={() => setHoveredClipId(clip.id)}
                         onMouseLeave={() => setHoveredClipId(null)}
                         onClick={() => startClipPlayback(clip)}
-                        onContextMenu={(e) => { e.preventDefault(); triggerHaptic(30); setAdminMenuClip(clip); }}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          triggerHaptic(30);
+                          setAdminMenuClip(clip);
+                        }}
                         className="break-inside-avoid group rounded-2xl overflow-hidden bg-[#0d0d12]/60 border border-white/5 hover:border-red-500/30 transition-all duration-300 relative flex flex-col p-1.5 backdrop-blur-xl cursor-pointer"
                         title="Dica: Clique longo / Clique Direito abre Menu de Monitoramento"
                       >
                         {/* Thumbnail Dinâmica with simulated play loop focus zoom */}
                         <div className="w-full aspect-video rounded-xl overflow-hidden relative bg-black/60 shadow-inner">
-                          <img 
-                            src={clip.thumbnailUrl} 
+                          <img
+                            src={clip.thumbnailUrl}
                             alt={clip.title}
                             className={`w-full h-full object-cover transition-transform duration-[1200ms] ${
-                              hoveredClipId === clip.id ? 'scale-110 filter brightness-90 animate-pulse' : 'scale-100 brightness-75'
+                              hoveredClipId === clip.id
+                                ? "scale-110 filter brightness-90 animate-pulse"
+                                : "scale-100 brightness-75"
                             }`}
                             referrerPolicy="no-referrer"
                           />
-                          
+
                           {/* Simulated animated loop feedback text on hover */}
                           {hoveredClipId === clip.id && (
                             <div className="absolute inset-0 bg-red-950/15 flex items-center justify-center pointer-events-none">
@@ -2340,26 +2834,31 @@ export const MediaModule: React.FC = () => {
 
                         {/* Text and Overlay Metadata (SPEC PAGE 3) */}
                         <div className="pt-1.5 text-left space-y-1 relative">
-
                           <h4 className="text-[10px] font-black text-white leading-snug group-hover:text-rose-400 transition-colors tracking-wide filter drop-shadow-[0_0_2px_black]">
                             {clip.title}
                           </h4>
-                          <p className="text-[8.5px] text-zinc-400 leading-normal line-clamp-1">{clip.description}</p>
-                          
+                          <p className="text-[8.5px] text-zinc-400 leading-normal line-clamp-1">
+                            {clip.description}
+                          </p>
+
                           <div className="flex justify-between items-center text-[7.5px] font-mono text-zinc-500 pt-1 border-t border-white/5">
-                            <span className="bg-white/5 px-1 py-0.2 rounded hover:text-white transition-colors">#{clip.tags[0]}</span>
+                            <span className="bg-white/5 px-1 py-0.2 rounded hover:text-white transition-colors">
+                              #{clip.tags[0]}
+                            </span>
                             <span>{clip.duration} MIN</span>
                           </div>
                         </div>
 
                         {/* Fine Neon Border status indicator at base (SPEC PAGE 3) */}
-                        <div className={`absolute bottom-0 left-2.5 right-2.5 h-[2px] rounded-full blur-[0.5px] shadow-[0_0_5px_currentColor] ${
-                          clip.status === 'online' 
-                            ? 'bg-emerald-500 text-emerald-400' 
-                            : clip.status === 'monitored' 
-                              ? 'bg-amber-400 text-amber-300' 
-                              : 'bg-rose-500 text-rose-400'
-                        }`} />
+                        <div
+                          className={`absolute bottom-0 left-2.5 right-2.5 h-[2px] rounded-full blur-[0.5px] shadow-[0_0_5px_currentColor] ${
+                            clip.status === "online"
+                              ? "bg-emerald-500 text-emerald-400"
+                              : clip.status === "monitored"
+                                ? "bg-amber-400 text-amber-300"
+                                : "bg-rose-500 text-rose-400"
+                          }`}
+                        />
                       </div>
                     ))}
                   </div>
@@ -2372,7 +2871,12 @@ export const MediaModule: React.FC = () => {
                         <span>Curadoria Freelance NPC de Busca</span>
                       </div>
                       <p className="text-[10px] text-zinc-400 max-w-md leading-relaxed">
-                        Não consegue achar o que assistir? Solicite que os mineradores virtuais busquem novas correspondências de <span className="text-rose-400 font-bold">{clipCategory}</span> indexadas na internet.
+                        Não consegue achar o que assistir? Solicite que os
+                        mineradores virtuais busquem novas correspondências de{" "}
+                        <span className="text-rose-400 font-bold">
+                          {clipCategory}
+                        </span>{" "}
+                        indexadas na internet.
                       </p>
                     </div>
 
@@ -2381,7 +2885,9 @@ export const MediaModule: React.FC = () => {
                       disabled={npcMiningActive}
                       className="px-5 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 text-black font-black font-mono text-[10px] tracking-wider uppercase transition-all shadow-[0_0_15px_rgba(180,50,50,0.35)] active:scale-95 disabled:opacity-50 hover:brightness-110 cursor-pointer shrink-0"
                     >
-                      {npcMiningActive ? '🤖 NPC MINERANDO...' : '🤖 SOLICITAR BUSCA NPC'}
+                      {npcMiningActive
+                        ? "🤖 NPC MINERANDO..."
+                        : "🤖 SOLICITAR BUSCA NPC"}
                     </button>
                   </div>
                 </motion.div>
@@ -2400,14 +2906,20 @@ export const MediaModule: React.FC = () => {
                       <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
                       REVISÃO DE CANAL ACTIVO
                     </span>
-                    
+
                     {/* SPEC PAGE 4 REQUIREMENT: STYLIZED YOUTUBE CLOSE BUTTON SHRINKS PLAYER */}
                     <button
-                      onClick={() => { triggerHaptic(20); setClipPlaying(false); setSelectedClip(null); }}
+                      onClick={() => {
+                        triggerHaptic(20);
+                        setClipPlaying(false);
+                        setSelectedClip(null);
+                      }}
                       className="group flex items-center gap-2 bg-black/60 border border-white/10 hover:border-red-500/30 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer"
                       title="Encolher vídeo e retornar ao modal de clips"
                     >
-                      <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest group-hover:text-red-400 transition-colors">Voltar</span>
+                      <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest group-hover:text-red-400 transition-colors">
+                        Voltar
+                      </span>
                       <div className="w-6 h-[18px] rounded bg-red-600 flex items-center justify-center transition-transform group-hover:scale-105 shadow-[0_0_8px_rgba(220,38,38,0.4)]">
                         <div className="w-0 h-0 border-t-[3.5px] border-t-transparent border-b-[3.5px] border-b-transparent border-l-[6px] border-l-white ml-0.5" />
                       </div>
@@ -2415,8 +2927,10 @@ export const MediaModule: React.FC = () => {
                   </div>
 
                   {/* FRAME DE VISUALIZAÇÃO: Red neon pulsing border reacts to audio frequencies (SPEC PAGE 4) */}
-                  <div className="w-full aspect-video rounded-3xl overflow-hidden bg-black relative border-[1px] border-rose-600 shadow-[0_0_25px_rgba(225,29,72,0.3)] animate-pulse" style={{ animationDuration: '4s' }}>
-                    
+                  <div
+                    className="w-full aspect-video rounded-3xl overflow-hidden bg-black relative border-[1px] border-rose-600 shadow-[0_0_25px_rgba(225,29,72,0.3)] animate-pulse"
+                    style={{ animationDuration: "4s" }}
+                  >
                     {/* Backdrop Blur thumbnail in high scale simulation */}
                     <img
                       src={selectedClip.thumbnailUrl}
@@ -2430,7 +2944,9 @@ export const MediaModule: React.FC = () => {
                         <div className="absolute top-4 left-4 bg-yellow-500/20 text-yellow-500 border border-yellow-500/50 px-2 py-1 rounded text-[9px] font-mono font-black uppercase tracking-widest">
                           Anúncio
                         </div>
-                        <div className="text-zinc-300 text-sm font-mono mt-8 mb-2">Bumper Ad</div>
+                        <div className="text-zinc-300 text-sm font-mono mt-8 mb-2">
+                          Bumper Ad
+                        </div>
                         <div className="w-12 h-12 border-4 border-zinc-800 border-t-yellow-500 rounded-full animate-spin mb-4" />
                         <div className="absolute bottom-4 right-4 bg-black/80 border border-white/10 px-3 py-1.5 rounded-lg text-white font-mono text-[10px] flex items-center gap-2">
                           <span>Seu vídeo começará em {bumperCountdown}s</span>
@@ -2442,11 +2958,20 @@ export const MediaModule: React.FC = () => {
                       <>
                         {/* Centered large play control action display */}
                         <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/35">
-                          <button 
-                            onClick={() => { triggerHaptic(20); setClipPlaying(!clipPlaying); }}
+                          <button
+                            onClick={() => {
+                              triggerHaptic(20);
+                              setClipPlaying(!clipPlaying);
+                            }}
                             className="w-14 h-14 rounded-full bg-black/85 border border-rose-500/50 flex items-center justify-center text-rose-500 hover:scale-110 active:scale-95 transition-all shadow-2xl cursor-pointer"
                           >
-                            {clipPlaying ? <span className="font-mono text-xs font-bold font-black">||</span> : <Play className="w-6 h-6 fill-rose-500 ml-0.5" />}
+                            {clipPlaying ? (
+                              <span className="font-mono text-xs font-bold font-black">
+                                ||
+                              </span>
+                            ) : (
+                              <Play className="w-6 h-6 fill-rose-500 ml-0.5" />
+                            )}
                           </button>
                         </div>
                       </>
@@ -2454,51 +2979,65 @@ export const MediaModule: React.FC = () => {
 
                     {/* SPEC 2: Gestures Touch zones (Left: Brightness, Right: Volume) */}
                     <div className="absolute inset-0 flex pointer-events-none z-20">
-                      
                       {/* Left vertical: Drag Brightness */}
-                      <div 
+                      <div
                         className="w-1/2 h-full pointer-events-auto cursor-ns-resize"
                         onWheel={(e) => {
                           e.preventDefault();
-                          setClipBrightness(prev => Math.min(100, Math.max(0, prev - Math.sign(e.deltaY) * 5)));
+                          setClipBrightness((prev) =>
+                            Math.min(
+                              100,
+                              Math.max(0, prev - Math.sign(e.deltaY) * 5),
+                            ),
+                          );
                           setShowBrightnessIndicator(true);
-                          setTimeout(() => setShowBrightnessIndicator(false), 2000);
+                          setTimeout(
+                            () => setShowBrightnessIndicator(false),
+                            2000,
+                          );
                           triggerHaptic(10);
                         }}
                         onClick={() => {
-                          setClipBrightness(prev => (prev === 20 ? 90 : 20)); // simulated tap toggle
+                          setClipBrightness((prev) => (prev === 20 ? 90 : 20)); // simulated tap toggle
                           setShowBrightnessIndicator(true);
-                          setTimeout(() => setShowBrightnessIndicator(false), 2000);
+                          setTimeout(
+                            () => setShowBrightnessIndicator(false),
+                            2000,
+                          );
                           triggerHaptic(15);
                         }}
                         title="Arraste na esquerda para ajustar brilho (ou clique)"
                       />
 
                       {/* Right vertical: Drag Volume */}
-                      <div 
+                      <div
                         className="w-1/2 h-full pointer-events-auto cursor-ns-resize"
                         onWheel={(e) => {
                           e.preventDefault();
-                          setClipVolume(prev => Math.min(100, Math.max(0, prev - Math.sign(e.deltaY) * 5)));
+                          setClipVolume((prev) =>
+                            Math.min(
+                              100,
+                              Math.max(0, prev - Math.sign(e.deltaY) * 5),
+                            ),
+                          );
                           setShowVolumeIndicator(true);
                           setTimeout(() => setShowVolumeIndicator(false), 2000);
                           triggerHaptic(10);
                         }}
                         onClick={() => {
-                          setClipVolume(prev => (prev === 0 ? 80 : 0)); // simulated mute tap toggle
+                          setClipVolume((prev) => (prev === 0 ? 80 : 0)); // simulated mute tap toggle
                           setShowVolumeIndicator(true);
                           setTimeout(() => setShowVolumeIndicator(false), 2000);
                           triggerHaptic(15);
                         }}
                         title="Arraste na direita para ajustar volume (ou clique)"
                       />
-
                     </div>
 
                     {/* Interactive indicators HUD layout */}
                     <AnimatePresence>
                       {showVolumeIndicator && (
-                        <motion.div 
+                        <motion.div
                           initial={{ opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0 }}
@@ -2509,7 +3048,7 @@ export const MediaModule: React.FC = () => {
                         </motion.div>
                       )}
                       {showBrightnessIndicator && (
-                        <motion.div 
+                        <motion.div
                           initial={{ opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0 }}
@@ -2526,16 +3065,16 @@ export const MediaModule: React.FC = () => {
                   <div className="space-y-4 px-1">
                     <div className="space-y-2">
                       {/* Timeline Bar */}
-                      <div 
+                      <div
                         onClick={handleClipTimelineClick}
                         className="w-full h-1 bg-zinc-800 rounded-full cursor-pointer relative flex items-center group"
                       >
-                        <div 
+                        <div
                           className="h-full bg-rose-600 rounded-full"
                           style={{ width: `${clipProgress}%` }}
                         />
                         {/* THE SYMBOL RED CRYSTAL LOSANGO SCRUBBER */}
-                        <div 
+                        <div
                           className="absolute w-2.5 h-4 bg-rose-500 border border-white/55 rotate-45 cursor-grab group-active:cursor-grabbing hover:scale-110 filter drop-shadow-[0_0_6px_#f43f5e] transition-transform"
                           style={{ left: `calc(${clipProgress}% - 5px)` }}
                         />
@@ -2543,10 +3082,30 @@ export const MediaModule: React.FC = () => {
 
                       <div className="flex justify-between items-center text-[10px] font-mono text-zinc-500">
                         <div className="flex gap-4">
-                          <button onClick={() => { setClipProgress(prev => Math.max(0, prev - 8)); triggerHaptic(12); }} className="hover:text-white transition-colors cursor-pointer text-zinc-400">🕒 -10s</button>
-                          <button onClick={() => { setClipProgress(prev => Math.min(100, prev + 8)); triggerHaptic(12); }} className="hover:text-white transition-colors cursor-pointer text-zinc-400">🕒 +10s</button>
+                          <button
+                            onClick={() => {
+                              setClipProgress((prev) => Math.max(0, prev - 8));
+                              triggerHaptic(12);
+                            }}
+                            className="hover:text-white transition-colors cursor-pointer text-zinc-400"
+                          >
+                            🕒 -10s
+                          </button>
+                          <button
+                            onClick={() => {
+                              setClipProgress((prev) =>
+                                Math.min(100, prev + 8),
+                              );
+                              triggerHaptic(12);
+                            }}
+                            className="hover:text-white transition-colors cursor-pointer text-zinc-400"
+                          >
+                            🕒 +10s
+                          </button>
                         </div>
-                        <span className="font-bold text-zinc-400">{Math.floor(clipProgress * 1.5)}s / 150s</span>
+                        <span className="font-bold text-zinc-400">
+                          {Math.floor(clipProgress * 1.5)}s / 150s
+                        </span>
                       </div>
                     </div>
 
@@ -2559,19 +3118,30 @@ export const MediaModule: React.FC = () => {
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex items-center justify-center animate-pulse">
                               <Heart className="w-2.5 h-2.5 text-white animate-ping" />
                             </span>
-                            <span className="text-[9px] font-mono text-emerald-400 tracking-wider font-bold">CONEXÃO ATIVA (HEARTBEAT)</span>
+                            <span className="text-[9px] font-mono text-emerald-400 tracking-wider font-bold">
+                              CONEXÃO ATIVA (HEARTBEAT)
+                            </span>
                           </div>
-                          
-                          <h4 className="text-sm font-black text-white uppercase tracking-wide">{selectedClip.title}</h4>
-                          <p className="text-[10px] leading-relaxed text-zinc-400 max-w-xl">{selectedClip.description}</p>
+
+                          <h4 className="text-sm font-black text-white uppercase tracking-wide">
+                            {selectedClip.title}
+                          </h4>
+                          <p className="text-[10px] leading-relaxed text-zinc-400 max-w-xl">
+                            {selectedClip.description}
+                          </p>
                         </div>
 
                         {/* Slide up metadata trigger */}
                         <button
-                          onClick={() => { triggerHaptic(15); setShowClipMetadataDrawer(!showClipMetadataDrawer); }}
+                          onClick={() => {
+                            triggerHaptic(15);
+                            setShowClipMetadataDrawer(!showClipMetadataDrawer);
+                          }}
                           className="px-3.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl text-[9px] font-mono tracking-wider uppercase cursor-pointer whitespace-nowrap"
                         >
-                          {showClipMetadataDrawer ? 'Ocultar Gaveta' : 'Ver Metadados'}
+                          {showClipMetadataDrawer
+                            ? "Ocultar Gaveta"
+                            : "Ver Metadados"}
                         </button>
                       </div>
 
@@ -2580,22 +3150,32 @@ export const MediaModule: React.FC = () => {
                         {showClipMetadataDrawer && (
                           <motion.div
                             initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
+                            animate={{ height: "auto", opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden bg-[#07070a]/90 border border-white/5 rounded-2xl p-4 text-left space-y-3"
                           >
-                            <span className="text-[8.5px] font-mono font-bold uppercase tracking-widest text-[#D4AF37]">PAINEL INTEGRADO SATELLITE (DEEP SCRAPE)</span>
+                            <span className="text-[8.5px] font-mono font-bold uppercase tracking-widest text-[#D4AF37]">
+                              PAINEL INTEGRADO SATELLITE (DEEP SCRAPE)
+                            </span>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[10px] font-mono text-zinc-400">
                               <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
-                                <span className="text-zinc-500 block text-[7px] uppercase font-black">ORIGEM DA FONTE</span>
-                                <span className="text-rose-400">PROXY EMBED MASK</span>
+                                <span className="text-zinc-500 block text-[7px] uppercase font-black">
+                                  ORIGEM DA FONTE
+                                </span>
+                                <span className="text-rose-400">
+                                  PROXY EMBED MASK
+                                </span>
                               </div>
                               <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
-                                <span className="text-zinc-500 block text-[7px] uppercase font-black">QUALIDADE STREAM</span>
+                                <span className="text-zinc-500 block text-[7px] uppercase font-black">
+                                  QUALIDADE STREAM
+                                </span>
                                 <span>1080p ABR ACTIVE</span>
                               </div>
                               <div className="p-2.5 rounded-xl bg-black/40 border border-white/5 col-span-2 sm:col-span-1">
-                                <span className="text-zinc-500 block text-[7px] uppercase font-black">FILTRADO POR</span>
+                                <span className="text-zinc-500 block text-[7px] uppercase font-black">
+                                  FILTRADO POR
+                                </span>
                                 <span>{clipCategory}</span>
                               </div>
                             </div>
@@ -2613,7 +3193,7 @@ export const MediaModule: React.FC = () => {
         {/* =========================================================================
             SESSÃO EXPANDIDA B: HUD DE MÚSICAS (AUDIO TERMINAL PCB CONTROL)
             ========================================================================= */}
-        {expandedSection === 'music' && (
+        {expandedSection === "music" && (
           <motion.div
             key="music-max-satelite"
             initial={{ opacity: 0 }}
@@ -2623,38 +3203,45 @@ export const MediaModule: React.FC = () => {
           >
             {/* Header */}
             <div className="w-full flex justify-between items-center px-2 py-1 bg-black/40 border border-white/5 rounded-2xl">
-              <button 
-                onClick={() => { 
-                  triggerHaptic(20); 
-                  setExpandedSection(null); 
-                  setSongPlaying(false); 
+              <button
+                onClick={() => {
+                  triggerHaptic(20);
+                  setExpandedSection(null);
+                  setSongPlaying(false);
                   setMediaHubSelectorOpen(true);
-                  closeBlock('media');
+                  closeBlock("media");
                 }}
                 className="p-1 px-3 text-xs bg-purple-950/40 hover:bg-purple-900/50 border border-purple-500/20 rounded-lg text-purple-400 font-mono flex items-center gap-1 cursor-pointer"
               >
                 ◀ VOLTAR
               </button>
               <div className="text-right">
-                <span className="text-[9px] font-mono text-neutral-500 uppercase tracking-widest block font-bold">DIGITAL SIGNAL</span>
-                <h3 className="text-xs font-black text-purple-400 uppercase tracking-wider">AUDIO HUB SATELLITE</h3>
+                <span className="text-[9px] font-mono text-neutral-500 uppercase tracking-widest block font-bold">
+                  DIGITAL SIGNAL
+                </span>
+                <h3 className="text-xs font-black text-purple-400 uppercase tracking-wider">
+                  AUDIO HUB SATELLITE
+                </h3>
               </div>
             </div>
 
             {/* SYNC VIOLET DETAILED PCB铜铂电路 PATTERNS WITH ACTIVE GLOW EQUALIZER (SPEC PAGE 12 & 13) */}
             <div className="w-full flex-1 flex flex-col md:flex-row items-center justify-center p-4 bg-gradient-to-tr from-[#050508] via-[#090614] to-black rounded-3xl border border-purple-500/20 relative overflow-hidden">
-              
               {/* Spectral glowing Equalizer background behind components */}
               <div className="absolute inset-0 opacity-[0.22] pointer-events-none flex items-end justify-center">
                 <div className="w-full h-32 flex justify-around items-end px-6 gap-[2px]">
                   {Array.from({ length: 32 }).map((_, idx) => (
-                    <div 
-                      key={idx} 
+                    <div
+                      key={idx}
                       className="bg-purple-500 rounded-t-full w-full"
-                      style={{ 
-                        height: songPlaying ? `${Math.round(20 + Math.sin(idx + songProgress) * 70)}%` : '5%',
-                        transition: 'height 0.15s ease-out',
-                        animation: songPlaying ? 'pulse 1.3s infinite ease-in-out' : 'undefined'
+                      style={{
+                        height: songPlaying
+                          ? `${Math.round(20 + Math.sin(idx + songProgress) * 70)}%`
+                          : "5%",
+                        transition: "height 0.15s ease-out",
+                        animation: songPlaying
+                          ? "pulse 1.3s infinite ease-in-out"
+                          : "undefined",
                       }}
                     />
                   ))}
@@ -2664,21 +3251,22 @@ export const MediaModule: React.FC = () => {
               {/* Central Compositing: Disc & Interface Frame (SPEC PAGE 12) */}
               <div className="flex-1 flex flex-col items-center justify-center space-y-6 relative z-10">
                 <div className="relative w-48 h-48 flex items-center justify-center">
-                  
                   {/* Rotating Vinyl disc purple sticker */}
-                  <div 
+                  <div
                     className={`absolute w-44 h-44 rounded-full bg-[#1a0f30] border-4 border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.45),inset_0_0_15px_black] flex items-center justify-center ${
-                      songPlaying && !isBuffering ? 'animate-[spin_10s_linear_infinite]' : ''
+                      songPlaying && !isBuffering
+                        ? "animate-[spin_10s_linear_infinite]"
+                        : ""
                     }`}
                     onWheel={handleMusicVolumeScroll}
                     title="Dica: Use scroll na moeda disk para volume!"
                   >
                     <div className="w-32 h-32 rounded-full border border-purple-400/20 flex items-center justify-center">
                       <div className="w-20 h-20 rounded-full bg-black/60 border-2 border-dashed border-purple-500/40 flex items-center justify-center">
-                        <img 
-                          src={currentSong.coverUrl} 
-                          alt="Cover" 
-                          className="w-12 h-12 rounded-full object-cover shadow-lg border border-purple-200" 
+                        <img
+                          src={currentSong.coverUrl}
+                          alt="Cover"
+                          className="w-12 h-12 rounded-full object-cover shadow-lg border border-purple-200"
                           referrerPolicy="no-referrer"
                         />
                       </div>
@@ -2687,8 +3275,10 @@ export const MediaModule: React.FC = () => {
 
                   {/* Embossed square playback control interface overlay on outer rim representing digital flow */}
                   <div className="absolute left-[-25px] w-20 h-28 rounded-2xl bg-[#09090f]/90 border border-white/10 shadow-[5px_5px_15px_black] p-2 flex flex-col justify-between text-left">
-                    <span className="text-[7px] font-mono text-purple-400">ID3 STATUS</span>
-                    
+                    <span className="text-[7px] font-mono text-purple-400">
+                      ID3 STATUS
+                    </span>
+
                     <div className="text-[9px] font-mono text-zinc-400 space-y-1">
                       <p className="line-clamp-1">{currentSong.title}</p>
                       <p className="text-[7.5px] text-zinc-500">HI-FI FLAC</p>
@@ -2697,18 +3287,23 @@ export const MediaModule: React.FC = () => {
                     <div className="space-y-1.5 pt-2 border-t border-white/5">
                       <div className="flex justify-between items-center text-[7px] text-zinc-500 font-mono">
                         <span>MODE:</span>
-                        <span className="text-emerald-400 font-bold">MONITORED</span>
+                        <span className="text-emerald-400 font-bold">
+                          MONITORED
+                        </span>
                       </div>
                     </div>
                   </div>
-
                 </div>
 
                 {/* MODES DRAG LETTERS KARAOKE LYRICS SYNC SYNC (SPEC PAGE 13) */}
                 <div className="w-full text-center py-2.5 px-4 rounded-xl bg-black/60 border border-white/5 backdrop-blur-md min-h-[48px] flex flex-col justify-center">
-                  <span className="text-[7.5px] font-mono tracking-[0.25em] text-[#D4AF37] uppercase font-bold mb-1">CANAIS KARAOKE SYNC MODE</span>
+                  <span className="text-[7.5px] font-mono tracking-[0.25em] text-[#D4AF37] uppercase font-bold mb-1">
+                    CANAIS KARAOKE SYNC MODE
+                  </span>
                   <p className="text-xs font-bold text-purple-300 transition-all duration-300 tracking-wide filter drop-shadow-[0_0_4px_rgba(168,85,247,0.4)]">
-                    {songPlaying ? getCurrentLyricText() || '[Instrumental]' : 'Reprodução Pausada'}
+                    {songPlaying
+                      ? getCurrentLyricText() || "[Instrumental]"
+                      : "Reprodução Pausada"}
                   </p>
                 </div>
               </div>
@@ -2716,11 +3311,13 @@ export const MediaModule: React.FC = () => {
               {/* Right Sidebar Control Column: Multi-interactions, WebRTC, NPC custom environments */}
               <div className="w-full md:w-56 flex flex-col gap-3 shrink-0 relative z-10 mt-6 md:mt-0">
                 <div className="p-3.5 rounded-2xl bg-[#08080c]/85 border border-white/5 space-y-3 text-left">
-                  <span className="text-[8.5px] font-mono text-indigo-400 tracking-wider font-bold block uppercase">TRILHAS PCB CONTROLLER</span>
-                  
+                  <span className="text-[8.5px] font-mono text-indigo-400 tracking-wider font-bold block uppercase">
+                    TRILHAS PCB CONTROLLER
+                  </span>
+
                   {/* MICRO-INTERACTIONS 3D BUTTON: Turns into buffering loading ring (SPEC PAGE 13) */}
                   <div className="flex justify-between items-center bg-black/40 p-2.5 rounded-xl border border-white/5">
-                    <button 
+                    <button
                       onClick={handlePrevSong}
                       className="text-xs text-purple-400 hover:text-white transition-colors cursor-pointer"
                     >
@@ -2735,13 +3332,15 @@ export const MediaModule: React.FC = () => {
                       {isBuffering ? (
                         <div className="w-6 h-6 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
                       ) : songPlaying ? (
-                        <span className="font-mono text-[10px] text-purple-300">||</span>
+                        <span className="font-mono text-[10px] text-purple-300">
+                          ||
+                        </span>
                       ) : (
                         <Play className="w-4 h-4 text-purple-400 fill-purple-400 ml-0.5" />
                       )}
                     </button>
 
-                    <button 
+                    <button
                       onClick={handleNextSong}
                       className="text-xs text-purple-400 hover:text-white transition-colors cursor-pointer"
                     >
@@ -2751,22 +3350,40 @@ export const MediaModule: React.FC = () => {
 
                   {/* Swipe horizontal control simulation */}
                   <div className="p-2 bg-black/60 rounded-xl border border-white/5 text-center">
-                    <span className="text-[7.5px] font-mono text-zinc-500 block uppercase">ARRASRAR DE MÚSICA</span>
+                    <span className="text-[7.5px] font-mono text-zinc-500 block uppercase">
+                      ARRASRAR DE MÚSICA
+                    </span>
                     <div className="flex justify-between items-center text-[9px] text-zinc-400 mt-1">
-                      <button onClick={handlePrevSong} className="hover:text-purple-300">swipe esq</button>
+                      <button
+                        onClick={handlePrevSong}
+                        className="hover:text-purple-300"
+                      >
+                        swipe esq
+                      </button>
                       <span className="text-purple-400 font-bold">•</span>
-                      <button onClick={handleNextSong} className="hover:text-purple-300">swipe dir</button>
+                      <button
+                        onClick={handleNextSong}
+                        className="hover:text-purple-300"
+                      >
+                        swipe dir
+                      </button>
                     </div>
                   </div>
 
                   {/* Sincronização Multiplex WebRTC (SPEC PAGE 13 & 14) */}
                   <div className="space-y-1 bg-purple-500/5 p-2.5 rounded-xl border border-purple-500/10 text-xs">
                     <div className="flex justify-between items-center">
-                      <span className="text-[8px] font-mono font-bold uppercase text-purple-400">MULTIPLEX STATUS</span>
-                      <span className="px-1.5 py-0.2 text-[7.5px] font-mono bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded">ATIVO</span>
+                      <span className="text-[8px] font-mono font-bold uppercase text-purple-400">
+                        MULTIPLEX STATUS
+                      </span>
+                      <span className="px-1.5 py-0.2 text-[7.5px] font-mono bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded">
+                        ATIVO
+                      </span>
                     </div>
                     <p className="text-[9.5px] text-zinc-400 leading-normal">
-                      Multiplex WebRTC conectado (Sala 1/12 usuários). Sincronismo da reprodução inferior a 50ms. Volume reduzido (ducking) se outra voz falar.
+                      Multiplex WebRTC conectado (Sala 1/12 usuários).
+                      Sincronismo da reprodução inferior a 50ms. Volume reduzido
+                      (ducking) se outra voz falar.
                     </p>
                   </div>
                 </div>
@@ -2777,16 +3394,19 @@ export const MediaModule: React.FC = () => {
                     <Compass className="w-3 h-3 animate-spin" />
                     NPC MOOD SELECTOR
                   </span>
-                  
+
                   <div className="grid grid-cols-2 gap-1.5 text-[9px] font-mono">
-                    {['foco', 'relaxamento', 'energia'].map((m) => (
+                    {["foco", "relaxamento", "energia"].map((m) => (
                       <button
                         key={m}
-                        onClick={() => { triggerHaptic(15); setMusicMood(m); }}
+                        onClick={() => {
+                          triggerHaptic(15);
+                          setMusicMood(m);
+                        }}
                         className={`px-2 py-1 rounded-lg uppercase tracking-wider text-center border transition-all cursor-pointer ${
-                          musicMood === m 
-                            ? 'bg-amber-400/10 border-amber-400 text-amber-300' 
-                            : 'bg-black/40 border-transparent text-zinc-400 hover:text-white'
+                          musicMood === m
+                            ? "bg-amber-400/10 border-amber-400 text-amber-300"
+                            : "bg-black/40 border-transparent text-zinc-400 hover:text-white"
                         }`}
                       >
                         {m}
@@ -2795,30 +3415,43 @@ export const MediaModule: React.FC = () => {
                   </div>
 
                   <p className="text-[9px] text-zinc-500 leading-tight">
-                    NPC opera como curador algorítmico diariamente filtrando BPM por estado de espírito do utilizador.
+                    NPC opera como curador algorítmico diariamente filtrando BPM
+                    por estado de espírito do utilizador.
                   </p>
                 </div>
               </div>
-
             </div>
 
             {/* Simulated Track Info Bar */}
             <div className="w-full p-4 rounded-2xl bg-[#09090f]/50 border border-white/5 text-left flex justify-between items-center">
               <div className="space-y-0.5">
-                <span className="text-[8.5px] font-mono text-purple-400 uppercase font-black">REPRODUZINDO AGORA</span>
-                <p className="text-xs font-black text-white uppercase tracking-wide">{currentSong.title}</p>
-                <p className="text-[10px] text-zinc-400">{currentSong.artist}</p>
+                <span className="text-[8.5px] font-mono text-purple-400 uppercase font-black">
+                  REPRODUZINDO AGORA
+                </span>
+                <p className="text-xs font-black text-white uppercase tracking-wide">
+                  {currentSong.title}
+                </p>
+                <p className="text-[10px] text-zinc-400">
+                  {currentSong.artist}
+                </p>
               </div>
 
               {/* Progress bar info */}
               <div className="w-32 space-y-1 font-mono text-[9px] text-zinc-500 text-right">
                 <div className="w-full bg-zinc-800 h-1 rounded-full overflow-hidden">
-                  <div 
-                    className="bg-purple-500 h-full" 
-                    style={{ width: `${(songProgress / currentSong.duration) * 100}%` }}
+                  <div
+                    className="bg-purple-500 h-full"
+                    style={{
+                      width: `${(songProgress / currentSong.duration) * 100}%`,
+                    }}
                   />
                 </div>
-                <span>{Math.floor(songProgress / 60)}:{(songProgress % 60).toString().padStart(2, '0')} / {Math.floor(currentSong.duration / 60)}:{(currentSong.duration % 60).toString().padStart(2, '0')}</span>
+                <span>
+                  {Math.floor(songProgress / 60)}:
+                  {(songProgress % 60).toString().padStart(2, "0")} /{" "}
+                  {Math.floor(currentSong.duration / 60)}:
+                  {(currentSong.duration % 60).toString().padStart(2, "0")}
+                </span>
               </div>
             </div>
           </motion.div>
@@ -2827,7 +3460,7 @@ export const MediaModule: React.FC = () => {
         {/* =========================================================================
             SESSÃO EXPANDIDA C: HUD DE FILMES (NETFLIX PREMIUM FLUID SHELVES)
             ========================================================================= */}
-        {expandedSection === 'movies' && (
+        {expandedSection === "movies" && (
           <motion.div
             key="movies-max-satelite"
             initial={{ opacity: 0 }}
@@ -2842,36 +3475,52 @@ export const MediaModule: React.FC = () => {
                   {/* Filmes vs Series switches + Category Toggle */}
                   <div className="flex flex-wrap items-center gap-2">
                     <button
-                      onClick={() => { triggerHaptic(15); setScopeFiltering(prev => prev === 'filme' ? 'todos' : 'filme'); }}
+                      onClick={() => {
+                        triggerHaptic(15);
+                        setScopeFiltering((prev) =>
+                          prev === "filme" ? "todos" : "filme",
+                        );
+                      }}
                       className={`px-4 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-wider font-bold transition-all cursor-pointer ${
-                        scopeFiltering === 'filme' 
-                          ? 'bg-red-650 text-white shadow-[0_0_12px_rgba(220,38,38,0.4)] border border-red-500/55' 
-                          : 'bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white'
+                        scopeFiltering === "filme"
+                          ? "bg-red-650 text-white shadow-[0_0_12px_rgba(220,38,38,0.4)] border border-red-500/55"
+                          : "bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white"
                       }`}
                     >
                       🎬 Filmes
                     </button>
                     <button
-                      onClick={() => { triggerHaptic(15); setScopeFiltering(prev => prev === 'serie' ? 'todos' : 'serie'); }}
+                      onClick={() => {
+                        triggerHaptic(15);
+                        setScopeFiltering((prev) =>
+                          prev === "serie" ? "todos" : "serie",
+                        );
+                      }}
                       className={`px-4 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-wider font-bold transition-all cursor-pointer ${
-                        scopeFiltering === 'serie' 
-                          ? 'bg-red-650 text-white shadow-[0_0_12px_rgba(220,38,38,0.4)] border border-red-500/55' 
-                          : 'bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white'
+                        scopeFiltering === "serie"
+                          ? "bg-red-650 text-white shadow-[0_0_12px_rgba(220,38,38,0.4)] border border-red-500/55"
+                          : "bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white"
                       }`}
                     >
                       📺 Séries
                     </button>
-                    
+
                     <div className="relative">
                       <button
-                        onClick={() => { triggerHaptic(10); setIsCategoryDrawerOpen(!isCategoryDrawerOpen); }}
+                        onClick={() => {
+                          triggerHaptic(10);
+                          setIsCategoryDrawerOpen(!isCategoryDrawerOpen);
+                        }}
                         className={`px-4 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-wider font-bold transition-all border cursor-pointer hover:border-cyan-400/55 flex items-center gap-1.5 ${
-                          isCategoryDrawerOpen || selectedCategory !== 'Todos'
-                            ? 'bg-cyan-950/60 border-cyan-500/55 text-cyan-400 font-black shadow-[0_0_10px_rgba(6,182,212,0.2)]'
-                            : 'bg-zinc-900 border-white/5 text-zinc-400'
+                          isCategoryDrawerOpen || selectedCategory !== "Todos"
+                            ? "bg-cyan-950/60 border-cyan-500/55 text-cyan-400 font-black shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+                            : "bg-zinc-900 border-white/5 text-zinc-400"
                         }`}
                       >
-                        📂 {selectedCategory !== 'Todos' ? selectedCategory : 'Tipo ▾'}
+                        📂{" "}
+                        {selectedCategory !== "Todos"
+                          ? selectedCategory
+                          : "Tipo ▾"}
                       </button>
                     </div>
                   </div>
@@ -2881,7 +3530,7 @@ export const MediaModule: React.FC = () => {
                     {isCategoryDrawerOpen && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
+                        animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
                         className="w-full absolute top-[110%] left-0 bg-[#0a0b0e] border border-cyan-500/20 rounded-2xl p-3.5 space-y-2 mt-1 shadow-2xl text-left z-50 overflow-hidden"
                       >
@@ -2889,7 +3538,41 @@ export const MediaModule: React.FC = () => {
                           Selecione um Tipo para Filtrar o Escopo Principal:
                         </span>
                         <div className="flex flex-wrap gap-1.5">
-                          {['Todos', 'Anime', 'Infantil', 'Romance', 'Comédia', 'Comédia Romântica', 'Ação', 'Aventura', 'Suspense', 'Thriller', 'Ficção', 'Terror', 'Adulto', 'Documentário', 'Drama', 'Dorama', 'Nacional', 'Sci-Fi', 'Fantasia', 'Faroeste', 'Crime', 'Policial', 'Guerra', 'Musical', 'Épico', 'Biografia', 'Noir', 'DC', 'Marvel', 'Sobrevivência', 'Sobrenatural', 'Super-herói', 'Trash'].map((cat) => (
+                          {[
+                            "Todos",
+                            "Anime",
+                            "Infantil",
+                            "Romance",
+                            "Comédia",
+                            "Comédia Romântica",
+                            "Ação",
+                            "Aventura",
+                            "Suspense",
+                            "Thriller",
+                            "Ficção",
+                            "Terror",
+                            "Adulto",
+                            "Documentário",
+                            "Drama",
+                            "Dorama",
+                            "Nacional",
+                            "Sci-Fi",
+                            "Fantasia",
+                            "Faroeste",
+                            "Crime",
+                            "Policial",
+                            "Guerra",
+                            "Musical",
+                            "Épico",
+                            "Biografia",
+                            "Noir",
+                            "DC",
+                            "Marvel",
+                            "Sobrevivência",
+                            "Sobrenatural",
+                            "Super-herói",
+                            "Trash",
+                          ].map((cat) => (
                             <button
                               key={cat}
                               onClick={() => {
@@ -2899,8 +3582,8 @@ export const MediaModule: React.FC = () => {
                               }}
                               className={`px-3 py-1 rounded-lg text-[9px] font-mono transition-all cursor-pointer ${
                                 selectedCategory === cat
-                                  ? 'bg-cyan-500 text-black font-black'
-                                  : 'bg-zinc-900/60 text-zinc-400 hover:text-white border border-white/5'
+                                  ? "bg-cyan-500 text-black font-black"
+                                  : "bg-zinc-900/60 text-zinc-400 hover:text-white border border-white/5"
                               }`}
                             >
                               {cat}
@@ -2927,10 +3610,13 @@ export const MediaModule: React.FC = () => {
                     className="w-full text-xs font-mono bg-[#090a0d] border border-white/10 hover:border-cyan-500/30 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-500/20 text-neutral-200 rounded-2xl py-2 px-9 placeholder-zinc-600 transition-all shadow-inner"
                   />
                   <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-2.5 transition-colors group-hover:text-cyan-400" />
-                  
+
                   {searchQuery && (
                     <button
-                      onClick={() => { setSearchQuery(''); setShowSuggestionsFocus(false); }}
+                      onClick={() => {
+                        setSearchQuery("");
+                        setShowSuggestionsFocus(false);
+                      }}
                       className="absolute right-3 top-2.5 text-zinc-500 hover:text-white px-1 text-[10px] font-mono"
                     >
                       ✕ Limpar
@@ -2938,7 +3624,7 @@ export const MediaModule: React.FC = () => {
                   )}
 
                   <AnimatePresence>
-                    {showSuggestionsFocus && searchQuery.trim() !== '' && (
+                    {showSuggestionsFocus && searchQuery.trim() !== "" && (
                       <motion.div
                         initial={{ opacity: 0, y: 3 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -2947,7 +3633,7 @@ export const MediaModule: React.FC = () => {
                       >
                         <div className="text-[7.5px] font-mono text-cyan-500 uppercase font-black px-1 border-b border-white/5 pb-1 flex justify-between items-center">
                           <span>Sugestões Encontradas:</span>
-                          <button 
+                          <button
                             onClick={() => setShowSuggestionsFocus(false)}
                             className="text-zinc-600 hover:text-white uppercase font-bold text-[8px]"
                           >
@@ -2955,9 +3641,17 @@ export const MediaModule: React.FC = () => {
                           </button>
                         </div>
                         {mappedMovies
-                          .filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()) || (m as any).category?.toLowerCase().includes(searchQuery.toLowerCase()))
+                          .filter(
+                            (m) =>
+                              m.title
+                                .toLowerCase()
+                                .includes(searchQuery.toLowerCase()) ||
+                              (m as any).category
+                                ?.toLowerCase()
+                                .includes(searchQuery.toLowerCase()),
+                          )
                           .slice(0, 5)
-                          .map(matchedMov => (
+                          .map((matchedMov) => (
                             <div
                               key={matchedMov.id}
                               onClick={() => {
@@ -2967,10 +3661,17 @@ export const MediaModule: React.FC = () => {
                               }}
                               className="flex justify-between items-center p-1.5 hover:bg-cyan-950/40 rounded transition-all cursor-pointer border border-transparent hover:border-cyan-500/10"
                             >
-                              <span className="text-[9.5px] text-zinc-200 font-bold uppercase truncate max-w-xs">{matchedMov.title}</span>
+                              <span className="text-[9.5px] text-zinc-200 font-bold uppercase truncate max-w-xs">
+                                {matchedMov.title}
+                              </span>
                               <div className="flex gap-2 items-center text-[7.5px] font-mono text-zinc-500 shrink-0">
-                                <span>{matchedMov.type.toUpperCase()} • {matchedMov.year}</span>
-                                <span className="px-1.5 py-0.5 bg-zinc-800 hover:bg-cyan-900 border border-white/5 text-cyan-400 font-black rounded uppercase">Selecionar</span>
+                                <span>
+                                  {matchedMov.type.toUpperCase()} •{" "}
+                                  {matchedMov.year}
+                                </span>
+                                <span className="px-1.5 py-0.5 bg-zinc-800 hover:bg-cyan-900 border border-white/5 text-cyan-400 font-black rounded uppercase">
+                                  Selecionar
+                                </span>
                               </div>
                             </div>
                           ))}
@@ -2980,1689 +3681,2086 @@ export const MediaModule: React.FC = () => {
                 </div>
                 {(!currentUser?.age || currentUser.age >= 18) && (
                   <label className="flex items-center gap-2 mt-2 cursor-pointer select-none text-left">
-                    <input 
-                      type="checkbox" 
-                      checked={includeAdult} 
+                    <input
+                      type="checkbox"
+                      checked={includeAdult}
                       onChange={(e) => setIncludeAdult(e.target.checked)}
                       className="accent-cyan-500 w-3 h-3 appearance-none border border-cyan-500/50 rounded-sm checked:bg-cyan-500 rounded cursor-pointer transition-colors"
                     />
-                    <span className="text-[10px] font-mono text-zinc-500 transition-colors uppercase tracking-widest font-black">Pesquisa Inclusiva (18+)</span>
+                    <span className="text-[10px] font-mono text-zinc-500 transition-colors uppercase tracking-widest font-black">
+                      Pesquisa Inclusiva (18+)
+                    </span>
                   </label>
                 )}
               </div>
             )}
 
             <AnimatePresence mode="wait">
-              {!selectedMovie ? (showIndexer ? (
-                /* =========================================================================
+              {!selectedMovie ? (
+                showIndexer ? (
+                  /* =========================================================================
                     BLOCO INDEXADOR & CRAWLER DIGITAL INTEGRADO (TESTES E ADMIN)
                     ========================================================================= */
-                <motion.div
-                  key="indexer-crawler-dashboard"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 overflow-y-auto pr-1 no-scrollbar text-[9px] font-mono text-left"
-                >
-                  {/* ESQUERDA: CRAWLER DE EMBEDS & EXTRATOR (7/12 cols) */}
-                  <div className="lg:col-span-7 bg-[#050508]/80 border border-white/5 rounded-3xl p-4 space-y-4 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                        <span className="text-cyan-400 font-black uppercase text-[10px]">🌐 TMDB TRENDING SYNC & WEB SCRAPER CRAWLER</span>
-                        <span className="text-[7.5px] bg-cyan-950 px-2 py-0.5 rounded text-cyan-500">API VERSION: 4.1</span>
-                      </div>
-
-                      {/* TMDB Quick Releases feed list */}
-                      <p className="text-zinc-500 text-[8px] mt-1">Clique em uma release do feed do TMDb para preencher os metadados:</p>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2">
-                        {[
-                          { title: 'Interstellar', year: 2014, poster: 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=200', overview: 'Aventura de ficção científica espacial.', type: 'filme' },
-                          { title: 'Blade Runner 2049', year: 2017, poster: 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=200', overview: 'Um novo Blade Runner desenterra um segredo há muito enterrado.', type: 'filme' },
-                          { title: 'Dune: Part Two', year: 2024, poster: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=200', overview: 'Paul Atreides se une a Chani e aos Fremen para se vingar.', type: 'serie' },
-                          { title: 'Cyberpunk Edgerunners', year: 2022, poster: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=200', overview: 'Um garoto de rua tenta sobreviver em uma cidade obsessiva.', type: 'serie' }
-                        ].map((trend) => (
-                          <div
-                            key={trend.title}
-                            onClick={() => {
-                              triggerHaptic(15);
-                              setFormTitle(trend.title);
-                              setFormYear(trend.year);
-                              setFormPosterUrl(trend.poster);
-                              setFormVideoUrl('https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1');
-                              setFormType(trend.type as any);
-                            }}
-                            className="p-1.5 rounded-xl border border-white/5 bg-black/40 hover:border-cyan-500/30 hover:bg-cyan-950/20 cursor-pointer text-left transition-all"
-                          >
-                            <p className="font-extrabold text-neutral-300 truncate">{trend.title}</p>
-                            <p className="text-[7px] text-zinc-500">{trend.year} • {trend.type.toUpperCase()}</p>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* FORMULÁRIO METADADOS BLOCO 5 */}
-                      <div className="mt-4 bg-black/40 p-3 rounded-2xl border border-white/5 space-y-2.5">
-                        <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest border-b border-white/5 pb-1 block">✏️ METADADOS DA FONTE FILTRADA</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <label className="flex flex-col gap-1">
-                            <span className="text-zinc-500 text-[8px]">TÍTULO DA OBRA:</span>
-                            <input
-                              type="text"
-                              value={formTitle}
-                              onChange={(e) => setFormTitle(e.target.value)}
-                              placeholder="ex: Blade Runner 2049"
-                              className="bg-[#0b0c10] border border-white/10 rounded-lg p-1.5 text-white max-w-full focus:outline-none focus:border-cyan-400"
-                            />
-                          </label>
-
-                          <label className="flex flex-col gap-1">
-                            <span className="text-zinc-500 text-[8px]">ANO DE LANÇAMENTO:</span>
-                            <input
-                              type="number"
-                              value={formYear}
-                              onChange={(e) => setFormYear(Number(e.target.value))}
-                              placeholder="ex: 2026"
-                              className="bg-[#0b0c10] border border-white/10 rounded-lg p-1.5 text-white max-w-full focus:outline-none focus:border-cyan-400"
-                            />
-                          </label>
+                  <motion.div
+                    key="indexer-crawler-dashboard"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 overflow-y-auto pr-1 no-scrollbar text-[9px] font-mono text-left"
+                  >
+                    {/* ESQUERDA: CRAWLER DE EMBEDS & EXTRATOR (7/12 cols) */}
+                    <div className="lg:col-span-7 bg-[#050508]/80 border border-white/5 rounded-3xl p-4 space-y-4 flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                          <span className="text-cyan-400 font-black uppercase text-[10px]">
+                            🌐 TMDB TRENDING SYNC & WEB SCRAPER CRAWLER
+                          </span>
+                          <span className="text-[7.5px] bg-cyan-950 px-2 py-0.5 rounded text-cyan-500">
+                            API VERSION: 4.1
+                          </span>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                          <label className="flex flex-col gap-1">
-                            <span className="text-zinc-500 text-[8px]">CÉDULA TIPO:</span>
-                            <select
-                              value={formType}
-                              onChange={(e) => setFormType(e.target.value as any)}
-                              className="bg-[#0b0c10] border border-white/10 rounded-lg p-1.5 text-white focus:outline-none"
+                        {/* TMDB Quick Releases feed list */}
+                        <p className="text-zinc-500 text-[8px] mt-1">
+                          Clique em uma release do feed do TMDb para preencher
+                          os metadados:
+                        </p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2">
+                          {[
+                            {
+                              title: "Interstellar",
+                              year: 2014,
+                              poster:
+                                "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=200",
+                              overview:
+                                "Aventura de ficção científica espacial.",
+                              type: "filme",
+                            },
+                            {
+                              title: "Blade Runner 2049",
+                              year: 2017,
+                              poster:
+                                "https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=200",
+                              overview:
+                                "Um novo Blade Runner desenterra um segredo há muito enterrado.",
+                              type: "filme",
+                            },
+                            {
+                              title: "Dune: Part Two",
+                              year: 2024,
+                              poster:
+                                "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=200",
+                              overview:
+                                "Paul Atreides se une a Chani e aos Fremen para se vingar.",
+                              type: "serie",
+                            },
+                            {
+                              title: "Cyberpunk Edgerunners",
+                              year: 2022,
+                              poster:
+                                "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=200",
+                              overview:
+                                "Um garoto de rua tenta sobreviver em uma cidade obsessiva.",
+                              type: "serie",
+                            },
+                          ].map((trend) => (
+                            <div
+                              key={trend.title}
+                              onClick={() => {
+                                triggerHaptic(15);
+                                setFormTitle(trend.title);
+                                setFormYear(trend.year);
+                                setFormPosterUrl(trend.poster);
+                                setFormVideoUrl(
+                                  "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1",
+                                );
+                                setFormType(trend.type as any);
+                              }}
+                              className="p-1.5 rounded-xl border border-white/5 bg-black/40 hover:border-cyan-500/30 hover:bg-cyan-950/20 cursor-pointer text-left transition-all"
                             >
-                              <option value="filme">FILME</option>
-                              <option value="serie">SÉRIE</option>
-                              <option value="trailer">TRAILER</option>
-                            </select>
-                          </label>
+                              <p className="font-extrabold text-neutral-300 truncate">
+                                {trend.title}
+                              </p>
+                              <p className="text-[7px] text-zinc-500">
+                                {trend.year} • {trend.type.toUpperCase()}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* FORMULÁRIO METADADOS BLOCO 5 */}
+                        <div className="mt-4 bg-black/40 p-3 rounded-2xl border border-white/5 space-y-2.5">
+                          <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest border-b border-white/5 pb-1 block">
+                            ✏️ METADADOS DA FONTE FILTRADA
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <label className="flex flex-col gap-1">
+                              <span className="text-zinc-500 text-[8px]">
+                                TÍTULO DA OBRA:
+                              </span>
+                              <input
+                                type="text"
+                                value={formTitle}
+                                onChange={(e) => setFormTitle(e.target.value)}
+                                placeholder="ex: Blade Runner 2049"
+                                className="bg-[#0b0c10] border border-white/10 rounded-lg p-1.5 text-white max-w-full focus:outline-none focus:border-cyan-400"
+                              />
+                            </label>
+
+                            <label className="flex flex-col gap-1">
+                              <span className="text-zinc-500 text-[8px]">
+                                ANO DE LANÇAMENTO:
+                              </span>
+                              <input
+                                type="number"
+                                value={formYear}
+                                onChange={(e) =>
+                                  setFormYear(Number(e.target.value))
+                                }
+                                placeholder="ex: 2026"
+                                className="bg-[#0b0c10] border border-white/10 rounded-lg p-1.5 text-white max-w-full focus:outline-none focus:border-cyan-400"
+                              />
+                            </label>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <label className="flex flex-col gap-1">
+                              <span className="text-zinc-500 text-[8px]">
+                                CÉDULA TIPO:
+                              </span>
+                              <select
+                                value={formType}
+                                onChange={(e) =>
+                                  setFormType(e.target.value as any)
+                                }
+                                className="bg-[#0b0c10] border border-white/10 rounded-lg p-1.5 text-white focus:outline-none"
+                              >
+                                <option value="filme">FILME</option>
+                                <option value="serie">SÉRIE</option>
+                                <option value="trailer">TRAILER</option>
+                              </select>
+                            </label>
+
+                            <label className="flex flex-col gap-1">
+                              <span className="text-zinc-500 text-[8px]">
+                                MINIATURA BANNER URL:
+                              </span>
+                              <input
+                                type="text"
+                                value={formPosterUrl}
+                                onChange={(e) =>
+                                  setFormPosterUrl(e.target.value)
+                                }
+                                placeholder="ex: https://images.unsplash..."
+                                className="bg-[#0b0c10] border border-white/10 rounded-lg p-1.5 text-white max-w-full truncate focus:outline-none"
+                              />
+                            </label>
+                          </div>
 
                           <label className="flex flex-col gap-1">
-                            <span className="text-zinc-500 text-[8px]">MINIATURA BANNER URL:</span>
+                            <span className="text-zinc-500 text-[8px]">
+                              STREAM EMBED VIDEO URL (MRE OU MP4/M3U8):
+                            </span>
                             <input
                               type="text"
-                              value={formPosterUrl}
-                              onChange={(e) => setFormPosterUrl(e.target.value)}
-                              placeholder="ex: https://images.unsplash..."
-                              className="bg-[#0b0c10] border border-white/10 rounded-lg p-1.5 text-white max-w-full truncate focus:outline-none"
+                              value={formVideoUrl}
+                              onChange={(e) => setFormVideoUrl(e.target.value)}
+                              placeholder="ex: https://youtube.com/embed/..."
+                              className="bg-[#0b0c10] border border-white/10 rounded-lg p-1.5 text-white max-w-full focus:outline-none"
                             />
                           </label>
-                        </div>
 
-                        <label className="flex flex-col gap-1">
-                          <span className="text-zinc-500 text-[8px]">STREAM EMBED VIDEO URL (MRE OU MP4/M3U8):</span>
-                          <input
-                            type="text"
-                            value={formVideoUrl}
-                            onChange={(e) => setFormVideoUrl(e.target.value)}
-                            placeholder="ex: https://youtube.com/embed/..."
-                            className="bg-[#0b0c10] border border-white/10 rounded-lg p-1.5 text-white max-w-full focus:outline-none"
-                          />
-                        </label>
-
-                        <div className="flex gap-2 justify-end pt-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!formTitle) return;
-                              runCrawler(formTitle, formYear, formType);
-                            }}
-                            disabled={isCrawling}
-                            className="px-3 py-1.5 bg-cyan-950 text-cyan-400 font-bold border border-cyan-400/40 rounded-xl uppercase tracking-wider hover:bg-cyan-900 cursor-pointer disabled:opacity-50"
-                          >
-                            {isCrawling ? "CRAWLING ACTIVE..." : "🌐 RASTREAR APIS & CRAWLER"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* CRAWLER SHELL LOGS PORT (BLOCO 3: Terminal de Execução com scrolling) */}
-                    <div className="mt-2 space-y-1 text-left">
-                      <div className="flex justify-between items-center text-[8px] text-zinc-500 font-mono">
-                        <span className="flex items-center gap-1"><Terminal className="w-3.5 h-3.5" /> EXECUÇÃO WEB SCRAPER TERMINAL:</span>
-                        <span>STATUS: {isCrawling ? "SCANNING APIS" : "READY"}</span>
-                      </div>
-                      
-                      <div className="h-32 rounded-xl bg-black border border-white/10 p-2.5 font-mono text-[8px] text-emerald-400 overflow-y-auto space-y-1">
-                        {crawlerLogs.length === 0 ? (
-                          <span className="text-zinc-600 block">[CRAWLER] Aguardando comando de extração contínua...</span>
-                        ) : (
-                          crawlerLogs.map((log, idx) => (
-                            <div key={idx} className="leading-relaxed">
-                              {log}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* DIREITA: HEALTH CHECK & AUDIT MANAGEMENT CLIENT (5/12 cols) */}
-                  <div className="lg:col-span-5 flex flex-col gap-4 text-left">
-                    
-                    {/* SEÇÃO 1: AUTOMATED HEALTH CHECK VALIDATOR (BLOCO 4) */}
-                    <div className="bg-[#050508]/80 border border-white/5 rounded-3xl p-4 space-y-3">
-                      <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                        <span className="text-amber-400 font-black uppercase text-[10px]">🩺 AUTO HEALTH CHECK SENSOR</span>
-                        <span className="text-[7px] text-zinc-400">HTTP HEAD CHECKS</span>
-                      </div>
-
-                      <p className="text-zinc-500 text-[8.5px] leading-relaxed">
-                        Varre as URLs do catálogo via requisição HTTP HEAD simulada. Ativo (<span className="text-emerald-400 font-bold">status=1</span>), links expirados (<span className="text-red-400 font-bold">status=0</span>) são removidos do HUD!
-                      </p>
-
-                      <div className="space-y-2 bg-black/40 p-3 rounded-2xl border border-white/5">
-                        <div className="flex justify-between items-center">
-                          <button
-                            type="button"
-                            onClick={runHealthCheck}
-                            disabled={isHealthChecking}
-                            className="px-3.5 py-1.5 bg-amber-400 text-black font-black rounded-xl uppercase tracking-wider hover:bg-amber-300 disabled:opacity-50 cursor-pointer"
-                          >
-                            {isHealthChecking ? "CHECAGEM ATIVA..." : "🩺 INICIAR HEALTH CHECK"}
-                          </button>
-                          
-                          <div className="text-right">
-                            <span className="text-zinc-400 text-[8px]">PROCESSO:</span>
-                            <span className="text-white font-bold block">{healthCheckProgress}%</span>
+                          <div className="flex gap-2 justify-end pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!formTitle) return;
+                                runCrawler(formTitle, formYear, formType);
+                              }}
+                              disabled={isCrawling}
+                              className="px-3 py-1.5 bg-cyan-950 text-cyan-400 font-bold border border-cyan-400/40 rounded-xl uppercase tracking-wider hover:bg-cyan-900 cursor-pointer disabled:opacity-50"
+                            >
+                              {isCrawling
+                                ? "CRAWLING ACTIVE..."
+                                : "🌐 RASTREAR APIS & CRAWLER"}
+                            </button>
                           </div>
                         </div>
+                      </div>
 
-                        {/* Progress Bar */}
-                        <div className="w-full bg-zinc-900 h-1.5 rounded-full overflow-hidden">
-                          <div className="bg-amber-400 h-full transition-all duration-300" style={{ width: `${healthCheckProgress}%` }} />
+                      {/* CRAWLER SHELL LOGS PORT (BLOCO 3: Terminal de Execução com scrolling) */}
+                      <div className="mt-2 space-y-1 text-left">
+                        <div className="flex justify-between items-center text-[8px] text-zinc-500 font-mono">
+                          <span className="flex items-center gap-1">
+                            <Terminal className="w-3.5 h-3.5" /> EXECUÇÃO WEB
+                            SCRAPER TERMINAL:
+                          </span>
+                          <span>
+                            STATUS: {isCrawling ? "SCANNING APIS" : "READY"}
+                          </span>
                         </div>
 
-                        {/* Audit Terminal Log */}
-                        <div className="h-20 bg-black rounded-lg p-2 font-mono text-[7.5px] overflow-y-auto text-amber-300 border border-amber-400/15">
-                          {healthCheckLogs.length === 0 ? (
-                            <span className="text-zinc-650">[SINAL] Sensor de ping inativo.</span>
+                        <div className="h-32 rounded-xl bg-black border border-white/10 p-2.5 font-mono text-[8px] text-emerald-400 overflow-y-auto space-y-1">
+                          {crawlerLogs.length === 0 ? (
+                            <span className="text-zinc-600 block">
+                              [CRAWLER] Aguardando comando de extração
+                              contínua...
+                            </span>
                           ) : (
-                            healthCheckLogs.map((log, idx) => (
-                              <p key={idx} className="line-clamp-2">{log}</p>
+                            crawlerLogs.map((log, idx) => (
+                              <div key={idx} className="leading-relaxed">
+                                {log}
+                              </div>
                             ))
                           )}
                         </div>
                       </div>
                     </div>
 
-                    {/* SEÇÃO 2: PLAY TEST DE STREAM PREVIEW & BANCO SQL LOCAL (BLOCO 5) */}
-                    <div className="bg-[#05055]/5 border border-white/5 rounded-3xl p-4 space-y-3 flex-1 flex flex-col justify-between bg-[#08080c]/85">
-                      <div>
+                    {/* DIREITA: HEALTH CHECK & AUDIT MANAGEMENT CLIENT (5/12 cols) */}
+                    <div className="lg:col-span-5 flex flex-col gap-4 text-left">
+                      {/* SEÇÃO 1: AUTOMATED HEALTH CHECK VALIDATOR (BLOCO 4) */}
+                      <div className="bg-[#050508]/80 border border-white/5 rounded-3xl p-4 space-y-3">
                         <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                          <span className="text-purple-400 font-black uppercase text-[10px]">📺 PLAY TESTE DE PRÉVIA & INTEGRIDADE</span>
-                          <span className="text-[8px] text-zinc-400">SIMULADOR</span>
+                          <span className="text-amber-400 font-black uppercase text-[10px]">
+                            🩺 AUTO HEALTH CHECK SENSOR
+                          </span>
+                          <span className="text-[7px] text-zinc-400">
+                            HTTP HEAD CHECKS
+                          </span>
                         </div>
 
-                        {/* Scraped Pending list elements to pick from */}
-                        <div className="space-y-1.5 mt-2">
-                          <span className="text-zinc-500 text-[8px]">FONTES INDEXADAS PENDENTES DE STREAM:</span>
-                          <div className="flex flex-col gap-1.5 max-h-24 overflow-y-auto pr-1">
-                            {scrapedPendingSources.map((sch) => (
-                              <div
-                                key={sch.id}
-                                className={`p-1.5 rounded-lg border flex justify-between items-center transition-all cursor-pointer ${
-                                  playTestUrl === sch.videoUrl 
-                                    ? 'bg-purple-950/20 border-purple-500/70' 
-                                    : 'bg-black/40 border-white/5 hover:border-white/15'
-                                }`}
-                                onClick={() => {
-                                  triggerHaptic(15);
-                                  setPlayTestUrl(sch.videoUrl);
-                                  // fill form to make editing easy
-                                  setFormTitle(sch.title);
-                                  setFormYear(sch.year);
-                                  setFormPosterUrl(sch.posterUrl);
-                                  setFormVideoUrl(sch.videoUrl);
-                                  setFormType(sch.type);
-                                }}
-                              >
-                                <div>
-                                  <p className="font-bold text-white uppercase text-[8.5px]">{sch.title} ({sch.year})</p>
-                                  <span className="text-[7.5px] text-zinc-500 uppercase tracking-widest">{sch.type} • READY_FOR_METADATA</span>
+                        <p className="text-zinc-500 text-[8.5px] leading-relaxed">
+                          Varre as URLs do catálogo via requisição HTTP HEAD
+                          simulada. Ativo (
+                          <span className="text-emerald-400 font-bold">
+                            status=1
+                          </span>
+                          ), links expirados (
+                          <span className="text-red-400 font-bold">
+                            status=0
+                          </span>
+                          ) são removidos do HUD!
+                        </p>
+
+                        <div className="space-y-2 bg-black/40 p-3 rounded-2xl border border-white/5">
+                          <div className="flex justify-between items-center">
+                            <button
+                              type="button"
+                              onClick={runHealthCheck}
+                              disabled={isHealthChecking}
+                              className="px-3.5 py-1.5 bg-amber-400 text-black font-black rounded-xl uppercase tracking-wider hover:bg-amber-300 disabled:opacity-50 cursor-pointer"
+                            >
+                              {isHealthChecking
+                                ? "CHECAGEM ATIVA..."
+                                : "🩺 INICIAR HEALTH CHECK"}
+                            </button>
+
+                            <div className="text-right">
+                              <span className="text-zinc-400 text-[8px]">
+                                PROCESSO:
+                              </span>
+                              <span className="text-white font-bold block">
+                                {healthCheckProgress}%
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Progress Bar */}
+                          <div className="w-full bg-zinc-900 h-1.5 rounded-full overflow-hidden">
+                            <div
+                              className="bg-amber-400 h-full transition-all duration-300"
+                              style={{ width: `${healthCheckProgress}%` }}
+                            />
+                          </div>
+
+                          {/* Audit Terminal Log */}
+                          <div className="h-20 bg-black rounded-lg p-2 font-mono text-[7.5px] overflow-y-auto text-amber-300 border border-amber-400/15">
+                            {healthCheckLogs.length === 0 ? (
+                              <span className="text-zinc-650">
+                                [SINAL] Sensor de ping inativo.
+                              </span>
+                            ) : (
+                              healthCheckLogs.map((log, idx) => (
+                                <p key={idx} className="line-clamp-2">
+                                  {log}
+                                </p>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* SEÇÃO 2: PLAY TEST DE STREAM PREVIEW & BANCO SQL LOCAL (BLOCO 5) */}
+                      <div className="bg-[#05055]/5 border border-white/5 rounded-3xl p-4 space-y-3 flex-1 flex flex-col justify-between bg-[#08080c]/85">
+                        <div>
+                          <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                            <span className="text-purple-400 font-black uppercase text-[10px]">
+                              📺 PLAY TESTE DE PRÉVIA & INTEGRIDADE
+                            </span>
+                            <span className="text-[8px] text-zinc-400">
+                              SIMULADOR
+                            </span>
+                          </div>
+
+                          {/* Scraped Pending list elements to pick from */}
+                          <div className="space-y-1.5 mt-2">
+                            <span className="text-zinc-500 text-[8px]">
+                              FONTES INDEXADAS PENDENTES DE STREAM:
+                            </span>
+                            <div className="flex flex-col gap-1.5 max-h-24 overflow-y-auto pr-1">
+                              {scrapedPendingSources.map((sch) => (
+                                <div
+                                  key={sch.id}
+                                  className={`p-1.5 rounded-lg border flex justify-between items-center transition-all cursor-pointer ${
+                                    playTestUrl === sch.videoUrl
+                                      ? "bg-purple-950/20 border-purple-500/70"
+                                      : "bg-black/40 border-white/5 hover:border-white/15"
+                                  }`}
+                                  onClick={() => {
+                                    triggerHaptic(15);
+                                    setPlayTestUrl(sch.videoUrl);
+                                    // fill form to make editing easy
+                                    setFormTitle(sch.title);
+                                    setFormYear(sch.year);
+                                    setFormPosterUrl(sch.posterUrl);
+                                    setFormVideoUrl(sch.videoUrl);
+                                    setFormType(sch.type);
+                                  }}
+                                >
+                                  <div>
+                                    <p className="font-bold text-white uppercase text-[8.5px]">
+                                      {sch.title} ({sch.year})
+                                    </p>
+                                    <span className="text-[7.5px] text-zinc-500 uppercase tracking-widest">
+                                      {sch.type} • READY_FOR_METADATA
+                                    </span>
+                                  </div>
+                                  <span
+                                    className={`text-[7px] font-mono px-1 rounded ${playTestUrl === sch.videoUrl ? "bg-purple-500 text-black font-black" : "bg-zinc-800 text-zinc-400"}`}
+                                  >
+                                    {playTestUrl === sch.videoUrl
+                                      ? "PLAYING"
+                                      : "TEST"}
+                                  </span>
                                 </div>
-                                <span className={`text-[7px] font-mono px-1 rounded ${playTestUrl === sch.videoUrl ? 'bg-purple-500 text-black font-black' : 'bg-zinc-800 text-zinc-400'}`}>
-                                  {playTestUrl === sch.videoUrl ? "PLAYING" : "TEST"}
-                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Interactive Play Test Viewbox */}
+                          <div className="mt-3 relative w-full aspect-video rounded-2xl overflow-hidden bg-black/95 border border-white/5 flex flex-col justify-center items-center">
+                            {playTestUrl ? (
+                              <div className="absolute inset-0 flex flex-col justify-between p-2">
+                                {isPlayingTest ? (
+                                  <div className="absolute inset-0 bg-black">
+                                    <iframe
+                                      src={playTestUrl}
+                                      title="Pre-check Stream Player Preview"
+                                      className="w-full h-full border-none"
+                                      referrerPolicy="no-referrer"
+                                    />
+                                    <div className="absolute top-1 left-1 bg-purple-500 text-black font-mono font-black text-[7px] px-1.5 py-0.5 rounded tracking-widest uppercase animate-pulse">
+                                      LIVE MONITORING
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex-1 flex flex-col justify-center items-center space-y-2">
+                                    <p className="text-zinc-400 text-center font-black text-[9px] uppercase tracking-wider block">
+                                      PRÉ-CHECK DE PLAYBACK DISPONÍVEL
+                                    </p>
+                                    <p className="text-zinc-650 text-[8px] line-clamp-1">
+                                      {playTestUrl}
+                                    </p>
+                                    <button
+                                      onClick={() => {
+                                        triggerHaptic(30);
+                                        setIsPlayingTest(true);
+                                      }}
+                                      className="px-4 py-1 bg-purple-500 text-black font-black font-mono text-[8px] rounded-lg uppercase tracking-wider hover:bg-purple-400"
+                                    >
+                                      ▶ INICIAR PLAY TESTE MANUAL
+                                    </button>
+                                  </div>
+                                )}
+
+                                <div className="absolute bottom-1 right-1">
+                                  <button
+                                    onClick={() => {
+                                      triggerHaptic(15);
+                                      setIsPlayingTest(false);
+                                    }}
+                                    className="p-1 px-1.5 bg-black/50 border border-white/10 rounded text-[7px] uppercase tracking-wider text-rose-400"
+                                  >
+                                    RESET
+                                  </button>
+                                </div>
                               </div>
-                            ))}
+                            ) : (
+                              <div className="text-center space-y-1.5 text-zinc-650 p-2 pointer-events-none">
+                                <span className="block text-[14px]">📺</span>
+                                <p className="uppercase text-[8px] font-black tracking-widest">
+                                  NENHUM FLUXO SELECIONADO
+                                </p>
+                                <p className="text-[7.5px] leading-tight">
+                                  Mapeie um canal ao lado para carregar preview
+                                  de estúdio
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </div>
 
-                        {/* Interactive Play Test Viewbox */}
-                        <div className="mt-3 relative w-full aspect-video rounded-2xl overflow-hidden bg-black/95 border border-white/5 flex flex-col justify-center items-center">
-                          {playTestUrl ? (
-                            <div className="absolute inset-0 flex flex-col justify-between p-2">
-                              {isPlayingTest ? (
-                                <div className="absolute inset-0 bg-black">
-                                  <iframe
-                                    src={playTestUrl}
-                                    title="Pre-check Stream Player Preview"
-                                    className="w-full h-full border-none"
-                                    referrerPolicy="no-referrer"
-                                  />
-                                  <div className="absolute top-1 left-1 bg-purple-500 text-black font-mono font-black text-[7px] px-1.5 py-0.5 rounded tracking-widest uppercase animate-pulse">
-                                    LIVE MONITORING
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="flex-1 flex flex-col justify-center items-center space-y-2">
-                                  <p className="text-zinc-400 text-center font-black text-[9px] uppercase tracking-wider block">PRÉ-CHECK DE PLAYBACK DISPONÍVEL</p>
-                                  <p className="text-zinc-650 text-[8px] line-clamp-1">{playTestUrl}</p>
-                                  <button
-                                    onClick={() => { triggerHaptic(30); setIsPlayingTest(true); }}
-                                    className="px-4 py-1 bg-purple-500 text-black font-black font-mono text-[8px] rounded-lg uppercase tracking-wider hover:bg-purple-400"
-                                  >
-                                    ▶ INICIAR PLAY TESTE MANUAL
-                                  </button>
-                                </div>
-                              )}
-                              
-                              <div className="absolute bottom-1 right-1">
+                        {/* Confirm/sync directly into movies list */}
+                        <button
+                          onClick={() => {
+                            if (!formTitle) return;
+                            triggerHaptic(35);
+                            // append directly
+                            const validatedMovie: Movie = {
+                              id: `m_${Date.now()}`,
+                              title: formTitle,
+                              year: formYear,
+                              posterUrl:
+                                formPosterUrl ||
+                                "https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=400",
+                              overview: `Cadastrado em tempo real. Link de streaming validado manualmente via Play Teste.`,
+                              videoUrl:
+                                formVideoUrl ||
+                                "https://www.youtube.com/embed/dQw4w9WgXcQ",
+                              type: formType,
+                              status: true,
+                            };
+                            setMoviesList((prev) => [validatedMovie, ...prev]);
+                            // cleanup / notifier
+                            setFormTitle("");
+                            setFormPosterUrl("");
+                            setFormVideoUrl("");
+                            setPlayTestUrl(null);
+                            setIsPlayingTest(false);
+                            setShowIndexer(false); // return to vitrine
+                          }}
+                          className="w-full mt-3 py-2 bg-gradient-to-r from-cyan-500 to-purple-600 text-black font-black font-mono uppercase tracking-widest rounded-xl hover:opacity-90 active:scale-98 cursor-pointer shadow-[0_4px_12px_rgba(168,85,247,0.3)]"
+                        >
+                          💾 SALVAR & PUBLICAR NO CATÁLOGO DO HUD
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ) : (
+                  /* REDERIZAÇÃO DA VITRINE ESTILO NETFLIX (SPEC PAGE 18 & 23) */
+                  <motion.div
+                    key="movies-netflix-rows"
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    className="space-y-6 flex-1 overflow-y-auto no-scrollbar pr-1 flex flex-col"
+                    onScroll={handleContainerScroll}
+                  >
+                    {!catalogLoaded ? (
+                      <div className="flex-1 flex flex-col items-center justify-center py-20 px-4 text-center my-auto min-h-[400px]">
+                        {showReconnectButton ? (
+                          <div className="flex flex-col items-center justify-center max-w-xs mx-auto space-y-4">
+                            <p className="text-xs font-mono font-black text-rose-500 tracking-[0.2em] uppercase">
+                              SINAL PARCIALMENTE RESTRITO
+                            </p>
+                            <p className="text-[10px] text-zinc-400 font-mono text-center leading-relaxed">
+                              O satélite de sincronização do banco de dados
+                              físico excedeu o tempo limite. Deseja reatar
+                              conexão ou usar dados locais?
+                            </p>
+                            <button
+                              id="btn-reconnect-satellite"
+                              onClick={() => {
+                                setShowReconnectButton(false);
+                                fetchIndexedCatalog();
+                              }}
+                              className="px-4 py-2 text-[10px] font-mono font-bold bg-cyan-950/80 hover:bg-cyan-500 hover:text-black text-cyan-400 border border-cyan-500/30 rounded-lg shadow-lg shadow-cyan-500/10 transition-all duration-300 transform active:scale-95 uppercase tracking-widest cursor-pointer"
+                            >
+                              RECONECTAR SATÉLITE
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="relative w-16 h-16 mb-4">
+                              <span className="absolute inset-0 w-full h-full rounded-full border-2 border-cyan-500/10" />
+                              <span className="absolute inset-0 w-full h-full rounded-full border-2 border-t-cyan-500 animate-spin" />
+                              <span className="absolute inset-[3px] rounded-full border border-purple-500/10" />
+                              <span
+                                className="absolute inset-[3px] rounded-full border-t border-purple-500 animate-spin"
+                                style={{ animationDuration: "1.2s" }}
+                              />
+                            </div>
+                            <p className="text-xs font-mono font-black text-cyan-400 tracking-[0.2em] animate-pulse uppercase">
+                              SINCRONIZANDO SATÉLITES...
+                            </p>
+                            <p className="text-[9px] text-zinc-400 mt-1.5 font-mono tracking-widest uppercase">
+                              Conectando ao banco de dados físico
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        {/* METADATA ACTION CONTROLS / SECTIONS BAR HAS BEEN REMOVED TO PREVENT DUPLICATION */}
+
+                        {/* 6 AUTOMATIC TRAILERS ROW - HORIZONTAL CAROUSEL WITH AUDIOLESS AUTOPLAY */}
+                        <div className="space-y-4 text-left border-b border-white/5 pb-6 mt-2">
+                          <div className="flex justify-between items-center px-2">
+                            <span className="text-[10px] font-black text-cyan-400 font-mono uppercase tracking-widest block flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full bg-cyan-500 animate-ping shrink-0" />
+                              ♛ TENDÊNCIAS
+                            </span>
+                            <span className="text-[8px] font-mono text-zinc-500">
+                              Arraste para explorar
+                            </span>
+                          </div>
+
+                          <div
+                            className="relative w-full h-[60vw] max-h-[300px] flex items-center justify-center overflow-hidden touch-none"
+                            style={{ perspective: "800px" }}
+                          >
+                            <motion.div
+                              drag="x"
+                              dragConstraints={{ left: 0, right: 0 }}
+                              onDragEnd={(e, info) => {
+                                const threshold = 50;
+                                const activeLength =
+                                  memoizedCategories.filtered.length;
+                                if (
+                                  info.offset.x < -threshold &&
+                                  activeTrailerIndex <
+                                    Math.min(10, activeLength) - 1
+                                ) {
+                                  setActiveTrailerIndex((prev) => prev + 1);
+                                } else if (
+                                  info.offset.x > threshold &&
+                                  activeTrailerIndex > 0
+                                ) {
+                                  setActiveTrailerIndex((prev) => prev - 1);
+                                }
+                              }}
+                              className="absolute inset-0 flex items-center justify-center cursor-grab active:cursor-grabbing z-20"
+                            >
+                              {memoizedCategories.filtered
+                                .slice(0, 10)
+                                .map((movie, idx) => {
+                                  const isActive = idx === activeTrailerIndex;
+                                  const offset = idx - activeTrailerIndex;
+                                  const absOffset = Math.abs(offset);
+                                  const isVisible = absOffset < 3;
+
+                                  if (!isVisible) return null;
+
+                                  return (
+                                    <motion.div
+                                      key={`coverflow_${movie.id}`}
+                                      animate={{
+                                        x: offset * 110,
+                                        scale: isActive
+                                          ? 1.1
+                                          : Math.max(
+                                              0.6,
+                                              0.85 - absOffset * 0.1,
+                                            ),
+                                        rotateY: -offset * 12,
+                                        zIndex: 10 - absOffset,
+                                        opacity: isActive
+                                          ? 1
+                                          : Math.max(
+                                              0.2,
+                                              0.7 - absOffset * 0.2,
+                                            ),
+                                      }}
+                                      transition={{
+                                        type: "spring",
+                                        stiffness: 250,
+                                        damping: 25,
+                                      }}
+                                      onClick={() => {
+                                        if (!isActive) triggerHaptic(20);
+                                        setActiveTrailerIndex(idx);
+                                      }}
+                                      className={`absolute w-[240px] md:w-[280px] aspect-video rounded-2xl overflow-hidden bg-black border ${isActive ? "border-cyan-500/80 shadow-[0_0_30px_rgba(6,182,212,0.3)]" : "border-white/10"} shadow-xl flex flex-col pointer-events-auto`}
+                                    >
+                                      <div className="relative w-full flex-1 bg-zinc-900 overflow-hidden pointer-events-none">
+                                        <img
+                                          src={
+                                            movie.backdropUrl || movie.posterUrl
+                                          }
+                                          alt={movie.title}
+                                          className="absolute inset-0 w-full h-full object-cover"
+                                          referrerPolicy="no-referrer"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent" />
+                                      </div>
+                                      <div className="h-[55px] bg-[#07090c] p-2 flex flex-col justify-center pointer-events-auto z-10 w-full text-left border-t border-white/5">
+                                        <h4
+                                          className={`text-[10px] md:text-[11px] font-black truncate uppercase ${isActive ? "text-cyan-400" : "text-neutral-300"}`}
+                                        >
+                                          {movie.title}
+                                        </h4>
+                                        <div className="flex justify-between items-center text-[8px] font-mono mt-1">
+                                          <span className="text-zinc-500">
+                                            {movie.year} •{" "}
+                                            {movie.type.toUpperCase()}
+                                          </span>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              selectMovieAndFetchDetails(movie);
+                                            }}
+                                            className="px-2 py-1 bg-white/5 hover:bg-cyan-900/50 rounded flex items-center transition-colors text-zinc-300 font-bold uppercase tracking-wider border border-white/10 active:scale-95 cursor-pointer"
+                                          >
+                                            + DETALHES
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  );
+                                })}
+                            </motion.div>
+                          </div>
+                        </div>
+
+                        {/* ACTIVE FILTER SECTION PANEL - ONLY SHOWN WHEN SEARCH OR GENRES EXPANSE IS ENGAGED */}
+                        {(searchQuery ||
+                          selectedCategory !== "Todos" ||
+                          scopeFiltering !== "todos") && (
+                          <div className="space-y-4 text-left">
+                            <div className="flex justify-between items-center border-b border-zinc-900 pb-1">
+                              <span className="text-[10px] font-black text-cyan-400 font-mono uppercase tracking-widest block">
+                                ⚡ RESULTADOS DETALHADOS DA BUSCA EM CURSO
+                              </span>
+                              <div className="flex gap-2 text-[8px] font-mono">
                                 <button
-                                  onClick={() => { triggerHaptic(15); setIsPlayingTest(false); }}
-                                  className="p-1 px-1.5 bg-black/50 border border-white/10 rounded text-[7px] uppercase tracking-wider text-rose-400"
+                                  onClick={() => {
+                                    triggerHaptic(10);
+                                    setSearchQuery("");
+                                    setSelectedCategory("Todos");
+                                    setScopeFiltering("todos");
+                                  }}
+                                  className="text-zinc-500 hover:text-rose-400 underline font-extrabold uppercase border border-transparent active:scale-95 cursor-pointer"
                                 >
-                                  RESET
+                                  ✕ Resetar Filtros
                                 </button>
                               </div>
                             </div>
-                          ) : (
-                            <div className="text-center space-y-1.5 text-zinc-650 p-2 pointer-events-none">
-                              <span className="block text-[14px]">📺</span>
-                              <p className="uppercase text-[8px] font-black tracking-widest">NENHUM FLUXO SELECIONADO</p>
-                              <p className="text-[7.5px] leading-tight">Mapeie um canal ao lado para carregar preview de estúdio</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
 
-                      {/* Confirm/sync directly into movies list */}
-                      <button
-                        onClick={() => {
-                          if (!formTitle) return;
-                          triggerHaptic(35);
-                          // append directly
-                          const validatedMovie: Movie = {
-                            id: `m_${Date.now()}`,
-                            title: formTitle,
-                            year: formYear,
-                            posterUrl: formPosterUrl || 'https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=400',
-                            overview: `Cadastrado em tempo real. Link de streaming validado manualmente via Play Teste.`,
-                            videoUrl: formVideoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                            type: formType,
-                            status: true
-                          };
-                          setMoviesList(prev => [validatedMovie, ...prev]);
-                          // cleanup / notifier
-                          setFormTitle('');
-                          setFormPosterUrl('');
-                          setFormVideoUrl('');
-                          setPlayTestUrl(null);
-                          setIsPlayingTest(false);
-                          setShowIndexer(false); // return to vitrine
-                        }}
-                        className="w-full mt-3 py-2 bg-gradient-to-r from-cyan-500 to-purple-600 text-black font-black font-mono uppercase tracking-widest rounded-xl hover:opacity-90 active:scale-98 cursor-pointer shadow-[0_4px_12px_rgba(168,85,247,0.3)]"
-                      >
-                        💾 SALVAR & PUBLICAR NO CATÁLOGO DO HUD
-                      </button>
-                    </div>
-
-                  </div>
-                </motion.div>
-              ) : (
-                /* REDERIZAÇÃO DA VITRINE ESTILO NETFLIX (SPEC PAGE 18 & 23) */
-                <motion.div
-                  key="movies-netflix-rows"
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  className="space-y-6 flex-1 overflow-y-auto no-scrollbar pr-1 flex flex-col"
-                  onScroll={handleContainerScroll}
-                >
-                  {indexedDbCatalog.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center py-20 px-4 text-center my-auto min-h-[400px]">
-                      {showReconnectButton ? (
-                        <div className="flex flex-col items-center justify-center max-w-xs mx-auto space-y-4">
-                          <p className="text-xs font-mono font-black text-rose-500 tracking-[0.2em] uppercase">
-                            SINAL PARCIALMENTE RESTRITO
-                          </p>
-                          <p className="text-[10px] text-zinc-400 font-mono text-center leading-relaxed">
-                            O satélite de sincronização do banco de dados físico excedeu o tempo limite. Deseja reatar conexão ou usar dados locais?
-                          </p>
-                          <button
-                            id="btn-reconnect-satellite"
-                            onClick={() => {
-                              setShowReconnectButton(false);
-                              // Força o uso imediato dos dados locais / MOCK_MOVIES para não deixar a tela preta e tenta sincronizar
-                              const mappedMockTitles = (MOCK_MOVIES || []).map(m => {
-                                const numericId = String(m.id).replace(/\D/g, "");
-                                return {
-                                  title_id: `tmdb-${numericId}`,
-                                  media_type: m.type === 'serie' ? 'tv' : 'movie',
-                                  stream_url: m.videoUrl || '',
-                                  tracks_data: {
-                                    title: m.title,
-                                    overview: m.overview,
-                                    poster_path: m.posterUrl,
-                                    backdrop_path: m.posterUrl,
-                                    audio_languages: ["pt-BR", "en-US"]
-                                  }
-                                };
-                              });
-                              setIndexedDbCatalog(mappedMockTitles);
-                              if (moviesList.length === 0) {
-                                setMoviesList(MOCK_MOVIES);
-                              }
-                              fetchIndexedCatalog();
-                            }}
-                            className="px-4 py-2 text-[10px] font-mono font-bold bg-cyan-950/80 hover:bg-cyan-500 hover:text-black text-cyan-400 border border-cyan-500/30 rounded-lg shadow-lg shadow-cyan-500/10 transition-all duration-300 transform active:scale-95 uppercase tracking-widest cursor-pointer"
-                          >
-                            RECONECTAR SATÉLITE
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="relative w-16 h-16 mb-4">
-                            <span className="absolute inset-0 w-full h-full rounded-full border-2 border-cyan-500/10" />
-                            <span className="absolute inset-0 w-full h-full rounded-full border-2 border-t-cyan-500 animate-spin" />
-                            <span className="absolute inset-[3px] rounded-full border border-purple-500/10" />
-                            <span className="absolute inset-[3px] rounded-full border-t border-purple-500 animate-spin" style={{ animationDuration: '1.2s' }} />
-                          </div>
-                          <p className="text-xs font-mono font-black text-cyan-400 tracking-[0.2em] animate-pulse uppercase">
-                            SINCRONIZANDO SATÉLITES...
-                          </p>
-                          <p className="text-[9px] text-zinc-400 mt-1.5 font-mono tracking-widest uppercase">
-                            Conectando ao banco de dados físico
-                          </p>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      {/* METADATA ACTION CONTROLS / SECTIONS BAR HAS BEEN REMOVED TO PREVENT DUPLICATION */}
-
-                      {/* 6 AUTOMATIC TRAILERS ROW - HORIZONTAL CAROUSEL WITH AUDIOLESS AUTOPLAY */}
-                      <div className="space-y-4 text-left border-b border-white/5 pb-6 mt-2">
-                    <div className="flex justify-between items-center px-2">
-                      <span className="text-[10px] font-black text-cyan-400 font-mono uppercase tracking-widest block flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-cyan-500 animate-ping shrink-0" />
-                        ♛ TENDÊNCIAS
-                      </span>
-                      <span className="text-[8px] font-mono text-zinc-500">Arraste para explorar</span>
-                    </div>
-
-                    <div className="relative w-full h-[60vw] max-h-[300px] flex items-center justify-center overflow-hidden touch-none" style={{ perspective: '800px' }}>
-                      <motion.div
-                        drag="x"
-                        dragConstraints={{ left: 0, right: 0 }}
-                        onDragEnd={(e, info) => {
-                          const threshold = 50;
-                          const activeLength = memoizedCategories.filtered.length;
-                          if (info.offset.x < -threshold && activeTrailerIndex < Math.min(10, activeLength) - 1) {
-                            setActiveTrailerIndex(prev => prev + 1);
-                          } else if (info.offset.x > threshold && activeTrailerIndex > 0) {
-                            setActiveTrailerIndex(prev => prev - 1);
-                          }
-                        }}
-                        className="absolute inset-0 flex items-center justify-center cursor-grab active:cursor-grabbing z-20"
-                      >
-                        {memoizedCategories.filtered.slice(0, 10).map((movie, idx) => {
-                          const isActive = idx === activeTrailerIndex;
-                          const offset = idx - activeTrailerIndex;
-                          const absOffset = Math.abs(offset);
-                          const isVisible = absOffset < 3;
-                          
-                          if (!isVisible) return null;
-
-                          return (
-                            <motion.div
-                              key={`coverflow_${movie.id}`}
-                              animate={{
-                                x: offset * 110,
-                                scale: isActive ? 1.1 : Math.max(0.6, 0.85 - (absOffset * 0.1)),
-                                rotateY: -offset * 12,
-                                zIndex: 10 - absOffset,
-                                opacity: isActive ? 1 : Math.max(0.2, 0.7 - (absOffset * 0.2)),
-                              }}
-                              transition={{ type: 'spring', stiffness: 250, damping: 25 }}
-                              onClick={() => {
-                                if (!isActive) triggerHaptic(20);
-                                setActiveTrailerIndex(idx);
-                              }}
-                              className={`absolute w-[240px] md:w-[280px] aspect-video rounded-2xl overflow-hidden bg-black border ${isActive ? 'border-cyan-500/80 shadow-[0_0_30px_rgba(6,182,212,0.3)]' : 'border-white/10'} shadow-xl flex flex-col pointer-events-auto`}
-                            >
-                              <div className="relative w-full flex-1 bg-zinc-900 overflow-hidden pointer-events-none">
-                                <img 
-                                  src={movie.backdropUrl || movie.posterUrl} 
-                                  alt={movie.title} 
-                                  className="absolute inset-0 w-full h-full object-cover" 
-                                  referrerPolicy="no-referrer"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent" />
-                              </div>
-                              <div className="h-[55px] bg-[#07090c] p-2 flex flex-col justify-center pointer-events-auto z-10 w-full text-left border-t border-white/5">
-                                <h4 className={`text-[10px] md:text-[11px] font-black truncate uppercase ${isActive ? 'text-cyan-400' : 'text-neutral-300'}`}>
-                                  {movie.title}
-                                </h4>
-                                <div className="flex justify-between items-center text-[8px] font-mono mt-1">
-                                  <span className="text-zinc-500">{movie.year} • {movie.type.toUpperCase()}</span>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      selectMovieAndFetchDetails(movie);
-                                    }}
-                                    className="px-2 py-1 bg-white/5 hover:bg-cyan-900/50 rounded flex items-center transition-colors text-zinc-300 font-bold uppercase tracking-wider border border-white/10 active:scale-95 cursor-pointer"
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                              {memoizedCategories.filtered
+                                .slice(0, visiblePostersCount)
+                                .map((movie) => (
+                                  <div
+                                    key={movie.id}
+                                    className="group relative rounded-xl overflow-hidden bg-zinc-950/45 border border-white/5 hover:border-cyan-500/30 p-1.5 hover:shadow-[0_0_15px_rgba(6,182,212,0.15)] flex flex-col justify-between transition-all cursor-pointer"
+                                    onClick={() =>
+                                      selectMovieAndFetchDetails(movie)
+                                    }
                                   >
-                                    + DETALHES
-                                  </button>
-                                </div>
-                              </div>
-                            </motion.div>
-                          );
-                        })}
-                      </motion.div>
-                    </div>
-                  </div>
+                                    <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                      <AnimatePresence>
+                                        {trailerMovieId === movie.id ? (
+                                          <motion.video
+                                            key="reel"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{ duration: 0.5 }}
+                                            src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                            autoPlay
+                                            muted
+                                            className="absolute inset-0 w-full h-full object-cover z-20"
+                                          />
+                                        ) : (
+                                          <>
+                                            <motion.img
+                                              key="poster"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src={movie.posterUrl}
+                                              alt={movie.title}
+                                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                              referrerPolicy="no-referrer"
+                                            />
+                                            {renderAudioBadge(movie)}
+                                          </>
+                                        )}
+                                      </AnimatePresence>
+                                    </div>
+                                    <div className="pt-1.5 text-left space-y-0.5">
+                                      <h4 className="text-[9.5px] font-bold text-neutral-200 uppercase truncate group-hover:text-cyan-400 transition-colors">
+                                        {movie.title}
+                                      </h4>
+                                      <div className="flex justify-between items-center text-[7.5px] font-mono text-zinc-500">
+                                        <span>
+                                          {movie.year} •{" "}
+                                          {movie.type.toUpperCase()}
+                                        </span>
+                                        {movie.status && (
+                                          <span className="text-cyan-400 font-extrabold font-mono">
+                                            ● SINAL ON
+                                          </span>
+                                        )}
+                                      </div>
 
-                  {/* ACTIVE FILTER SECTION PANEL - ONLY SHOWN WHEN SEARCH OR GENRES EXPANSE IS ENGAGED */}
-                  {(searchQuery || selectedCategory !== 'Todos' || scopeFiltering !== 'todos') && (
-                    <div className="space-y-4 text-left">
-                      <div className="flex justify-between items-center border-b border-zinc-900 pb-1">
-                        <span className="text-[10px] font-black text-cyan-400 font-mono uppercase tracking-widest block">
-                          ⚡ RESULTADOS DETALHADOS DA BUSCA EM CURSO
-                        </span>
-                        <div className="flex gap-2 text-[8px] font-mono">
-                          <button
-                            onClick={() => {
-                              triggerHaptic(10);
-                              setSearchQuery('');
-                              setSelectedCategory('Todos');
-                              setScopeFiltering('todos');
-                            }}
-                            className="text-zinc-500 hover:text-rose-400 underline font-extrabold uppercase border border-transparent active:scale-95 cursor-pointer"
-                          >
-                            ✕ Resetar Filtros
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                        {memoizedCategories.filtered
-                          .slice(0, visiblePostersCount)
-                          .map((movie) => (
-                            <div
-                              key={movie.id}
-                              className="group relative rounded-xl overflow-hidden bg-zinc-950/45 border border-white/5 hover:border-cyan-500/30 p-1.5 hover:shadow-[0_0_15px_rgba(6,182,212,0.15)] flex flex-col justify-between transition-all cursor-pointer"
-                              onClick={() => selectMovieAndFetchDetails(movie)}
-                            >
-                              <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <>
-          <motion.img
-            key="poster"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            src={movie.posterUrl} 
-            alt={movie.title} 
-             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" 
-          />
-          {renderAudioBadge(movie)}
-        </>
-      )}
-    </AnimatePresence>
-                              </div>
-                              <div className="pt-1.5 text-left space-y-0.5">
-
-                                <h4 className="text-[9.5px] font-bold text-neutral-200 uppercase truncate group-hover:text-cyan-400 transition-colors">{movie.title}</h4>
-                                <div className="flex justify-between items-center text-[7.5px] font-mono text-zinc-500">
-                                  <span>{movie.year} • {movie.type.toUpperCase()}</span>
-                                  {movie.status && <span className="text-cyan-400 font-extrabold font-mono">● SINAL ON</span>}
-                                </div>
-                              
-      <button 
-        onClick={(e) => { 
-          e.stopPropagation(); 
-          setTrailerMovieId(movie.id); 
-          setTimeout(() => {
-            setTrailerMovieId(cur => cur === movie.id ? null : cur);
-          }, 30000);
-        }}
-        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
-      >
-        Trailer
-      </button>
-    </div>
-  </div>
-))}
-                      </div>
-
-                      {/* PROGRESSIVE MORE POSTERS LOAD SENSOR CONTROL */}
-                      {memoizedCategories.filtered.length > visiblePostersCount && (
-                        <div className="flex justify-center pt-2">
-                          <button
-                            onClick={() => {
-                              triggerHaptic(20);
-                              setVisiblePostersCount(prev => prev + 18);
-                            }}
-                            className="px-6 py-2 bg-zinc-900/40 hover:bg-cyan-950/40 text-cyan-400 border border-cyan-500/20 rounded-xl text-[9.5px] font-mono uppercase tracking-widest font-black active:scale-95 transition-all shadow cursor-pointer"
-                          >
-                            ✦ Carregar mais 18 Títulos ✦
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* MAIN VITRINE SHELVES CONTAINER - HIDDEN OR COMPLEMENTED BY FILTER */}
-                  <div className="space-y-6">
-
-                    {/* SHELF A: FAVORITOS DO USUÁRIO (SESSÃO DO USUÁRIO) */}
-                    <div className="space-y-2 text-left">
-                      <div 
-                        onClick={() => { triggerHaptic(20); setExpandedSessionGrid(prev => prev === 'favorites' ? null : 'favorites'); }}
-                        className="flex justify-between items-center border-b border-zinc-900/40 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
-                      >
-                        <span className="text-[10px] font-black text-cyan-400 font-mono uppercase tracking-widest block flex items-center gap-1">
-                          <Heart className="w-3 h-3 text-red-500 fill-red-500 animate-pulse" />
-                          FAVORITOS
-                        </span>
-                      </div>
-
-                      {expandedSessionGrid === 'favorites' ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 max-h-[65vh] overflow-y-auto no-scrollbar place-content-start">
-                          {getExpandedTitlesForCategory('favorites').map((movie) => (
-                            <div
-                              key={`expanded_fav_${movie.id}`}
-                              onClick={() => selectMovieAndFetchDetails(movie)}
-                              className="group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-cyan-500/40 p-1.5 transition-all cursor-pointer"
-                            >
-                              <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
-      )}
-    </AnimatePresence>
-                                {renderAudioBadge(movie)}
-                                <div className="absolute top-1.5 left-1.5 bg-black/60 border border-red-500/30 px-1 py-0.5 rounded text-[6.5px] font-sans text-red-400 flex items-center gap-0.5 font-bold">
-                                  <Heart className="w-2 h-2 fill-red-500 text-red-500" /> FAV
-                                </div>
-                              </div>
-                              <div className="pt-1.5 text-left">
-
-                                <h5 className="text-[9px] font-bold text-neutral-200 uppercase truncate">{movie.title}</h5>
-                                <div className="flex justify-between items-center text-[7px] font-mono text-zinc-500 mt-0.5">
-                                  <span>{movie.year} • {movie.type.toUpperCase()}</span>
-                                  {movie.status && <span className="text-cyan-405 font-bold">H.265</span>}
-                                </div>
-                              
-      <button 
-        onClick={(e) => { 
-          e.stopPropagation(); 
-          setTrailerMovieId(movie.id); 
-          setTimeout(() => {
-            setTrailerMovieId(cur => cur === movie.id ? null : cur);
-          }, 30000);
-        }}
-        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
-      >
-        Trailer
-      </button>
-    </div>
-  </div>
-))}
-                        </div>
-                      ) : (
-                        /* Infinite Scrollable Box with program scroll detection */
-                        <div
-                          onScroll={(e) => handleHorizontalScroll(e, 'favorites')}
-                          className="flex overflow-x-auto gap-3 pb-2 no-scrollbar scroll-smooth"
-                          style={{ scrollbarWidth: 'none' }}
-                        >
-                          {memoizedCategories.favorites
-                            .slice(0, favoritesLimit)
-                            .map((movie) => (
-                              <div
-                                key={`fav_${movie.id}`}
-                                onClick={() => selectMovieAndFetchDetails(movie)}
-                                className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-cyan-500/40 p-1.5 transition-all cursor-pointer inline-block"
-                              >
-                                <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                  <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
-      )}
-    </AnimatePresence>
-                                  <div className="absolute top-1.5 left-1.5 bg-black/60 border border-red-500/30 px-1 py-0.5 rounded text-[6.5px] font-sans text-red-400 flex items-center gap-0.5 font-bold">
-                                    <Heart className="w-2 h-2 fill-red-500 text-red-500" /> FAV
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setTrailerMovieId(movie.id);
+                                          setTimeout(() => {
+                                            setTrailerMovieId((cur) =>
+                                              cur === movie.id ? null : cur,
+                                            );
+                                          }, 30000);
+                                        }}
+                                        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+                                      >
+                                        Trailer
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="pt-1.5 text-left">
+                                ))}
+                            </div>
 
-                                  <h5 className="text-[9px] font-bold text-neutral-200 uppercase truncate">{movie.title}</h5>
-                                  <div className="flex justify-between items-center text-[7px] font-mono text-zinc-500 mt-0.5">
-                                    <span>{movie.year} • {movie.type.toUpperCase()}</span>
-                                    {movie.status && <span className="text-cyan-405 font-bold">H.265</span>}
-                                  </div>
-                                
-      <button 
-        onClick={(e) => { 
-          e.stopPropagation(); 
-          setTrailerMovieId(movie.id); 
-          setTimeout(() => {
-            setTrailerMovieId(cur => cur === movie.id ? null : cur);
-          }, 30000);
-        }}
-        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
-      >
-        Trailer
-      </button>
-    </div>
-  </div>
-))}
-                        </div>
-                      )}
-                    </div>
-
-
-                    {/* SHELF B: CONTINUAR ASSISTINDO */}
-                    <div className="space-y-2 text-left">
-                      <div 
-                        onClick={() => { triggerHaptic(20); setExpandedSessionGrid(prev => prev === 'continue' ? null : 'continue'); }}
-                        className="flex justify-between items-center border-b border-zinc-900/40 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
-                      >
-                        <span className="text-[10px] font-black text-purple-400 font-mono uppercase tracking-widest block flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-purple-400" />
-                          CONTINUAR ASSISTINDO
-                        </span>
-                      </div>
-
-                      {expandedSessionGrid === 'continue' ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 max-h-[65vh] overflow-y-auto no-scrollbar place-content-start">
-                          {getExpandedTitlesForCategory('continue').map((movie) => {
-                            const progress = (movie as any).continueProgress || 45;
-                            return (
-                              <div
-                                key={`expanded_continue_${movie.id}`}
-                                onClick={() => selectMovieAndFetchDetails(movie)}
-                                className="group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-purple-500/40 p-1.5 transition-all cursor-pointer"
-                              >
-                                <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                  <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
-      )}
-    </AnimatePresence>
-                                  <div className="absolute bottom-0 left-0 w-full h-1 bg-zinc-800">
-                                    <div className="bg-red-600 h-full transition-all" style={{ width: `${progress}%` }} />
-                                  </div>
-                                </div>
-                                <div className="pt-1.5 text-left">
-
-                                  <h5 className="text-[9px] font-bold text-neutral-200 uppercase truncate">{movie.title}</h5>
-                                  <div className="flex justify-between items-center text-[7px] font-mono text-zinc-500 mt-0.5">
-                                    <span>{progress}% Concluído</span>
-                                    <span className="text-purple-405 font-bold">RETOMAR</span>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div
-                          onScroll={(e) => handleHorizontalScroll(e, 'continue')}
-                          className="flex overflow-x-auto gap-3 pb-2 no-scrollbar scroll-smooth"
-                          style={{ scrollbarWidth: 'none' }}
-                        >
-                          {memoizedCategories.continue
-                            .slice(0, continueWatchingLimit)
-                            .map((movie) => {
-                              const progress = (movie as any).continueProgress || 45;
-                              return (
-                                <div
-                                  key={`continue_${movie.id}`}
-                                  onClick={() => selectMovieAndFetchDetails(movie)}
-                                  className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-purple-500/40 p-1.5 transition-all cursor-pointer inline-block"
+                            {/* PROGRESSIVE MORE POSTERS LOAD SENSOR CONTROL */}
+                            {memoizedCategories.filtered.length >
+                              visiblePostersCount && (
+                              <div className="flex justify-center pt-2">
+                                <button
+                                  onClick={() => {
+                                    triggerHaptic(20);
+                                    setVisiblePostersCount((prev) => prev + 18);
+                                  }}
+                                  className="px-6 py-2 bg-zinc-900/40 hover:bg-cyan-950/40 text-cyan-400 border border-cyan-500/20 rounded-xl text-[9.5px] font-mono uppercase tracking-widest font-black active:scale-95 transition-all shadow cursor-pointer"
                                 >
-                                  <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                    <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
-      )}
-    </AnimatePresence>
-                                    
-                                    {/* Red Progress Indicator at visual footer */}
-                                    <div className="absolute bottom-0 left-0 w-full h-1 bg-zinc-800">
-                                      <div className="bg-red-600 h-full transition-all" style={{ width: `${progress}%` }} />
-                                    </div>
-                                  </div>
-                                  <div className="pt-1.5 text-left">
-                                    <h5 className="text-[9px] font-bold text-neutral-200 uppercase truncate">{movie.title}</h5>
-                                    <div className="flex justify-between items-center text-[7px] font-mono text-zinc-500 mt-0.5">
-                                      <span>{progress}% Concluído</span>
-                                      <span className="text-purple-405 font-bold">RETOMAR</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                        </div>
-                      )}
-                    </div>
-
-
-                    {/* SHELF C: SUGESTÕES BASEADAS EM SEU HISTÓRICO */}
-                    <div className="space-y-2 text-left">
-                      <div 
-                        onClick={() => { triggerHaptic(20); setExpandedSessionGrid(prev => prev === 'suggestions' ? null : 'suggestions'); }}
-                        className="flex justify-between items-center border-b border-zinc-900/40 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
-                      >
-                        <span className="text-[10px] font-black text-cyan-400 font-mono uppercase tracking-widest block flex items-center gap-1">
-                          <Star className="w-3 h-3 text-cyan-400 animate-pulse" />
-                          SUGESTÕES COM BASE EM SEU ESTILO
-                        </span>
-                      </div>
-
-                      {expandedSessionGrid === 'suggestions' ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 max-h-[65vh] overflow-y-auto no-scrollbar place-content-start">
-                          {getExpandedTitlesForCategory('suggestions').map((movie) => {
-                            const rating = (movie as any).rating || 8.5;
-                            return (
-                              <div
-                                key={`expanded_sug_${movie.id}`}
-                                onClick={() => selectMovieAndFetchDetails(movie)}
-                                className="group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-cyan-500/40 p-1.5 transition-all cursor-pointer"
-                              >
-                                <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                  <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
-      )}
-    </AnimatePresence>
-                                  <div className="absolute top-1.5 right-1.5 bg-black/80 px-1.5 py-0.5 rounded text-[6.5px] font-mono text-cyan-400 border border-cyan-500/30">
-                                    ★ {rating.toFixed(1)}
-                                  </div>
-                                </div>
-                                <div className="pt-1.5 text-left">
-                                  <h5 className="text-[9px] font-bold text-neutral-200 uppercase truncate">{movie.title}</h5>
-                                  <p className="text-[7.5px] text-zinc-500 truncate leading-snug">Para fãs de {(movie as any).category || "Premium"}</p>
-                                </div>
+                                  ✦ Carregar mais 18 Títulos ✦
+                                </button>
                               </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div
-                          onScroll={(e) => handleHorizontalScroll(e, 'suggestions')}
-                          className="flex overflow-x-auto gap-3 pb-2 no-scrollbar scroll-smooth"
-                          style={{ scrollbarWidth: 'none' }}
-                        >
-                          {memoizedCategories.suggestions
-                            .slice(0, suggestionsLimit)
-                            .map((movie) => {
-                              const rating = (movie as any).rating || 8.5;
-                              return (
-                                <div
-                                  key={`sug_${movie.id}`}
-                                  onClick={() => selectMovieAndFetchDetails(movie)}
-                                  className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-cyan-500/40 p-1.5 transition-all cursor-pointer inline-block"
-                                >
-                                  <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                    <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
-      )}
-    </AnimatePresence>
-                                    <div className="absolute top-1.5 right-1.5 bg-black/80 px-1.5 py-0.5 rounded text-[6.5px] font-mono text-cyan-400 border border-cyan-500/30">
-                                      ★ {rating.toFixed(1)}
-                                    </div>
-                                  </div>
-                                  <div className="pt-1.5 text-left">
-                                    <h5 className="text-[9px] font-bold text-neutral-200 uppercase truncate">{movie.title}</h5>
-                                    <p className="text-[7.5px] text-zinc-500 truncate leading-snug">Para fãs de {(movie as any).category || "Premium"}</p>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                        </div>
-                      )}
-                    </div>
+                            )}
+                          </div>
+                        )}
 
-
-                    {/* SHELF D: TOP MAIS VISTOS NA NETFLIX */}
-                    <div className="space-y-2 text-left relative p-3 rounded-2xl bg-gradient-to-r from-red-950/5 to-black/40 border border-red-500/5">
-                      <div 
-                        onClick={() => { triggerHaptic(20); setExpandedSessionGrid(prev => prev === 'netflix' ? null : 'netflix'); }}
-                        className="flex justify-between items-center border-b border-red-900/20 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
-                      >
-                        <span className="text-[10px] font-black text-red-500 font-mono uppercase tracking-widest block flex items-center gap-1.5">
-                          <span className="px-1.5 py-0.5 bg-red-600 text-white rounded font-sans text-[7.5px] font-black shadow-md">N</span>
-                          TOP MAIS VISTOS NA NETFLIX
-                        </span>
-                      </div>
-
-                      {expandedSessionGrid === 'netflix' ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 max-h-[65vh] overflow-y-auto no-scrollbar place-content-start">
-                          {getExpandedTitlesForCategory('netflix').map((movie, index) => (
+                        {/* MAIN VITRINE SHELVES CONTAINER - HIDDEN OR COMPLEMENTED BY FILTER */}
+                        <div className="space-y-6">
+                          {/* SHELF A: FAVORITOS DO USUÁRIO (SESSÃO DO USUÁRIO) */}
+                          <div className="space-y-2 text-left">
                             <div
-                              key={`expanded_nft_${movie.id}`}
-                              onClick={() => selectMovieAndFetchDetails(movie)}
-                              className="group rounded-xl overflow-hidden bg-[#0a0707] border border-red-900/10 hover:border-red-500/40 p-1.5 transition-all cursor-pointer"
+                              onClick={() => {
+                                triggerHaptic(20);
+                                setExpandedSessionGrid((prev) =>
+                                  prev === "favorites" ? null : "favorites",
+                                );
+                              }}
+                              className="flex justify-between items-center border-b border-zinc-900/40 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
                             >
-                              <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                <span className="absolute top-1.5 left-1.5 text-red-500 font-sans font-black text-xl select-none leading-none z-10 antialiased italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                                  #{index + 1}
+                              <span className="text-[10px] font-black text-cyan-400 font-mono uppercase tracking-widest block flex items-center gap-1">
+                                <Heart className="w-3 h-3 text-red-500 fill-red-500 animate-pulse" />
+                                FAVORITOS
+                              </span>
+                            </div>
+
+                            {expandedSessionGrid === "favorites" ? (
+                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 max-h-[65vh] overflow-y-auto no-scrollbar place-content-start">
+                                {getExpandedTitlesForCategory("favorites").map(
+                                  (movie) => (
+                                    <div
+                                      key={`expanded_fav_${movie.id}`}
+                                      onClick={() =>
+                                        selectMovieAndFetchDetails(movie)
+                                      }
+                                      className="group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-cyan-500/40 p-1.5 transition-all cursor-pointer"
+                                    >
+                                      <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                        <AnimatePresence>
+                                          {trailerMovieId === movie.id ? (
+                                            <motion.video
+                                              key="reel"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                              autoPlay
+                                              muted
+                                              className="absolute inset-0 w-full h-full object-cover z-20"
+                                            />
+                                          ) : (
+                                            <motion.img
+                                              key="poster"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src={movie.posterUrl}
+                                              alt={movie.title}
+                                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                              referrerPolicy="no-referrer"
+                                            />
+                                          )}
+                                        </AnimatePresence>
+                                        {renderAudioBadge(movie)}
+                                        <div className="absolute top-1.5 left-1.5 bg-black/60 border border-red-500/30 px-1 py-0.5 rounded text-[6.5px] font-sans text-red-400 flex items-center gap-0.5 font-bold">
+                                          <Heart className="w-2 h-2 fill-red-500 text-red-500" />{" "}
+                                          FAV
+                                        </div>
+                                      </div>
+                                      <div className="pt-1.5 text-left">
+                                        <h5 className="text-[9px] font-bold text-neutral-200 uppercase truncate">
+                                          {movie.title}
+                                        </h5>
+                                        <div className="flex justify-between items-center text-[7px] font-mono text-zinc-500 mt-0.5">
+                                          <span>
+                                            {movie.year} •{" "}
+                                            {movie.type.toUpperCase()}
+                                          </span>
+                                          {movie.status && (
+                                            <span className="text-cyan-405 font-bold">
+                                              H.265
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setTrailerMovieId(movie.id);
+                                            setTimeout(() => {
+                                              setTrailerMovieId((cur) =>
+                                                cur === movie.id ? null : cur,
+                                              );
+                                            }, 30000);
+                                          }}
+                                          className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+                                        >
+                                          Trailer
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ),
+                                )}
+                              </div>
+                            ) : (
+                              /* Infinite Scrollable Box with program scroll detection */
+                              <div
+                                onScroll={(e) =>
+                                  handleHorizontalScroll(e, "favorites")
+                                }
+                                className="flex overflow-x-auto gap-3 pb-2 no-scrollbar scroll-smooth"
+                                style={{ scrollbarWidth: "none" }}
+                              >
+                                {memoizedCategories.favorites
+                                  .slice(0, favoritesLimit)
+                                  .map((movie) => (
+                                    <div
+                                      key={`fav_${movie.id}`}
+                                      onClick={() =>
+                                        selectMovieAndFetchDetails(movie)
+                                      }
+                                      className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-cyan-500/40 p-1.5 transition-all cursor-pointer inline-block"
+                                    >
+                                      <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                        <AnimatePresence>
+                                          {trailerMovieId === movie.id ? (
+                                            <motion.video
+                                              key="reel"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                              autoPlay
+                                              muted
+                                              className="absolute inset-0 w-full h-full object-cover z-20"
+                                            />
+                                          ) : (
+                                            <motion.img
+                                              key="poster"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src={movie.posterUrl}
+                                              alt={movie.title}
+                                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                              referrerPolicy="no-referrer"
+                                            />
+                                          )}
+                                        </AnimatePresence>
+                                        <div className="absolute top-1.5 left-1.5 bg-black/60 border border-red-500/30 px-1 py-0.5 rounded text-[6.5px] font-sans text-red-400 flex items-center gap-0.5 font-bold">
+                                          <Heart className="w-2 h-2 fill-red-500 text-red-500" />{" "}
+                                          FAV
+                                        </div>
+                                      </div>
+                                      <div className="pt-1.5 text-left">
+                                        <h5 className="text-[9px] font-bold text-neutral-200 uppercase truncate">
+                                          {movie.title}
+                                        </h5>
+                                        <div className="flex justify-between items-center text-[7px] font-mono text-zinc-500 mt-0.5">
+                                          <span>
+                                            {movie.year} •{" "}
+                                            {movie.type.toUpperCase()}
+                                          </span>
+                                          {movie.status && (
+                                            <span className="text-cyan-405 font-bold">
+                                              H.265
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setTrailerMovieId(movie.id);
+                                            setTimeout(() => {
+                                              setTrailerMovieId((cur) =>
+                                                cur === movie.id ? null : cur,
+                                              );
+                                            }, 30000);
+                                          }}
+                                          className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+                                        >
+                                          Trailer
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* SHELF B: CONTINUAR ASSISTINDO */}
+                          <div className="space-y-2 text-left">
+                            <div
+                              onClick={() => {
+                                triggerHaptic(20);
+                                setExpandedSessionGrid((prev) =>
+                                  prev === "continue" ? null : "continue",
+                                );
+                              }}
+                              className="flex justify-between items-center border-b border-zinc-900/40 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
+                            >
+                              <span className="text-[10px] font-black text-purple-400 font-mono uppercase tracking-widest block flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-purple-400" />
+                                CONTINUAR ASSISTINDO
+                              </span>
+                            </div>
+
+                            {expandedSessionGrid === "continue" ? (
+                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 max-h-[65vh] overflow-y-auto no-scrollbar place-content-start">
+                                {getExpandedTitlesForCategory("continue").map(
+                                  (movie) => {
+                                    const progress =
+                                      (movie as any).continueProgress || 45;
+                                    return (
+                                      <div
+                                        key={`expanded_continue_${movie.id}`}
+                                        onClick={() =>
+                                          selectMovieAndFetchDetails(movie)
+                                        }
+                                        className="group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-purple-500/40 p-1.5 transition-all cursor-pointer"
+                                      >
+                                        <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                          <AnimatePresence>
+                                            {trailerMovieId === movie.id ? (
+                                              <motion.video
+                                                key="reel"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.5 }}
+                                                src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                                autoPlay
+                                                muted
+                                                className="absolute inset-0 w-full h-full object-cover z-20"
+                                              />
+                                            ) : (
+                                              <motion.img
+                                                key="poster"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.5 }}
+                                                src={movie.posterUrl}
+                                                alt={movie.title}
+                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                                referrerPolicy="no-referrer"
+                                              />
+                                            )}
+                                          </AnimatePresence>
+                                          <div className="absolute bottom-0 left-0 w-full h-1 bg-zinc-800">
+                                            <div
+                                              className="bg-red-600 h-full transition-all"
+                                              style={{ width: `${progress}%` }}
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="pt-1.5 text-left">
+                                          <h5 className="text-[9px] font-bold text-neutral-200 uppercase truncate">
+                                            {movie.title}
+                                          </h5>
+                                          <div className="flex justify-between items-center text-[7px] font-mono text-zinc-500 mt-0.5">
+                                            <span>{progress}% Concluído</span>
+                                            <span className="text-purple-405 font-bold">
+                                              RETOMAR
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  },
+                                )}
+                              </div>
+                            ) : (
+                              <div
+                                onScroll={(e) =>
+                                  handleHorizontalScroll(e, "continue")
+                                }
+                                className="flex overflow-x-auto gap-3 pb-2 no-scrollbar scroll-smooth"
+                                style={{ scrollbarWidth: "none" }}
+                              >
+                                {memoizedCategories.continue
+                                  .slice(0, continueWatchingLimit)
+                                  .map((movie) => {
+                                    const progress =
+                                      (movie as any).continueProgress || 45;
+                                    return (
+                                      <div
+                                        key={`continue_${movie.id}`}
+                                        onClick={() =>
+                                          selectMovieAndFetchDetails(movie)
+                                        }
+                                        className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-purple-500/40 p-1.5 transition-all cursor-pointer inline-block"
+                                      >
+                                        <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                          <AnimatePresence>
+                                            {trailerMovieId === movie.id ? (
+                                              <motion.video
+                                                key="reel"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.5 }}
+                                                src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                                autoPlay
+                                                muted
+                                                className="absolute inset-0 w-full h-full object-cover z-20"
+                                              />
+                                            ) : (
+                                              <motion.img
+                                                key="poster"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.5 }}
+                                                src={movie.posterUrl}
+                                                alt={movie.title}
+                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                                referrerPolicy="no-referrer"
+                                              />
+                                            )}
+                                          </AnimatePresence>
+
+                                          {/* Red Progress Indicator at visual footer */}
+                                          <div className="absolute bottom-0 left-0 w-full h-1 bg-zinc-800">
+                                            <div
+                                              className="bg-red-600 h-full transition-all"
+                                              style={{ width: `${progress}%` }}
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="pt-1.5 text-left">
+                                          <h5 className="text-[9px] font-bold text-neutral-200 uppercase truncate">
+                                            {movie.title}
+                                          </h5>
+                                          <div className="flex justify-between items-center text-[7px] font-mono text-zinc-500 mt-0.5">
+                                            <span>{progress}% Concluído</span>
+                                            <span className="text-purple-405 font-bold">
+                                              RETOMAR
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* SHELF C: SUGESTÕES BASEADAS EM SEU HISTÓRICO */}
+                          <div className="space-y-2 text-left">
+                            <div
+                              onClick={() => {
+                                triggerHaptic(20);
+                                setExpandedSessionGrid((prev) =>
+                                  prev === "suggestions" ? null : "suggestions",
+                                );
+                              }}
+                              className="flex justify-between items-center border-b border-zinc-900/40 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
+                            >
+                              <span className="text-[10px] font-black text-cyan-400 font-mono uppercase tracking-widest block flex items-center gap-1">
+                                <Star className="w-3 h-3 text-cyan-400 animate-pulse" />
+                                SUGESTÕES COM BASE EM SEU ESTILO
+                              </span>
+                            </div>
+
+                            {expandedSessionGrid === "suggestions" ? (
+                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 max-h-[65vh] overflow-y-auto no-scrollbar place-content-start">
+                                {getExpandedTitlesForCategory(
+                                  "suggestions",
+                                ).map((movie) => {
+                                  const rating = (movie as any).rating || 8.5;
+                                  return (
+                                    <div
+                                      key={`expanded_sug_${movie.id}`}
+                                      onClick={() =>
+                                        selectMovieAndFetchDetails(movie)
+                                      }
+                                      className="group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-cyan-500/40 p-1.5 transition-all cursor-pointer"
+                                    >
+                                      <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                        <AnimatePresence>
+                                          {trailerMovieId === movie.id ? (
+                                            <motion.video
+                                              key="reel"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                              autoPlay
+                                              muted
+                                              className="absolute inset-0 w-full h-full object-cover z-20"
+                                            />
+                                          ) : (
+                                            <motion.img
+                                              key="poster"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src={movie.posterUrl}
+                                              alt={movie.title}
+                                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                              referrerPolicy="no-referrer"
+                                            />
+                                          )}
+                                        </AnimatePresence>
+                                        <div className="absolute top-1.5 right-1.5 bg-black/80 px-1.5 py-0.5 rounded text-[6.5px] font-mono text-cyan-400 border border-cyan-500/30">
+                                          ★ {rating.toFixed(1)}
+                                        </div>
+                                      </div>
+                                      <div className="pt-1.5 text-left">
+                                        <h5 className="text-[9px] font-bold text-neutral-200 uppercase truncate">
+                                          {movie.title}
+                                        </h5>
+                                        <p className="text-[7.5px] text-zinc-500 truncate leading-snug">
+                                          Para fãs de{" "}
+                                          {(movie as any).category || "Premium"}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div
+                                onScroll={(e) =>
+                                  handleHorizontalScroll(e, "suggestions")
+                                }
+                                className="flex overflow-x-auto gap-3 pb-2 no-scrollbar scroll-smooth"
+                                style={{ scrollbarWidth: "none" }}
+                              >
+                                {memoizedCategories.suggestions
+                                  .slice(0, suggestionsLimit)
+                                  .map((movie) => {
+                                    const rating = (movie as any).rating || 8.5;
+                                    return (
+                                      <div
+                                        key={`sug_${movie.id}`}
+                                        onClick={() =>
+                                          selectMovieAndFetchDetails(movie)
+                                        }
+                                        className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-zinc-950/60 border border-white/5 hover:border-cyan-500/40 p-1.5 transition-all cursor-pointer inline-block"
+                                      >
+                                        <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                          <AnimatePresence>
+                                            {trailerMovieId === movie.id ? (
+                                              <motion.video
+                                                key="reel"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.5 }}
+                                                src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                                autoPlay
+                                                muted
+                                                className="absolute inset-0 w-full h-full object-cover z-20"
+                                              />
+                                            ) : (
+                                              <motion.img
+                                                key="poster"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.5 }}
+                                                src={movie.posterUrl}
+                                                alt={movie.title}
+                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                                referrerPolicy="no-referrer"
+                                              />
+                                            )}
+                                          </AnimatePresence>
+                                          <div className="absolute top-1.5 right-1.5 bg-black/80 px-1.5 py-0.5 rounded text-[6.5px] font-mono text-cyan-400 border border-cyan-500/30">
+                                            ★ {rating.toFixed(1)}
+                                          </div>
+                                        </div>
+                                        <div className="pt-1.5 text-left">
+                                          <h5 className="text-[9px] font-bold text-neutral-200 uppercase truncate">
+                                            {movie.title}
+                                          </h5>
+                                          <p className="text-[7.5px] text-zinc-500 truncate leading-snug">
+                                            Para fãs de{" "}
+                                            {(movie as any).category ||
+                                              "Premium"}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* SHELF D: TOP MAIS VISTOS NA NETFLIX */}
+                          <div className="space-y-2 text-left relative p-3 rounded-2xl bg-gradient-to-r from-red-950/5 to-black/40 border border-red-500/5">
+                            <div
+                              onClick={() => {
+                                triggerHaptic(20);
+                                setExpandedSessionGrid((prev) =>
+                                  prev === "netflix" ? null : "netflix",
+                                );
+                              }}
+                              className="flex justify-between items-center border-b border-red-900/20 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
+                            >
+                              <span className="text-[10px] font-black text-red-500 font-mono uppercase tracking-widest block flex items-center gap-1.5">
+                                <span className="px-1.5 py-0.5 bg-red-600 text-white rounded font-sans text-[7.5px] font-black shadow-md">
+                                  N
                                 </span>
-                                <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
-      )}
-    </AnimatePresence>
+                                TOP MAIS VISTOS NA NETFLIX
+                              </span>
+                            </div>
+
+                            {expandedSessionGrid === "netflix" ? (
+                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 max-h-[65vh] overflow-y-auto no-scrollbar place-content-start">
+                                {getExpandedTitlesForCategory("netflix").map(
+                                  (movie, index) => (
+                                    <div
+                                      key={`expanded_nft_${movie.id}`}
+                                      onClick={() =>
+                                        selectMovieAndFetchDetails(movie)
+                                      }
+                                      className="group rounded-xl overflow-hidden bg-[#0a0707] border border-red-900/10 hover:border-red-500/40 p-1.5 transition-all cursor-pointer"
+                                    >
+                                      <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                        <span className="absolute top-1.5 left-1.5 text-red-500 font-sans font-black text-xl select-none leading-none z-10 antialiased italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                          #{index + 1}
+                                        </span>
+                                        <AnimatePresence>
+                                          {trailerMovieId === movie.id ? (
+                                            <motion.video
+                                              key="reel"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                              autoPlay
+                                              muted
+                                              className="absolute inset-0 w-full h-full object-cover z-20"
+                                            />
+                                          ) : (
+                                            <motion.img
+                                              key="poster"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src={movie.posterUrl}
+                                              alt={movie.title}
+                                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                              referrerPolicy="no-referrer"
+                                            />
+                                          )}
+                                        </AnimatePresence>
+                                      </div>
+                                      <div className="pt-1.5 text-left">
+                                        <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">
+                                          {movie.title}
+                                        </h5>
+                                        <span className="text-[7.5px] font-mono text-zinc-500">
+                                          {movie.year} •{" "}
+                                          {(movie as any).category || "NETFLIX"}
+                                        </span>
+
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setTrailerMovieId(movie.id);
+                                            setTimeout(() => {
+                                              setTrailerMovieId((cur) =>
+                                                cur === movie.id ? null : cur,
+                                              );
+                                            }, 30000);
+                                          }}
+                                          className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+                                        >
+                                          Trailer
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ),
+                                )}
                               </div>
-                              <div className="pt-1.5 text-left">
-                                <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
-                                <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'NETFLIX'}</span>
-                              
-      <button 
-        onClick={(e) => { 
-          e.stopPropagation(); 
-          setTrailerMovieId(movie.id); 
-          setTimeout(() => {
-            setTrailerMovieId(cur => cur === movie.id ? null : cur);
-          }, 30000);
-        }}
-        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
-      >
-        Trailer
-      </button>
-    </div>
-  </div>
-))}
-                        </div>
-                      ) : (
-                        <div
-                          onScroll={(e) => handleHorizontalScroll(e, 'netflix')}
-                          className="flex overflow-x-auto gap-3 pb-2 no-scrollbar scroll-smooth"
-                          style={{ scrollbarWidth: 'none' }}
-                        >
-                          {memoizedCategories.netflix
-                            .slice(0, netflixLimit)
-                            .map((movie, index) => (
+                            ) : (
                               <div
-                                key={`nft_shelf_${movie.id}`}
-                                onClick={() => selectMovieAndFetchDetails(movie)}
-                                className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-[#0a0707] border border-red-900/10 hover:border-red-500/40 p-1.5 transition-all cursor-pointer inline-block"
+                                onScroll={(e) =>
+                                  handleHorizontalScroll(e, "netflix")
+                                }
+                                className="flex overflow-x-auto gap-3 pb-2 no-scrollbar scroll-smooth"
+                                style={{ scrollbarWidth: "none" }}
                               >
-                                <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                  <span className="absolute top-1.5 left-1.5 text-red-500 font-sans font-black text-xl select-none leading-none z-10 antialiased italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                                    #{index + 1}
-                                  </span>
-                                  <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
-      )}
-    </AnimatePresence>
-                                </div>
-                                <div className="pt-1.5 text-left">
+                                {memoizedCategories.netflix
+                                  .slice(0, netflixLimit)
+                                  .map((movie, index) => (
+                                    <div
+                                      key={`nft_shelf_${movie.id}`}
+                                      onClick={() =>
+                                        selectMovieAndFetchDetails(movie)
+                                      }
+                                      className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-[#0a0707] border border-red-900/10 hover:border-red-500/40 p-1.5 transition-all cursor-pointer inline-block"
+                                    >
+                                      <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                        <span className="absolute top-1.5 left-1.5 text-red-500 font-sans font-black text-xl select-none leading-none z-10 antialiased italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                          #{index + 1}
+                                        </span>
+                                        <AnimatePresence>
+                                          {trailerMovieId === movie.id ? (
+                                            <motion.video
+                                              key="reel"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                              autoPlay
+                                              muted
+                                              className="absolute inset-0 w-full h-full object-cover z-20"
+                                            />
+                                          ) : (
+                                            <motion.img
+                                              key="poster"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src={movie.posterUrl}
+                                              alt={movie.title}
+                                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                              referrerPolicy="no-referrer"
+                                            />
+                                          )}
+                                        </AnimatePresence>
+                                      </div>
+                                      <div className="pt-1.5 text-left">
+                                        <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">
+                                          {movie.title}
+                                        </h5>
+                                        <span className="text-[7.5px] font-mono text-zinc-500">
+                                          {movie.year} •{" "}
+                                          {(movie as any).category || "NETFLIX"}
+                                        </span>
 
-                                  <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
-                                  <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'NETFLIX'}</span>
-                                
-      <button 
-        onClick={(e) => { 
-          e.stopPropagation(); 
-          setTrailerMovieId(movie.id); 
-          setTimeout(() => {
-            setTrailerMovieId(cur => cur === movie.id ? null : cur);
-          }, 30000);
-        }}
-        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
-      >
-        Trailer
-      </button>
-    </div>
-  </div>
-))}
-                        </div>
-                      )}
-                    </div>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setTrailerMovieId(movie.id);
+                                            setTimeout(() => {
+                                              setTrailerMovieId((cur) =>
+                                                cur === movie.id ? null : cur,
+                                              );
+                                            }, 30000);
+                                          }}
+                                          className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+                                        >
+                                          Trailer
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            )}
+                          </div>
 
-
-                    {/* SHELF E: MAIS VISTOS NA DISNEY+ */}
-                    <div className="space-y-2 text-left relative p-3 rounded-2xl bg-gradient-to-r from-blue-950/10 to-black/40 border border-blue-500/5">
-                      <div 
-                        onClick={() => { triggerHaptic(20); setExpandedSessionGrid(prev => prev === 'disney' ? null : 'disney'); }}
-                        className="flex justify-between items-center border-b border-blue-900/20 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
-                      >
-                        <span className="text-[10px] font-black text-blue-400 font-mono uppercase tracking-widest block flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                          MAIS VISTOS NA DISNEY+
-                        </span>
-                      </div>
-
-                      {expandedSessionGrid === 'disney' ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 max-h-[65vh] overflow-y-auto no-scrollbar place-content-start">
-                          {getExpandedTitlesForCategory('disney').map((movie) => (
+                          {/* SHELF E: MAIS VISTOS NA DISNEY+ */}
+                          <div className="space-y-2 text-left relative p-3 rounded-2xl bg-gradient-to-r from-blue-950/10 to-black/40 border border-blue-500/5">
                             <div
-                              key={`expanded_dis_${movie.id}`}
-                              onClick={() => selectMovieAndFetchDetails(movie)}
-                              className="group rounded-xl overflow-hidden bg-[#07090f] border border-blue-900/10 hover:border-blue-400/45 p-1.5 transition-all cursor-pointer"
+                              onClick={() => {
+                                triggerHaptic(20);
+                                setExpandedSessionGrid((prev) =>
+                                  prev === "disney" ? null : "disney",
+                                );
+                              }}
+                              className="flex justify-between items-center border-b border-blue-900/20 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
                             >
-                              <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
-      )}
-    </AnimatePresence>
+                              <span className="text-[10px] font-black text-blue-400 font-mono uppercase tracking-widest block flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                MAIS VISTOS NA DISNEY+
+                              </span>
+                            </div>
+
+                            {expandedSessionGrid === "disney" ? (
+                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 max-h-[65vh] overflow-y-auto no-scrollbar place-content-start">
+                                {getExpandedTitlesForCategory("disney").map(
+                                  (movie) => (
+                                    <div
+                                      key={`expanded_dis_${movie.id}`}
+                                      onClick={() =>
+                                        selectMovieAndFetchDetails(movie)
+                                      }
+                                      className="group rounded-xl overflow-hidden bg-[#07090f] border border-blue-900/10 hover:border-blue-400/45 p-1.5 transition-all cursor-pointer"
+                                    >
+                                      <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                        <AnimatePresence>
+                                          {trailerMovieId === movie.id ? (
+                                            <motion.video
+                                              key="reel"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                              autoPlay
+                                              muted
+                                              className="absolute inset-0 w-full h-full object-cover z-20"
+                                            />
+                                          ) : (
+                                            <motion.img
+                                              key="poster"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src={movie.posterUrl}
+                                              alt={movie.title}
+                                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                              referrerPolicy="no-referrer"
+                                            />
+                                          )}
+                                        </AnimatePresence>
+                                      </div>
+                                      <div className="pt-1.5 text-left">
+                                        <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">
+                                          {movie.title}
+                                        </h5>
+                                        <span className="text-[7.5px] font-mono text-zinc-500">
+                                          {movie.year} •{" "}
+                                          {(movie as any).category || "DISNEY+"}
+                                        </span>
+
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setTrailerMovieId(movie.id);
+                                            setTimeout(() => {
+                                              setTrailerMovieId((cur) =>
+                                                cur === movie.id ? null : cur,
+                                              );
+                                            }, 30000);
+                                          }}
+                                          className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+                                        >
+                                          Trailer
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ),
+                                )}
                               </div>
-                              <div className="pt-1.5 text-left">
-
-                                <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
-                                <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'DISNEY+'}</span>
-                              
-      <button 
-        onClick={(e) => { 
-          e.stopPropagation(); 
-          setTrailerMovieId(movie.id); 
-          setTimeout(() => {
-            setTrailerMovieId(cur => cur === movie.id ? null : cur);
-          }, 30000);
-        }}
-        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
-      >
-        Trailer
-      </button>
-    </div>
-  </div>
-))}
-                        </div>
-                      ) : (
-                        <div
-                          onScroll={(e) => handleHorizontalScroll(e, 'disney')}
-                          className="flex overflow-x-auto gap-3 pb-2 no-scrollbar scroll-smooth"
-                          style={{ scrollbarWidth: 'none' }}
-                        >
-                          {memoizedCategories.disney
-                            .slice(0, disneyLimit)
-                            .map((movie) => (
+                            ) : (
                               <div
-                                key={`dis_shelf_${movie.id}`}
-                                onClick={() => selectMovieAndFetchDetails(movie)}
-                                className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-[#07090f] border border-blue-900/10 hover:border-blue-400/45 p-1.5 transition-all cursor-pointer inline-block"
+                                onScroll={(e) =>
+                                  handleHorizontalScroll(e, "disney")
+                                }
+                                className="flex overflow-x-auto gap-3 pb-2 no-scrollbar scroll-smooth"
+                                style={{ scrollbarWidth: "none" }}
                               >
-                                <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                  <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
-      )}
-    </AnimatePresence>
-                                </div>
-                                <div className="pt-1.5 text-left">
+                                {memoizedCategories.disney
+                                  .slice(0, disneyLimit)
+                                  .map((movie) => (
+                                    <div
+                                      key={`dis_shelf_${movie.id}`}
+                                      onClick={() =>
+                                        selectMovieAndFetchDetails(movie)
+                                      }
+                                      className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-[#07090f] border border-blue-900/10 hover:border-blue-400/45 p-1.5 transition-all cursor-pointer inline-block"
+                                    >
+                                      <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                        <AnimatePresence>
+                                          {trailerMovieId === movie.id ? (
+                                            <motion.video
+                                              key="reel"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                              autoPlay
+                                              muted
+                                              className="absolute inset-0 w-full h-full object-cover z-20"
+                                            />
+                                          ) : (
+                                            <motion.img
+                                              key="poster"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src={movie.posterUrl}
+                                              alt={movie.title}
+                                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                              referrerPolicy="no-referrer"
+                                            />
+                                          )}
+                                        </AnimatePresence>
+                                      </div>
+                                      <div className="pt-1.5 text-left">
+                                        <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">
+                                          {movie.title}
+                                        </h5>
+                                        <span className="text-[7.5px] font-mono text-zinc-500">
+                                          {movie.year} •{" "}
+                                          {(movie as any).category || "DISNEY+"}
+                                        </span>
 
-                                  <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
-                                  <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'DISNEY+'}</span>
-                                
-      <button 
-        onClick={(e) => { 
-          e.stopPropagation(); 
-          setTrailerMovieId(movie.id); 
-          setTimeout(() => {
-            setTrailerMovieId(cur => cur === movie.id ? null : cur);
-          }, 30000);
-        }}
-        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
-      >
-        Trailer
-      </button>
-    </div>
-  </div>
-))}
-                        </div>
-                      )}
-                    </div>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setTrailerMovieId(movie.id);
+                                            setTimeout(() => {
+                                              setTrailerMovieId((cur) =>
+                                                cur === movie.id ? null : cur,
+                                              );
+                                            }, 30000);
+                                          }}
+                                          className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+                                        >
+                                          Trailer
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            )}
+                          </div>
 
-
-                    {/* SHELF F: MAIS VISTOS NA HBO MAX */}
-                    <div className="space-y-2 text-left relative p-3 rounded-2xl bg-gradient-to-r from-purple-950/10 to-black/40 border border-purple-500/5">
-                      <div 
-                        onClick={() => { triggerHaptic(20); setExpandedSessionGrid(prev => prev === 'hbo' ? null : 'hbo'); }}
-                        className="flex justify-between items-center border-b border-purple-900/20 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
-                      >
-                        <span className="text-[10px] font-black text-purple-400 font-mono uppercase tracking-widest block flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-                          MAIS VISTOS NA HBO MAX
-                        </span>
-                      </div>
-
-                      {expandedSessionGrid === 'hbo' ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 max-h-[65vh] overflow-y-auto no-scrollbar place-content-start">
-                          {getExpandedTitlesForCategory('hbo').map((movie) => (
+                          {/* SHELF F: MAIS VISTOS NA HBO MAX */}
+                          <div className="space-y-2 text-left relative p-3 rounded-2xl bg-gradient-to-r from-purple-950/10 to-black/40 border border-purple-500/5">
                             <div
-                              key={`expanded_hbo_${movie.id}`}
-                              onClick={() => selectMovieAndFetchDetails(movie)}
-                              className="group rounded-xl overflow-hidden bg-[#09070c] border border-purple-900/10 hover:border-purple-400/45 p-1.5 transition-all cursor-pointer"
+                              onClick={() => {
+                                triggerHaptic(20);
+                                setExpandedSessionGrid((prev) =>
+                                  prev === "hbo" ? null : "hbo",
+                                );
+                              }}
+                              className="flex justify-between items-center border-b border-purple-900/20 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
                             >
-                              <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
-      )}
-    </AnimatePresence>
+                              <span className="text-[10px] font-black text-purple-400 font-mono uppercase tracking-widest block flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                                MAIS VISTOS NA HBO MAX
+                              </span>
+                            </div>
+
+                            {expandedSessionGrid === "hbo" ? (
+                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 max-h-[65vh] overflow-y-auto no-scrollbar place-content-start">
+                                {getExpandedTitlesForCategory("hbo").map(
+                                  (movie) => (
+                                    <div
+                                      key={`expanded_hbo_${movie.id}`}
+                                      onClick={() =>
+                                        selectMovieAndFetchDetails(movie)
+                                      }
+                                      className="group rounded-xl overflow-hidden bg-[#09070c] border border-purple-900/10 hover:border-purple-400/45 p-1.5 transition-all cursor-pointer"
+                                    >
+                                      <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                        <AnimatePresence>
+                                          {trailerMovieId === movie.id ? (
+                                            <motion.video
+                                              key="reel"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                              autoPlay
+                                              muted
+                                              className="absolute inset-0 w-full h-full object-cover z-20"
+                                            />
+                                          ) : (
+                                            <motion.img
+                                              key="poster"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src={movie.posterUrl}
+                                              alt={movie.title}
+                                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                              referrerPolicy="no-referrer"
+                                            />
+                                          )}
+                                        </AnimatePresence>
+                                      </div>
+                                      <div className="pt-1.5 text-left">
+                                        <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">
+                                          {movie.title}
+                                        </h5>
+                                        <span className="text-[7.5px] font-mono text-zinc-500">
+                                          {movie.year} •{" "}
+                                          {(movie as any).category || "HBO MAX"}
+                                        </span>
+
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setTrailerMovieId(movie.id);
+                                            setTimeout(() => {
+                                              setTrailerMovieId((cur) =>
+                                                cur === movie.id ? null : cur,
+                                              );
+                                            }, 30000);
+                                          }}
+                                          className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+                                        >
+                                          Trailer
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ),
+                                )}
                               </div>
-                              <div className="pt-1.5 text-left">
-
-                                <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
-                                <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'HBO MAX'}</span>
-                              
-      <button 
-        onClick={(e) => { 
-          e.stopPropagation(); 
-          setTrailerMovieId(movie.id); 
-          setTimeout(() => {
-            setTrailerMovieId(cur => cur === movie.id ? null : cur);
-          }, 30000);
-        }}
-        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
-      >
-        Trailer
-      </button>
-    </div>
-  </div>
-))}
-                        </div>
-                      ) : (
-                        <div
-                          onScroll={(e) => handleHorizontalScroll(e, 'hbo')}
-                          className="flex overflow-x-auto gap-3 pb-2 no-scrollbar scroll-smooth"
-                          style={{ scrollbarWidth: 'none' }}
-                        >
-                          {memoizedCategories.hbo
-                            .slice(0, hboLimit)
-                            .map((movie) => (
+                            ) : (
                               <div
-                                key={`hbo_shelf_${movie.id}`}
-                                onClick={() => selectMovieAndFetchDetails(movie)}
-                                className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-[#09070c] border border-purple-900/10 hover:border-purple-400/45 p-1.5 transition-all cursor-pointer inline-block"
+                                onScroll={(e) =>
+                                  handleHorizontalScroll(e, "hbo")
+                                }
+                                className="flex overflow-x-auto gap-3 pb-2 no-scrollbar scroll-smooth"
+                                style={{ scrollbarWidth: "none" }}
                               >
-                                <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                  <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
-      )}
-    </AnimatePresence>
-                                </div>
-                                <div className="pt-1.5 text-left">
+                                {memoizedCategories.hbo
+                                  .slice(0, hboLimit)
+                                  .map((movie) => (
+                                    <div
+                                      key={`hbo_shelf_${movie.id}`}
+                                      onClick={() =>
+                                        selectMovieAndFetchDetails(movie)
+                                      }
+                                      className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-[#09070c] border border-purple-900/10 hover:border-purple-400/45 p-1.5 transition-all cursor-pointer inline-block"
+                                    >
+                                      <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                        <AnimatePresence>
+                                          {trailerMovieId === movie.id ? (
+                                            <motion.video
+                                              key="reel"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                              autoPlay
+                                              muted
+                                              className="absolute inset-0 w-full h-full object-cover z-20"
+                                            />
+                                          ) : (
+                                            <motion.img
+                                              key="poster"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src={movie.posterUrl}
+                                              alt={movie.title}
+                                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                              referrerPolicy="no-referrer"
+                                            />
+                                          )}
+                                        </AnimatePresence>
+                                      </div>
+                                      <div className="pt-1.5 text-left">
+                                        <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">
+                                          {movie.title}
+                                        </h5>
+                                        <span className="text-[7.5px] font-mono text-zinc-500">
+                                          {movie.year} •{" "}
+                                          {(movie as any).category || "HBO MAX"}
+                                        </span>
 
-                                  <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
-                                  <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'HBO MAX'}</span>
-                                
-      <button 
-        onClick={(e) => { 
-          e.stopPropagation(); 
-          setTrailerMovieId(movie.id); 
-          setTimeout(() => {
-            setTrailerMovieId(cur => cur === movie.id ? null : cur);
-          }, 30000);
-        }}
-        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
-      >
-        Trailer
-      </button>
-    </div>
-  </div>
-))}
-                        </div>
-                      )}
-                    </div>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setTrailerMovieId(movie.id);
+                                            setTimeout(() => {
+                                              setTrailerMovieId((cur) =>
+                                                cur === movie.id ? null : cur,
+                                              );
+                                            }, 30000);
+                                          }}
+                                          className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+                                        >
+                                          Trailer
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            )}
+                          </div>
 
-
-                    {/* SHELF G: MAIS VISTOS NA AMAZON PRIME */}
-                    <div className="space-y-2 text-left relative p-3 rounded-2xl bg-gradient-to-r from-sky-950/10 to-black/40 border border-sky-500/5">
-                      <div 
-                        onClick={() => { triggerHaptic(20); setExpandedSessionGrid(prev => prev === 'prime' ? null : 'prime'); }}
-                        className="flex justify-between items-center border-b border-sky-900/20 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
-                      >
-                        <span className="text-[10px] font-black text-sky-400 font-mono uppercase tracking-widest block flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
-                          MAIS VISTOS NA AMAZON PRIME
-                        </span>
-                      </div>
-
-                      {expandedSessionGrid === 'prime' ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 max-h-[65vh] overflow-y-auto no-scrollbar place-content-start">
-                          {getExpandedTitlesForCategory('prime').map((movie) => (
+                          {/* SHELF G: MAIS VISTOS NA AMAZON PRIME */}
+                          <div className="space-y-2 text-left relative p-3 rounded-2xl bg-gradient-to-r from-sky-950/10 to-black/40 border border-sky-500/5">
                             <div
-                              key={`expanded_prm_${movie.id}`}
-                              onClick={() => selectMovieAndFetchDetails(movie)}
-                              className="group rounded-xl overflow-hidden bg-[#07090b] border border-sky-900/10 hover:border-sky-400/45 p-1.5 transition-all cursor-pointer"
+                              onClick={() => {
+                                triggerHaptic(20);
+                                setExpandedSessionGrid((prev) =>
+                                  prev === "prime" ? null : "prime",
+                                );
+                              }}
+                              className="flex justify-between items-center border-b border-sky-900/20 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
                             >
-                              <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
-      )}
-    </AnimatePresence>
+                              <span className="text-[10px] font-black text-sky-400 font-mono uppercase tracking-widest block flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+                                MAIS VISTOS NA AMAZON PRIME
+                              </span>
+                            </div>
+
+                            {expandedSessionGrid === "prime" ? (
+                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 max-h-[65vh] overflow-y-auto no-scrollbar place-content-start">
+                                {getExpandedTitlesForCategory("prime").map(
+                                  (movie) => (
+                                    <div
+                                      key={`expanded_prm_${movie.id}`}
+                                      onClick={() =>
+                                        selectMovieAndFetchDetails(movie)
+                                      }
+                                      className="group rounded-xl overflow-hidden bg-[#07090b] border border-sky-900/10 hover:border-sky-400/45 p-1.5 transition-all cursor-pointer"
+                                    >
+                                      <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                        <AnimatePresence>
+                                          {trailerMovieId === movie.id ? (
+                                            <motion.video
+                                              key="reel"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                              autoPlay
+                                              muted
+                                              className="absolute inset-0 w-full h-full object-cover z-20"
+                                            />
+                                          ) : (
+                                            <motion.img
+                                              key="poster"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src={movie.posterUrl}
+                                              alt={movie.title}
+                                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                              referrerPolicy="no-referrer"
+                                            />
+                                          )}
+                                        </AnimatePresence>
+                                      </div>
+                                      <div className="pt-1.5 text-left">
+                                        <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">
+                                          {movie.title}
+                                        </h5>
+                                        <span className="text-[7.5px] font-mono text-zinc-500">
+                                          {movie.year} •{" "}
+                                          {(movie as any).category ||
+                                            "PRIME Video"}
+                                        </span>
+
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setTrailerMovieId(movie.id);
+                                            setTimeout(() => {
+                                              setTrailerMovieId((cur) =>
+                                                cur === movie.id ? null : cur,
+                                              );
+                                            }, 30000);
+                                          }}
+                                          className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+                                        >
+                                          Trailer
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ),
+                                )}
                               </div>
-                              <div className="pt-1.5 text-left">
-
-                                <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
-                                <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'PRIME Video'}</span>
-                              
-      <button 
-        onClick={(e) => { 
-          e.stopPropagation(); 
-          setTrailerMovieId(movie.id); 
-          setTimeout(() => {
-            setTrailerMovieId(cur => cur === movie.id ? null : cur);
-          }, 30000);
-        }}
-        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
-      >
-        Trailer
-      </button>
-    </div>
-  </div>
-))}
-                        </div>
-                      ) : (
-                        <div
-                          onScroll={(e) => handleHorizontalScroll(e, 'prime')}
-                          className="flex overflow-x-auto gap-3 pb-2 no-scrollbar scroll-smooth"
-                          style={{ scrollbarWidth: 'none' }}
-                        >
-                          {memoizedCategories.prime
-                            .slice(0, primeLimit)
-                            .map((movie) => (
+                            ) : (
                               <div
-                                key={`prm_shelf_${movie.id}`}
-                                onClick={() => selectMovieAndFetchDetails(movie)}
-                                className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-[#07090b] border border-sky-900/10 hover:border-sky-400/45 p-1.5 transition-all cursor-pointer inline-block"
+                                onScroll={(e) =>
+                                  handleHorizontalScroll(e, "prime")
+                                }
+                                className="flex overflow-x-auto gap-3 pb-2 no-scrollbar scroll-smooth"
+                                style={{ scrollbarWidth: "none" }}
                               >
-                                <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                  <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
-      )}
-    </AnimatePresence>
-                                </div>
-                                <div className="pt-1.5 text-left">
+                                {memoizedCategories.prime
+                                  .slice(0, primeLimit)
+                                  .map((movie) => (
+                                    <div
+                                      key={`prm_shelf_${movie.id}`}
+                                      onClick={() =>
+                                        selectMovieAndFetchDetails(movie)
+                                      }
+                                      className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-[#07090b] border border-sky-900/10 hover:border-sky-400/45 p-1.5 transition-all cursor-pointer inline-block"
+                                    >
+                                      <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                        <AnimatePresence>
+                                          {trailerMovieId === movie.id ? (
+                                            <motion.video
+                                              key="reel"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                              autoPlay
+                                              muted
+                                              className="absolute inset-0 w-full h-full object-cover z-20"
+                                            />
+                                          ) : (
+                                            <motion.img
+                                              key="poster"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src={movie.posterUrl}
+                                              alt={movie.title}
+                                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                              referrerPolicy="no-referrer"
+                                            />
+                                          )}
+                                        </AnimatePresence>
+                                      </div>
+                                      <div className="pt-1.5 text-left">
+                                        <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">
+                                          {movie.title}
+                                        </h5>
+                                        <span className="text-[7.5px] font-mono text-zinc-500">
+                                          {movie.year} •{" "}
+                                          {(movie as any).category ||
+                                            "PRIME VIDEO"}
+                                        </span>
 
-                                  <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
-                                  <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'PRIME VIDEO'}</span>
-                                
-      <button 
-        onClick={(e) => { 
-          e.stopPropagation(); 
-          setTrailerMovieId(movie.id); 
-          setTimeout(() => {
-            setTrailerMovieId(cur => cur === movie.id ? null : cur);
-          }, 30000);
-        }}
-        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
-      >
-        Trailer
-      </button>
-    </div>
-  </div>
-))}
-                        </div>
-                      )}
-                    </div>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setTrailerMovieId(movie.id);
+                                            setTimeout(() => {
+                                              setTrailerMovieId((cur) =>
+                                                cur === movie.id ? null : cur,
+                                              );
+                                            }, 30000);
+                                          }}
+                                          className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+                                        >
+                                          Trailer
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            )}
+                          </div>
 
-
-                    {/* SHELF H: MAIS VISTOS NA GLOBOPLAY */}
-                    <div className="space-y-2 text-left relative p-3 rounded-2xl bg-gradient-to-r from-orange-950/10 to-black/40 border border-orange-500/5">
-                      <div 
-                        onClick={() => { triggerHaptic(20); setExpandedSessionGrid(prev => prev === 'globoplay' ? null : 'globoplay'); }}
-                        className="flex justify-between items-center border-b border-orange-900/20 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
-                      >
-                        <span className="text-[10px] font-black text-orange-400 font-mono uppercase tracking-widest block flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-                          MAIS VISTOS NA GLOBOPLAY
-                        </span>
-                      </div>
-
-                      {expandedSessionGrid === 'globoplay' ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 max-h-[65vh] overflow-y-auto no-scrollbar place-content-start">
-                          {getExpandedTitlesForCategory('globoplay').map((movie) => (
+                          {/* SHELF H: MAIS VISTOS NA GLOBOPLAY */}
+                          <div className="space-y-2 text-left relative p-3 rounded-2xl bg-gradient-to-r from-orange-950/10 to-black/40 border border-orange-500/5">
                             <div
-                              key={`expanded_glo_${movie.id}`}
-                              onClick={() => selectMovieAndFetchDetails(movie)}
-                              className="group rounded-xl overflow-hidden bg-[#0b0807] border border-orange-900/10 hover:border-orange-400/45 p-1.5 transition-all cursor-pointer"
+                              onClick={() => {
+                                triggerHaptic(20);
+                                setExpandedSessionGrid((prev) =>
+                                  prev === "globoplay" ? null : "globoplay",
+                                );
+                              }}
+                              className="flex justify-between items-center border-b border-orange-900/20 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
                             >
-                              <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
-      )}
-    </AnimatePresence>
+                              <span className="text-[10px] font-black text-orange-400 font-mono uppercase tracking-widest block flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                                MAIS VISTOS NA GLOBOPLAY
+                              </span>
+                            </div>
+
+                            {expandedSessionGrid === "globoplay" ? (
+                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 max-h-[65vh] overflow-y-auto no-scrollbar place-content-start">
+                                {getExpandedTitlesForCategory("globoplay").map(
+                                  (movie) => (
+                                    <div
+                                      key={`expanded_glo_${movie.id}`}
+                                      onClick={() =>
+                                        selectMovieAndFetchDetails(movie)
+                                      }
+                                      className="group rounded-xl overflow-hidden bg-[#0b0807] border border-orange-900/10 hover:border-orange-400/45 p-1.5 transition-all cursor-pointer"
+                                    >
+                                      <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                        <AnimatePresence>
+                                          {trailerMovieId === movie.id ? (
+                                            <motion.video
+                                              key="reel"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                              autoPlay
+                                              muted
+                                              className="absolute inset-0 w-full h-full object-cover z-20"
+                                            />
+                                          ) : (
+                                            <motion.img
+                                              key="poster"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src={movie.posterUrl}
+                                              alt={movie.title}
+                                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                              referrerPolicy="no-referrer"
+                                            />
+                                          )}
+                                        </AnimatePresence>
+                                      </div>
+                                      <div className="pt-1.5 text-left">
+                                        <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">
+                                          {movie.title}
+                                        </h5>
+                                        <span className="text-[7.5px] font-mono text-zinc-500">
+                                          {movie.year} •{" "}
+                                          {(movie as any).category ||
+                                            "GLOBOPLAY"}
+                                        </span>
+
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setTrailerMovieId(movie.id);
+                                            setTimeout(() => {
+                                              setTrailerMovieId((cur) =>
+                                                cur === movie.id ? null : cur,
+                                              );
+                                            }, 30000);
+                                          }}
+                                          className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+                                        >
+                                          Trailer
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ),
+                                )}
                               </div>
-                              <div className="pt-1.5 text-left">
-
-                                <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
-                                <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'GLOBOPLAY'}</span>
-                              
-      <button 
-        onClick={(e) => { 
-          e.stopPropagation(); 
-          setTrailerMovieId(movie.id); 
-          setTimeout(() => {
-            setTrailerMovieId(cur => cur === movie.id ? null : cur);
-          }, 30000);
-        }}
-        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
-      >
-        Trailer
-      </button>
-    </div>
-  </div>
-))}
-                        </div>
-                      ) : (
-                        <div
-                          onScroll={(e) => handleHorizontalScroll(e, 'globoplay')}
-                          className="flex overflow-x-auto gap-3 pb-2 no-scrollbar scroll-smooth"
-                          style={{ scrollbarWidth: 'none' }}
-                        >
-                          {memoizedCategories.globoplay
-                            .slice(0, globoplayLimit)
-                            .map((movie) => (
+                            ) : (
                               <div
-                                key={`glo_shelf_${movie.id}`}
-                                onClick={() => selectMovieAndFetchDetails(movie)}
-                                className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-[#0b0807] border border-orange-900/10 hover:border-orange-400/45 p-1.5 transition-all cursor-pointer inline-block"
+                                onScroll={(e) =>
+                                  handleHorizontalScroll(e, "globoplay")
+                                }
+                                className="flex overflow-x-auto gap-3 pb-2 no-scrollbar scroll-smooth"
+                                style={{ scrollbarWidth: "none" }}
                               >
-                                <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                                  <AnimatePresence>
-      {trailerMovieId === movie.id ? (
-        <motion.video
-          key="reel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src="https://www.w3schools.com/html/mov_bbb.mp4"
-          autoPlay
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-20"
-        />
-      ) : (
-        <motion.img
-          key="poster"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          src={movie.posterUrl} 
-          alt={movie.title} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" 
-        />
-      )}
-    </AnimatePresence>
-                                </div>
-                                <div className="pt-1.5 text-left">
+                                {memoizedCategories.globoplay
+                                  .slice(0, globoplayLimit)
+                                  .map((movie) => (
+                                    <div
+                                      key={`glo_shelf_${movie.id}`}
+                                      onClick={() =>
+                                        selectMovieAndFetchDetails(movie)
+                                      }
+                                      className="min-w-[140px] max-w-[140px] group rounded-xl overflow-hidden bg-[#0b0807] border border-orange-900/10 hover:border-orange-400/45 p-1.5 transition-all cursor-pointer inline-block"
+                                    >
+                                      <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                                        <AnimatePresence>
+                                          {trailerMovieId === movie.id ? (
+                                            <motion.video
+                                              key="reel"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src="https://www.w3schools.com/html/mov_bbb.mp4"
+                                              autoPlay
+                                              muted
+                                              className="absolute inset-0 w-full h-full object-cover z-20"
+                                            />
+                                          ) : (
+                                            <motion.img
+                                              key="poster"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              exit={{ opacity: 0 }}
+                                              transition={{ duration: 0.5 }}
+                                              src={movie.posterUrl}
+                                              alt={movie.title}
+                                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                              referrerPolicy="no-referrer"
+                                            />
+                                          )}
+                                        </AnimatePresence>
+                                      </div>
+                                      <div className="pt-1.5 text-left">
+                                        <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">
+                                          {movie.title}
+                                        </h5>
+                                        <span className="text-[7.5px] font-mono text-zinc-500">
+                                          {movie.year} •{" "}
+                                          {(movie as any).category ||
+                                            "GLOBOPLAY"}
+                                        </span>
 
-                                  <h5 className="text-[9px] font-bold text-neutral-200 truncate uppercase">{movie.title}</h5>
-                                  <span className="text-[7.5px] font-mono text-zinc-500">{movie.year} • {(movie as any).category || 'GLOBOPLAY'}</span>
-                                
-      <button 
-        onClick={(e) => { 
-          e.stopPropagation(); 
-          setTrailerMovieId(movie.id); 
-          setTimeout(() => {
-            setTrailerMovieId(cur => cur === movie.id ? null : cur);
-          }, 30000);
-        }}
-        className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
-      >
-        Trailer
-      </button>
-    </div>
-  </div>
-))}
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setTrailerMovieId(movie.id);
+                                            setTimeout(() => {
+                                              setTrailerMovieId((cur) =>
+                                                cur === movie.id ? null : cur,
+                                              );
+                                            }, 30000);
+                                          }}
+                                          className="mt-1 w-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[8px] font-bold uppercase tracking-widest py-1 rounded transition-colors"
+                                        >
+                                          Trailer
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-
-                  </div>
-                    </>
-                  )}
-                </motion.div>
-              )) : (
+                      </>
+                    )}
+                  </motion.div>
+                )
+              ) : (
                 /* MOVIE SELECTED FLOW SATELLITE */
                 <motion.div
                   key="movies-active-detail-or-player"
@@ -4704,15 +5802,15 @@ export const MediaModule: React.FC = () => {
                                   className="absolute inset-0 w-full h-full object-cover z-20 transform-gpu"
                                 />
                               ) : (
-                                <motion.img 
+                                <motion.img
                                   key="poster"
                                   initial={{ opacity: 0 }}
                                   animate={{ opacity: 1 }}
                                   exit={{ opacity: 0 }}
                                   transition={{ duration: 0.5 }}
-                                  src={selectedMovie.posterUrl} 
-                                  alt={selectedMovie.title} 
-                                  className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 transform-gpu" 
+                                  src={selectedMovie.posterUrl}
+                                  alt={selectedMovie.title}
+                                  className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 transform-gpu"
                                   referrerPolicy="no-referrer"
                                 />
                               )}
@@ -4723,13 +5821,15 @@ export const MediaModule: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          
-                          <button 
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              setTrailerMovieId(selectedMovie.id); 
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTrailerMovieId(selectedMovie.id);
                               setTimeout(() => {
-                                setTrailerMovieId(cur => cur === selectedMovie.id ? null : cur);
+                                setTrailerMovieId((cur) =>
+                                  cur === selectedMovie.id ? null : cur,
+                                );
                               }, 30000);
                             }}
                             className="mt-2 w-[140px] md:w-full md:max-w-[220px] bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/20 text-cyan-400 font-mono text-[9px] md:text-[10px] font-bold uppercase tracking-widest py-1.5 md:py-2 rounded-lg transition-colors shadow-sm z-10 transform-gpu"
@@ -4746,25 +5846,44 @@ export const MediaModule: React.FC = () => {
                                 {selectedMovie.title}
                               </h2>
                               <p className="text-[9px] md:text-[10px] font-mono text-cyan-400 font-bold uppercase tracking-widest">
-                                {selectedMovie.type === 'serie' ? 'Série Oficial' : 'Filme Oficial'} • {(selectedMovie as any).category || 'Premium H.265'}
+                                {selectedMovie.type === "serie"
+                                  ? "Série Oficial"
+                                  : "Filme Oficial"}{" "}
+                                •{" "}
+                                {(selectedMovie as any).category ||
+                                  "Premium H.265"}
                               </p>
                             </div>
 
                             <div className="flex flex-wrap gap-1.5 text-[9px] font-mono text-zinc-400 pl-1 justify-center md:justify-start">
-                              <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5 font-black text-white">{selectedMovie.year}</span>
-                              <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5">Duração: {selectedMovie.duration || selectedMovie.totalDuration || 'N/A'}</span>
-                              <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5">Produtor: {selectedMovie.production || 'N/A'}</span>
+                              <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5 font-black text-white">
+                                {selectedMovie.year}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5">
+                                Duração:{" "}
+                                {selectedMovie.duration ||
+                                  selectedMovie.totalDuration ||
+                                  "N/A"}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5">
+                                Produtor: {selectedMovie.production || "N/A"}
+                              </span>
                             </div>
 
                             <div className="space-y-1.5 pb-2 pl-1">
-                              <h3 className="text-[9px] text-zinc-500 font-mono uppercase tracking-widest border-b border-white/5 pb-0.5 mt-1">Sinopse</h3>
+                              <h3 className="text-[9px] text-zinc-500 font-mono uppercase tracking-widest border-b border-white/5 pb-0.5 mt-1">
+                                Sinopse
+                              </h3>
                               <p className="text-[10px] md:text-[11px] leading-relaxed text-zinc-300 font-normal select-text line-clamp-3 md:line-clamp-4">
-                                {selectedMovie.overview || 'Nenhuma sinopse disponível para este título no momento.'}
+                                {selectedMovie.overview ||
+                                  "Nenhuma sinopse disponível para este título no momento."}
                               </p>
-                              
-                              <h3 className="text-[9px] text-zinc-500 font-mono uppercase tracking-widest border-b border-white/5 pb-0.5 mt-2 md:mt-3">Elenco Principal</h3>
+
+                              <h3 className="text-[9px] text-zinc-500 font-mono uppercase tracking-widest border-b border-white/5 pb-0.5 mt-2 md:mt-3">
+                                Elenco Principal
+                              </h3>
                               <p className="text-[9px] md:text-[10px] font-mono text-zinc-400 leading-normal select-text line-clamp-1 md:line-clamp-2">
-                                {selectedMovie.actors || 'Indisponível.'}
+                                {selectedMovie.actors || "Indisponível."}
                               </p>
                             </div>
                           </div>
@@ -4791,15 +5910,23 @@ export const MediaModule: React.FC = () => {
                           </button>
 
                           <button
-                            onClick={() => toggleFavoriteMovie(selectedMovie.id)}
+                            onClick={() =>
+                              toggleFavoriteMovie(selectedMovie.id)
+                            }
                             className={`flex-1 rounded-lg md:rounded-xl font-mono text-[8px] md:text-[9px] uppercase font-black tracking-wide border transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer transform-gpu ${
-                              (selectedMovie as any).isFavorite 
-                                ? 'bg-rose-950/30 text-rose-300 border-rose-500/30'
-                                : 'bg-zinc-900/40 text-zinc-400 border-white/5 hover:text-white'
+                              (selectedMovie as any).isFavorite
+                                ? "bg-rose-950/30 text-rose-300 border-rose-500/30"
+                                : "bg-zinc-900/40 text-zinc-400 border-white/5 hover:text-white"
                             }`}
                           >
-                            <Heart className={`w-3 h-3 shrink-0 ${(selectedMovie as any).isFavorite ? 'fill-rose-500 text-rose-500' : 'text-zinc-400'}`} />
-                            <span className="hidden sm:inline">{(selectedMovie as any).isFavorite ? 'REMOVER' : 'FAVORITAR'}</span>
+                            <Heart
+                              className={`w-3 h-3 shrink-0 ${(selectedMovie as any).isFavorite ? "fill-rose-500 text-rose-500" : "text-zinc-400"}`}
+                            />
+                            <span className="hidden sm:inline">
+                              {(selectedMovie as any).isFavorite
+                                ? "REMOVER"
+                                : "FAVORITAR"}
+                            </span>
                           </button>
 
                           <button
@@ -4810,10 +5937,13 @@ export const MediaModule: React.FC = () => {
                             <span className="hidden sm:inline">CURTIR</span>
                           </button>
                         </div>
-                        
+
                         {/* Close Button */}
                         <button
-                          onClick={() => { triggerHaptic(15); setSelectedMovie(null); }}
+                          onClick={() => {
+                            triggerHaptic(15);
+                            setSelectedMovie(null);
+                          }}
                           className="w-full py-1.5 md:py-2 rounded-lg md:rounded-xl border border-white/5 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[9px] md:text-[10px] font-mono font-black tracking-widest uppercase cursor-pointer transition-all active:scale-95 transform-gpu"
                         >
                           ✕ FECHAR ABA
@@ -4822,49 +5952,75 @@ export const MediaModule: React.FC = () => {
                     </div>
                   ) : (
                     /* MOVIE PLAYBACK GRAPHIC VIEW WITH ACTIVE STREAM SOURCE */
-                    <div 
+                    <div
                       id="cinema_player_scrollable_container"
                       className="w-full h-full overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden flex flex-col pt-4 pb-16 px-4 space-y-8 select-none"
-                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                      style={{
+                        scrollbarWidth: "none",
+                        msOverflowStyle: "none",
+                      }}
                     >
                       {/* The standard YouTube-sized video block aspect-video (16:9 ratio) */}
                       <div className="w-full max-w-4xl mx-auto flex flex-col space-y-3 shrink-0">
                         {/* REPRODUTOR DE STREAM DIRETO HUD */}
-                        {(selectedMovie.type === 'filme' || selectedMovie.type === 'serie') && (
+                        {(selectedMovie.type === "filme" ||
+                          selectedMovie.type === "serie") && (
                           <div className="flex items-center justify-between p-3 bg-zinc-950/80 rounded-2xl border border-white/5 shadow-2xl relative z-20">
                             <div className="flex items-center gap-2">
                               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
-                              <span className="text-zinc-300 text-[10px] font-mono font-bold tracking-wider uppercase">SINAL INTEGRAL DE ALTA DEFINIÇÃO CDN</span>
+                              <span className="text-zinc-300 text-[10px] font-mono font-bold tracking-wider uppercase">
+                                SINAL INTEGRAL DE ALTA DEFINIÇÃO CDN
+                              </span>
                             </div>
-                            <span className="text-cyan-400 text-[9px] font-mono font-bold">● CONEXÃO DETERMINÍSTICA ESTÁVEL</span>
+                            <span className="text-cyan-400 text-[9px] font-mono font-bold">
+                              ● CONEXÃO DETERMINÍSTICA ESTÁVEL
+                            </span>
                           </div>
                         )}
 
-                        <div 
+                        <div
                           id="youtube-player-block"
                           className="w-full aspect-video bg-black relative rounded-2xl overflow-hidden border border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.3)] group/player"
                         >
-                          <video
-                            ref={movieVideoRef}
-                            className="w-full h-full object-contain pointer-events-none relative z-10"
-                            onTimeUpdate={handleMovieTimeUpdate}
-                            onLoadedMetadata={handleMovieLoadedMetadata}
-                            onEnded={handleMovieEnded}
-                            onWaiting={() => setIsVideoBuffering(true)}
-                            onPlaying={() => setIsVideoBuffering(false)}
-                            onCanPlay={() => setIsVideoBuffering(false)}
-                            onPlay={() => setMovieIsPlaying(true)}
-                            onPause={() => setMovieIsPlaying(false)}
-                            onError={(e) => {
-                              console.error("Video Error:", e.currentTarget.error);
-                              setActiveMediaAlert(`MEDIA ERROR: ${e.currentTarget.error?.message || e.currentTarget.error?.code || 'Desconhecido'}`);
-                              setMovieIsPlaying(false);
-                            }}
-                            autoPlay={true}
-                            playsInline={true}
-                            preload="auto"
-                            muted={movieVolume === 0}
-                          />
+                          {bouncerStreamData?.source_type === "iframe" ? (
+                            <iframe
+                              src={(bouncerStreamData.stream_url || "").replace(
+                                /tmdb-/g,
+                                "",
+                              )}
+                              className="w-full h-full object-contain pointer-events-auto relative z-10 border-none"
+                              allowFullScreen={true}
+                              allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+                              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+                            />
+                          ) : (
+                            <video
+                              ref={movieVideoRef}
+                              className="w-full h-full object-contain pointer-events-none relative z-10"
+                              onTimeUpdate={handleMovieTimeUpdate}
+                              onLoadedMetadata={handleMovieLoadedMetadata}
+                              onEnded={handleMovieEnded}
+                              onWaiting={() => setIsVideoBuffering(true)}
+                              onPlaying={() => setIsVideoBuffering(false)}
+                              onCanPlay={() => setIsVideoBuffering(false)}
+                              onPlay={() => setMovieIsPlaying(true)}
+                              onPause={() => setMovieIsPlaying(false)}
+                              onError={(e) => {
+                                console.error(
+                                  "Video Error:",
+                                  e.currentTarget.error,
+                                );
+                                setActiveMediaAlert(
+                                  `MEDIA ERROR: ${e.currentTarget.error?.message || e.currentTarget.error?.code || "Desconhecido"}`,
+                                );
+                                setMovieIsPlaying(false);
+                              }}
+                              autoPlay={true}
+                              playsInline={true}
+                              preload="auto"
+                              muted={movieVolume === 0}
+                            />
+                          )}
 
                           {/* Top Center: Alert HUD Notification for player parameter changes */}
                           {activeMediaAlert && (
@@ -4875,29 +6031,32 @@ export const MediaModule: React.FC = () => {
                           )}
 
                           {/* Center: persistent subtitler overlay synced with realcurrentTime */}
-                          {movieSubtitle !== 'OFF' && getActiveSubtitleText() !== '' && (
-                            <div className="absolute bottom-16 md:bottom-20 left-1/2 -translate-x-1/2 bg-black/85 border border-white/5 px-4 py-2 rounded-xl text-white font-sans text-xs md:text-sm font-semibold tracking-wide text-center z-50 select-none shadow-[0_4px_15px_rgba(0,0,0,0.8)] max-w-[85%] pointer-events-none animate-in fade-in duration-200">
-                              {getActiveSubtitleText()}
-                            </div>
-                          )}
+                          {movieSubtitle !== "OFF" &&
+                            getActiveSubtitleText() !== "" && (
+                              <div className="absolute bottom-16 md:bottom-20 left-1/2 -translate-x-1/2 bg-black/85 border border-white/5 px-4 py-2 rounded-xl text-white font-sans text-xs md:text-sm font-semibold tracking-wide text-center z-50 select-none shadow-[0_4px_15px_rgba(0,0,0,0.8)] max-w-[85%] pointer-events-none animate-in fade-in duration-200">
+                                {getActiveSubtitleText()}
+                              </div>
+                            )}
 
                           {/* Loading spinner overlay */}
                           {isVideoBuffering && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-blackSpace z-50 select-none pointer-events-none">
                               <div className="w-10 h-10 border-2 border-cyan-500/30 border-t-cyan-400 anonymity-spin rounded-full animate-spin" />
-                              <span className="text-[10px] font-mono text-cyan-300 tracking-widest animate-pulse font-bold mt-2">CONECTANDO CANAL HLS...</span>
+                              <span className="text-[10px] font-mono text-cyan-300 tracking-widest animate-pulse font-bold mt-2">
+                                CONECTANDO CANAL HLS...
+                              </span>
                             </div>
                           )}
 
                           {/* Complete control Overlay bar. Hovering shows controls. If paused, controls are locked visible */}
-                          <div 
+                          <div
                             onClick={(e) => {
                               // Click on video toggles play/pause
                               triggerHaptic(15);
                               if (e.target !== e.currentTarget) return; // avoid trigger on child elements
                               const nextState = !movieIsPlaying;
                               setMovieIsPlaying(nextState);
-                              showAlert(nextState ? 'PLAY' : 'PAUSADO');
+                              showAlert(nextState ? "PLAY" : "PAUSADO");
 
                               if (movieVideoRef.current) {
                                 if (nextState) {
@@ -4907,9 +6066,8 @@ export const MediaModule: React.FC = () => {
                                 }
                               }
                             }}
-                            className={`absolute inset-0 bg-gradient-to-t from-black/95 via-black/10 to-black/50 opacity-0 group-hover/player:opacity-100 flex flex-col justify-between p-4 z-30 transition-opacity duration-300 pointer-events-none ${!movieIsPlaying ? 'opacity-100' : ''}`}
+                            className={`absolute inset-0 bg-gradient-to-t from-black/95 via-black/10 to-black/50 opacity-0 group-hover/player:opacity-100 flex flex-col justify-between p-4 z-30 transition-opacity duration-300 pointer-events-none ${!movieIsPlaying ? "opacity-100" : ""}`}
                           >
-
                             {/* Player Header Info */}
                             <div className="flex justify-between items-start w-full pointer-events-auto">
                               <div className="flex items-center gap-3">
@@ -4924,28 +6082,38 @@ export const MediaModule: React.FC = () => {
                                   <ArrowLeft className="w-4 h-4" />
                                 </button>
                                 <div className="text-left">
-                                  <h4 className="text-xs font-black text-white uppercase tracking-wide truncate max-w-[200px] sm:max-w-xs">{selectedMovie?.title}</h4>
-                                  <p className="text-[9px] font-mono text-zinc-400 capitalize">{selectedMovie?.category || 'Cinema Master'}</p>
+                                  <h4 className="text-xs font-black text-white uppercase tracking-wide truncate max-w-[200px] sm:max-w-xs">
+                                    {selectedMovie?.title}
+                                  </h4>
+                                  <p className="text-[9px] font-mono text-zinc-400 capitalize">
+                                    {selectedMovie?.category || "Cinema Master"}
+                                  </p>
                                 </div>
                               </div>
 
                               {/* Server & Pipeline status */}
                               <div className="flex items-center gap-2">
-                                <span className="bg-red-700/80 border-rose-500 text-white font-mono text-[8px] font-black tracking-widest uppercase px-2 py-0.5 rounded shadow-sm">CINEMA VOD</span>
-                                <span className="bg-zinc-900/80 border border-cyan-500/30 text-cyan-400 font-mono text-[8px] font-bold px-2 py-0.5 rounded">{activeServer.toUpperCase()}</span>
+                                <span className="bg-red-700/80 border-rose-500 text-white font-mono text-[8px] font-black tracking-widest uppercase px-2 py-0.5 rounded shadow-sm">
+                                  CINEMA VOD
+                                </span>
+                                <span className="bg-zinc-900/80 border border-cyan-500/30 text-cyan-400 font-mono text-[8px] font-bold px-2 py-0.5 rounded">
+                                  {activeServer.toUpperCase()}
+                                </span>
                               </div>
                             </div>
 
                             {/* Centered Large Play Button Overlay when paused */}
                             {!movieIsPlaying && (
-                              <button 
+                              <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   triggerHaptic(30);
                                   setMovieIsPlaying(true);
-                                  showAlert('PLAY');
+                                  showAlert("PLAY");
                                   if (movieVideoRef.current) {
-                                    movieVideoRef.current.play().catch(() => {});
+                                    movieVideoRef.current
+                                      .play()
+                                      .catch(() => {});
                                   }
                                 }}
                                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 bg-cyan-500 text-black rounded-full flex items-center justify-center hover:scale-110 active:scale-95 shadow-[0_0_20px_rgba(6,182,212,0.6)] cursor-pointer transition-all z-40 pointer-events-auto"
@@ -4955,27 +6123,33 @@ export const MediaModule: React.FC = () => {
                             )}
 
                             {/* Bottom controls container */}
-                            <div 
+                            <div
                               onClick={(e) => e.stopPropagation()}
                               className="w-full space-y-3 pointer-events-auto"
                             >
                               {/* Timeline scrub bar or Encrypted Bouncer connection HUD */}
                               <div className="flex items-center gap-3 w-full">
-                                <span className="text-[9px] font-mono font-bold text-zinc-300 w-8">{formatTime(currentTime)}</span>
-                                <div 
+                                <span className="text-[9px] font-mono font-bold text-zinc-300 w-8">
+                                  {formatTime(currentTime)}
+                                </span>
+                                <div
                                   onClick={handleMovieTimelineClick}
                                   className="flex-1 h-1.5 relative bg-white/20 rounded-full cursor-pointer group/timeline flex items-center"
                                 >
-                                  <div 
+                                  <div
                                     className="absolute left-0 h-full bg-cyan-400 rounded-full"
                                     style={{ width: `${movieProgress}%` }}
                                   />
-                                  <div 
+                                  <div
                                     className="absolute w-3 h-3 bg-white rounded-full scale-0 group-hover/timeline:scale-100 transition-transform shadow-[0_0_8px_white]"
-                                    style={{ left: `calc(${movieProgress}% - 6px)` }}
+                                    style={{
+                                      left: `calc(${movieProgress}% - 6px)`,
+                                    }}
                                   />
                                 </div>
-                                <span className="text-[9px] font-mono font-bold text-zinc-500 w-8">{formatTime(duration)}</span>
+                                <span className="text-[9px] font-mono font-bold text-zinc-500 w-8">
+                                  {formatTime(duration)}
+                                </span>
                               </div>
 
                               {/* Buttons toolbar row */}
@@ -4988,10 +6162,16 @@ export const MediaModule: React.FC = () => {
                                       triggerHaptic(15);
                                       const nextState = !movieIsPlaying;
                                       setMovieIsPlaying(nextState);
-                                      showAlert(nextState ? 'PLAY' : 'PAUSADO');
-                                      if (bouncerStreamData?.source_type !== 'iframe' && movieVideoRef.current) {
+                                      showAlert(nextState ? "PLAY" : "PAUSADO");
+                                      if (
+                                        bouncerStreamData?.source_type !==
+                                          "iframe" &&
+                                        movieVideoRef.current
+                                      ) {
                                         if (nextState) {
-                                          movieVideoRef.current.play().catch(() => {});
+                                          movieVideoRef.current
+                                            .play()
+                                            .catch(() => {});
                                         } else {
                                           movieVideoRef.current.pause();
                                         }
@@ -4999,7 +6179,11 @@ export const MediaModule: React.FC = () => {
                                     }}
                                     className="text-white hover:text-cyan-400 transition-colors w-5 h-5 flex items-center justify-center cursor-pointer"
                                   >
-                                    {movieIsPlaying ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white" />}
+                                    {movieIsPlaying ? (
+                                      <Pause className="w-4 h-4 fill-white" />
+                                    ) : (
+                                      <Play className="w-4 h-4 fill-white" />
+                                    )}
                                   </button>
 
                                   {/* Volume level control */}
@@ -5009,17 +6193,21 @@ export const MediaModule: React.FC = () => {
                                         triggerHaptic(15);
                                         if (movieVolume > 0) {
                                           setMovieVolume(0);
-                                          showAlert('MUTADO');
+                                          showAlert("MUTADO");
                                         } else {
                                           setMovieVolume(85);
-                                          showAlert('VOLUME: 85%');
+                                          showAlert("VOLUME: 85%");
                                         }
                                       }}
                                       className="text-white hover:text-cyan-400 transition-colors cursor-pointer"
                                     >
-                                      {movieVolume === 0 ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4" />}
+                                      {movieVolume === 0 ? (
+                                        <VolumeX className="w-4 h-4 text-rose-400" />
+                                      ) : (
+                                        <Volume2 className="w-4 h-4" />
+                                      )}
                                     </button>
-                                    <input 
+                                    <input
                                       type="range"
                                       min="0"
                                       max="100"
@@ -5028,7 +6216,7 @@ export const MediaModule: React.FC = () => {
                                         const vol = parseInt(e.target.value);
                                         setMovieVolume(vol);
                                         if (vol === 0) {
-                                          showAlert('MUTADO');
+                                          showAlert("MUTADO");
                                         } else {
                                           showAlert(`VOLUME: ${vol}%`);
                                         }
@@ -5040,57 +6228,77 @@ export const MediaModule: React.FC = () => {
 
                                 {/* Right Side: Netflix Advanced controls */}
                                 <div className="flex items-center gap-2 sm:gap-3.5">
-                                  
                                   {/* Audio dropdown */}
                                   <div className="relative flex flex-col items-center">
-                                    {(activePlayerMenu === 'audio' || activePlayerMenu === null) && (
-                                      <div className={`absolute bottom-full mb-2 ${activePlayerMenu === 'audio' ? 'flex' : 'hidden group-hover/menu:flex'} flex-col bg-black/95 border border-white/10 rounded-xl p-1 z-50 shadow-2xl min-w-[100px] animate-in fade-in zoom-in-95 duration-150`}>
-                                        {availableAudioTracks.length > 0 ? (
-                                          availableAudioTracks.map((track, idx) => {
-                                            const isSelected = hlsInstanceRef.current?.audioTrack === idx;
-                                            return (
-                                              <button 
-                                                key={idx} 
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  triggerHaptic(10);
-                                                  changeAudioTrack(idx);
-                                                  setMovieAudioLang(track.name || track.lang || `Áudio ${idx + 1}`);
-                                                  setActivePlayerMenu(null);
-                                                  showAlert(`ÁUDIO: ${track.name || track.lang || `Canal ${idx + 1}`}`);
-                                                }} 
-                                                className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${isSelected ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-400'}`}
-                                              >
-                                                {track.name || track.lang || `Áudio ${idx + 1}`}
-                                              </button>
-                                            );
-                                          })
-                                        ) : (
-                                          (['PT-BR', 'EN'] as const).map((lang) => (
-                                            <button 
-                                              key={lang} 
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                triggerHaptic(10);
-                                                setMovieAudioLang(lang);
-                                                setActivePlayerMenu(null);
-                                                showAlert(`ÁUDIO: ${lang === 'PT-BR' ? 'PORTUGUÊS' : 'INGLÊS (EN)'}`);
-                                              }} 
-                                              className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${movieAudioLang === lang ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-400'}`}
-                                            >
-                                              {lang}
-                                            </button>
-                                          ))
-                                        )}
+                                    {(activePlayerMenu === "audio" ||
+                                      activePlayerMenu === null) && (
+                                      <div
+                                        className={`absolute bottom-full mb-2 ${activePlayerMenu === "audio" ? "flex" : "hidden group-hover/menu:flex"} flex-col bg-black/95 border border-white/10 rounded-xl p-1 z-50 shadow-2xl min-w-[100px] animate-in fade-in zoom-in-95 duration-150`}
+                                      >
+                                        {availableAudioTracks.length > 0
+                                          ? availableAudioTracks.map(
+                                              (track, idx) => {
+                                                const isSelected =
+                                                  hlsInstanceRef.current
+                                                    ?.audioTrack === idx;
+                                                return (
+                                                  <button
+                                                    key={idx}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      triggerHaptic(10);
+                                                      changeAudioTrack(idx);
+                                                      setMovieAudioLang(
+                                                        track.name ||
+                                                          track.lang ||
+                                                          `Áudio ${idx + 1}`,
+                                                      );
+                                                      setActivePlayerMenu(null);
+                                                      showAlert(
+                                                        `ÁUDIO: ${track.name || track.lang || `Canal ${idx + 1}`}`,
+                                                      );
+                                                    }}
+                                                    className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${isSelected ? "bg-cyan-500/20 text-cyan-400" : "hover:bg-white/5 text-zinc-400"}`}
+                                                  >
+                                                    {track.name ||
+                                                      track.lang ||
+                                                      `Áudio ${idx + 1}`}
+                                                  </button>
+                                                );
+                                              },
+                                            )
+                                          : (["PT-BR", "EN"] as const).map(
+                                              (lang) => (
+                                                <button
+                                                  key={lang}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    triggerHaptic(10);
+                                                    setMovieAudioLang(lang);
+                                                    setActivePlayerMenu(null);
+                                                    showAlert(
+                                                      `ÁUDIO: ${lang === "PT-BR" ? "PORTUGUÊS" : "INGLÊS (EN)"}`,
+                                                    );
+                                                  }}
+                                                  className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${movieAudioLang === lang ? "bg-cyan-500/20 text-cyan-400" : "hover:bg-white/5 text-zinc-400"}`}
+                                                >
+                                                  {lang}
+                                                </button>
+                                              ),
+                                            )}
                                       </div>
                                     )}
-                                    <button 
+                                    <button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         triggerHaptic(15);
-                                        setActivePlayerMenu(activePlayerMenu === 'audio' ? null : 'audio');
+                                        setActivePlayerMenu(
+                                          activePlayerMenu === "audio"
+                                            ? null
+                                            : "audio",
+                                        );
                                       }}
-                                      className={`w-8 h-8 rounded-full flex items-center justify-center border bg-zinc-900/80 hover:bg-zinc-800 transition-colors cursor-pointer ${activePlayerMenu === 'audio' ? 'text-cyan-400 border-cyan-500/40' : 'text-zinc-300 border-white/5 hover:text-cyan-400'}`}
+                                      className={`w-8 h-8 rounded-full flex items-center justify-center border bg-zinc-900/80 hover:bg-zinc-800 transition-colors cursor-pointer ${activePlayerMenu === "audio" ? "text-cyan-400 border-cyan-500/40" : "text-zinc-300 border-white/5 hover:text-cyan-400"}`}
                                     >
                                       <Volume2 className="w-3.5 h-3.5" />
                                     </button>
@@ -5098,32 +6306,41 @@ export const MediaModule: React.FC = () => {
 
                                   {/* Subtitles dropdown */}
                                   <div className="relative flex flex-col items-center">
-                                    {(activePlayerMenu === 'subtitle' || activePlayerMenu === null) && (
-                                      <div className={`absolute bottom-full mb-2 ${activePlayerMenu === 'subtitle' ? 'flex' : 'hidden group-hover/menu:flex'} flex-col bg-black/95 border border-white/10 rounded-xl p-1 z-50 shadow-2xl min-w-[110px] animate-in fade-in zoom-in-95 duration-150`}>
-                                        {(['OFF', 'PT-BR', 'EN', 'ES'] as const).map((sub) => (
-                                          <button 
-                                            key={sub} 
+                                    {(activePlayerMenu === "subtitle" ||
+                                      activePlayerMenu === null) && (
+                                      <div
+                                        className={`absolute bottom-full mb-2 ${activePlayerMenu === "subtitle" ? "flex" : "hidden group-hover/menu:flex"} flex-col bg-black/95 border border-white/10 rounded-xl p-1 z-50 shadow-2xl min-w-[110px] animate-in fade-in zoom-in-95 duration-150`}
+                                      >
+                                        {(
+                                          ["OFF", "PT-BR", "EN", "ES"] as const
+                                        ).map((sub) => (
+                                          <button
+                                            key={sub}
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               triggerHaptic(10);
                                               setMovieSubtitle(sub);
                                               setActivePlayerMenu(null);
                                               showAlert(`LEGENDA: ${sub}`);
-                                            }} 
-                                            className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${movieSubtitle === sub ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-400'}`}
+                                            }}
+                                            className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${movieSubtitle === sub ? "bg-cyan-500/20 text-cyan-400" : "hover:bg-white/5 text-zinc-400"}`}
                                           >
                                             {sub}
                                           </button>
                                         ))}
                                       </div>
                                     )}
-                                    <button 
+                                    <button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         triggerHaptic(15);
-                                        setActivePlayerMenu(activePlayerMenu === 'subtitle' ? null : 'subtitle');
+                                        setActivePlayerMenu(
+                                          activePlayerMenu === "subtitle"
+                                            ? null
+                                            : "subtitle",
+                                        );
                                       }}
-                                      className={`w-8 h-8 rounded-full flex items-center justify-center border bg-zinc-900/80 hover:bg-zinc-800 transition-colors cursor-pointer ${movieSubtitle !== 'OFF' || activePlayerMenu === 'subtitle' ? 'text-cyan-400 border-cyan-500/35' : 'text-zinc-300 border-white/5 hover:text-cyan-400'}`}
+                                      className={`w-8 h-8 rounded-full flex items-center justify-center border bg-zinc-900/80 hover:bg-zinc-800 transition-colors cursor-pointer ${movieSubtitle !== "OFF" || activePlayerMenu === "subtitle" ? "text-cyan-400 border-cyan-500/35" : "text-zinc-300 border-white/5 hover:text-cyan-400"}`}
                                     >
                                       <Type className="w-3.5 h-3.5" />
                                     </button>
@@ -5131,33 +6348,42 @@ export const MediaModule: React.FC = () => {
 
                                   {/* Speed dropdown */}
                                   <div className="relative flex flex-col items-center">
-                                    {(activePlayerMenu === 'speed' || activePlayerMenu === null) && (
-                                      <div className={`absolute bottom-full mb-2 ${activePlayerMenu === 'speed' ? 'flex' : 'hidden group-hover/menu:flex'} flex-col bg-black/95 border border-white/10 rounded-xl p-1 z-50 shadow-2xl min-w-[90px] animate-in fade-in zoom-in-95 duration-150`}>
+                                    {(activePlayerMenu === "speed" ||
+                                      activePlayerMenu === null) && (
+                                      <div
+                                        className={`absolute bottom-full mb-2 ${activePlayerMenu === "speed" ? "flex" : "hidden group-hover/menu:flex"} flex-col bg-black/95 border border-white/10 rounded-xl p-1 z-50 shadow-2xl min-w-[90px] animate-in fade-in zoom-in-95 duration-150`}
+                                      >
                                         {[0.5, 1, 1.5, 2].map((sp) => (
-                                          <button 
-                                            key={sp} 
+                                          <button
+                                            key={sp}
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               triggerHaptic(10);
                                               setMovieSpeed(sp);
-                                              if (movieVideoRef.current) movieVideoRef.current.playbackRate = sp;
+                                              if (movieVideoRef.current)
+                                                movieVideoRef.current.playbackRate =
+                                                  sp;
                                               setActivePlayerMenu(null);
                                               showAlert(`VELOCIDADE: ${sp}x`);
-                                            }} 
-                                            className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${movieSpeed === sp ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-400'}`}
+                                            }}
+                                            className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${movieSpeed === sp ? "bg-cyan-500/20 text-cyan-400" : "hover:bg-white/5 text-zinc-400"}`}
                                           >
                                             {sp}x
                                           </button>
                                         ))}
                                       </div>
                                     )}
-                                    <button 
+                                    <button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         triggerHaptic(15);
-                                        setActivePlayerMenu(activePlayerMenu === 'speed' ? null : 'speed');
+                                        setActivePlayerMenu(
+                                          activePlayerMenu === "speed"
+                                            ? null
+                                            : "speed",
+                                        );
                                       }}
-                                      className={`w-8 h-8 rounded-full flex items-center justify-center border bg-zinc-900/80 hover:bg-zinc-800 transition-colors cursor-pointer ${activePlayerMenu === 'speed' ? 'text-cyan-400 border-cyan-500/40' : 'text-zinc-300 border-white/5 hover:text-cyan-400'}`}
+                                      className={`w-8 h-8 rounded-full flex items-center justify-center border bg-zinc-900/80 hover:bg-zinc-800 transition-colors cursor-pointer ${activePlayerMenu === "speed" ? "text-cyan-400 border-cyan-500/40" : "text-zinc-300 border-white/5 hover:text-cyan-400"}`}
                                     >
                                       <Clock className="w-3.5 h-3.5" />
                                     </button>
@@ -5165,32 +6391,39 @@ export const MediaModule: React.FC = () => {
 
                                   {/* Quality HLS Adaptive */}
                                   <div className="relative flex flex-col items-center">
-                                    {(activePlayerMenu === 'quality' || activePlayerMenu === null) && (
-                                      <div className={`absolute bottom-full mb-2 ${activePlayerMenu === 'quality' ? 'flex' : 'hidden group-hover/menu:flex'} flex-col bg-black/95 border border-white/10 rounded-xl p-1 z-50 shadow-2xl min-w-[100px] animate-in fade-in zoom-in-95 duration-150`}>
-                                        {['1080p', '720p', '480p'].map((q) => (
-                                          <button 
-                                            key={q} 
+                                    {(activePlayerMenu === "quality" ||
+                                      activePlayerMenu === null) && (
+                                      <div
+                                        className={`absolute bottom-full mb-2 ${activePlayerMenu === "quality" ? "flex" : "hidden group-hover/menu:flex"} flex-col bg-black/95 border border-white/10 rounded-xl p-1 z-50 shadow-2xl min-w-[100px] animate-in fade-in zoom-in-95 duration-150`}
+                                      >
+                                        {["1080p", "720p", "480p"].map((q) => (
+                                          <button
+                                            key={q}
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               triggerHaptic(10);
                                               setAbrMode(q as any);
                                               setActivePlayerMenu(null);
                                               showAlert(`RESOLUÇÃO: ${q}`);
-                                            }} 
-                                            className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${abrMode === q ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/5 text-zinc-400'}`}
+                                            }}
+                                            className={`w-full py-1.5 px-3 text-[9px] font-mono text-left font-bold rounded-lg transition-colors cursor-pointer ${abrMode === q ? "bg-cyan-500/20 text-cyan-400" : "hover:bg-white/5 text-zinc-400"}`}
                                           >
                                             {q}
                                           </button>
                                         ))}
                                       </div>
                                     )}
-                                    <button 
+                                    <button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         triggerHaptic(15);
-                                        setActivePlayerMenu(activePlayerMenu === 'quality' ? null : 'quality');
+                                        setActivePlayerMenu(
+                                          activePlayerMenu === "quality"
+                                            ? null
+                                            : "quality",
+                                        );
                                       }}
-                                      className={`w-8 h-8 rounded-full flex items-center justify-center border bg-zinc-900/80 hover:bg-zinc-800 transition-colors cursor-pointer ${activePlayerMenu === 'quality' ? 'text-cyan-400 border-cyan-500/40' : 'text-zinc-300 border-white/5 hover:text-cyan-400'}`}
+                                      className={`w-8 h-8 rounded-full flex items-center justify-center border bg-zinc-900/80 hover:bg-zinc-800 transition-colors cursor-pointer ${activePlayerMenu === "quality" ? "text-cyan-400 border-cyan-500/40" : "text-zinc-300 border-white/5 hover:text-cyan-400"}`}
                                     >
                                       <Settings className="w-3.5 h-3.5" />
                                     </button>
@@ -5205,13 +6438,13 @@ export const MediaModule: React.FC = () => {
                                       try {
                                         if (document.pictureInPictureElement) {
                                           await document.exitPictureInPicture();
-                                          showAlert('SAIU DO PIP');
+                                          showAlert("SAIU DO PIP");
                                         } else {
                                           await video.requestPictureInPicture();
-                                          showAlert('ENTROU EM PIP');
+                                          showAlert("ENTROU EM PIP");
                                         }
                                       } catch (err) {
-                                        showAlert('PiP INDISPONÍVEL');
+                                        showAlert("PiP INDISPONÍVEL");
                                         // fallback
                                         togglePipMode(true);
                                       }
@@ -5227,14 +6460,18 @@ export const MediaModule: React.FC = () => {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       triggerHaptic(20);
-                                      const el = document.getElementById('youtube-player-block');
+                                      const el = document.getElementById(
+                                        "youtube-player-block",
+                                      );
                                       if (!el) return;
                                       if (!document.fullscreenElement) {
                                         el.requestFullscreen().catch(() => {});
-                                        showAlert('TELA CHEIA');
+                                        showAlert("TELA CHEIA");
                                       } else {
-                                        document.exitFullscreen().catch(() => {});
-                                        showAlert('SAIU TELA CHEIA');
+                                        document
+                                          .exitFullscreen()
+                                          .catch(() => {});
+                                        showAlert("SAIU TELA CHEIA");
                                       }
                                     }}
                                     className="w-8 h-8 rounded-full flex items-center justify-center border border-white/5 bg-zinc-900/80 hover:bg-zinc-800 transition-colors text-zinc-300 hover:text-cyan-400 cursor-pointer"
@@ -5242,90 +6479,124 @@ export const MediaModule: React.FC = () => {
                                   >
                                     <Maximize2 className="w-3.5 h-3.5" />
                                   </button>
-
                                 </div>
                               </div>
                             </div>
                           </div>
                         </div>
 
-                  {/* Title & Metadata row like YouTube detail layer */}
+                        {/* Title & Metadata row like YouTube detail layer */}
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 bg-zinc-950/40 rounded-2xl border border-white/5">
                           <div className="space-y-1 text-left">
-                            <h2 className="text-base font-black text-white">{selectedMovie?.title}</h2>
+                            <h2 className="text-base font-black text-white">
+                              {selectedMovie?.title}
+                            </h2>
                             <div className="flex items-center gap-3 text-xs text-zinc-400 font-mono flex-wrap">
                               <span>Ano: {selectedMovie?.year}</span>
-                              <span className="px-1.5 py-0.5 bg-zinc-800 text-[9px] font-bold uppercase rounded text-zinc-300">{selectedMovie?.type}</span>
-                              <span className="text-cyan-400 font-bold">★ {selectedMovie?.rating || 8.0}</span>
-                              <span className="text-[10px] text-zinc-500 font-medium">Áudio Original: {selectedMovie?.audioLanguages?.join(', ') || 'PT-BR, EN'}</span>
+                              <span className="px-1.5 py-0.5 bg-zinc-800 text-[9px] font-bold uppercase rounded text-zinc-300">
+                                {selectedMovie?.type}
+                              </span>
+                              <span className="text-cyan-400 font-bold">
+                                ★ {selectedMovie?.rating || 8.0}
+                              </span>
+                              <span className="text-[10px] text-zinc-500 font-medium">
+                                Áudio Original:{" "}
+                                {selectedMovie?.audioLanguages?.join(", ") ||
+                                  "PT-BR, EN"}
+                              </span>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-mono font-black bg-[#E50914] text-white px-2 py-1 rounded tracking-wider shadow-md">INVIS ORIGINAL STREAM</span>
-                            <span className="text-[9px] font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-500/20 px-2 py-1 rounded">{abrMode}</span>
+                            <span className="text-[9px] font-mono font-black bg-[#E50914] text-white px-2 py-1 rounded tracking-wider shadow-md">
+                              INVIS ORIGINAL STREAM
+                            </span>
+                            <span className="text-[9px] font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-500/20 px-2 py-1 rounded">
+                              {abrMode}
+                            </span>
                           </div>
                         </div>
-
                       </div>
 
                       {/* EPISODES & RELATED CONTENT PANELS BELOW PLAYER */}
                       <div className="w-full max-w-4xl mx-auto space-y-8 select-none">
-                         
                         {/* Section A: Series Episodes list or Movies chapters based on type */}
-                        {(!movieIsPlaying || selectedMovie?.type === 'serie') && (
+                        {(!movieIsPlaying ||
+                          selectedMovie?.type === "serie") && (
                           <div className="space-y-4 animate-in fade-in duration-300">
                             <h3 className="text-xs font-mono tracking-widest text-cyan-400 uppercase font-black flex items-center gap-2 text-left">
                               <Tv className="w-4 h-4 text-cyan-400" />
-                              <span>{selectedMovie?.type === 'serie' ? 'Seleção de Episódios' : 'Seleção de Capítulos'}</span>
+                              <span>
+                                {selectedMovie?.type === "serie"
+                                  ? "Seleção de Episódios"
+                                  : "Seleção de Capítulos"}
+                              </span>
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                              {getDynamicEpisodesForSelectedMovie().map((ep, epIdx) => {
-                                const isCurrentEp = selectedMovie?.type === 'serie' ? selectedEpisode === epIdx + 1 : false;
-                                return (
-                                  <div 
-                                    key={ep.id}
-                                    onClick={() => {
-                                      triggerHaptic(15);
-                                      showAlert(`Carregando ${ep.title}...`);
-                                      if (selectedMovie?.type === 'serie') {
-                                        setSelectedSeason(1);
-                                        setSelectedEpisode(epIdx + 1);
-                                        setMovieIsPlaying(true);
-                                      } else {
-                                        const video = movieVideoRef.current;
-                                        if (video) {
-                                          video.currentTime = ep.seekTime;
-                                          video.play().catch(() => {});
+                              {getDynamicEpisodesForSelectedMovie().map(
+                                (ep, epIdx) => {
+                                  const isCurrentEp =
+                                    selectedMovie?.type === "serie"
+                                      ? selectedEpisode === epIdx + 1
+                                      : false;
+                                  return (
+                                    <div
+                                      key={ep.id}
+                                      onClick={() => {
+                                        triggerHaptic(15);
+                                        showAlert(`Carregando ${ep.title}...`);
+                                        if (selectedMovie?.type === "serie") {
+                                          setSelectedSeason(1);
+                                          setSelectedEpisode(epIdx + 1);
                                           setMovieIsPlaying(true);
+                                        } else {
+                                          const video = movieVideoRef.current;
+                                          if (video) {
+                                            video.currentTime = ep.seekTime;
+                                            video.play().catch(() => {});
+                                            setMovieIsPlaying(true);
+                                          }
                                         }
-                                      }
-                                    }}
-                                    className={`group/ep border p-3 flex flex-col space-y-2 cursor-pointer transition-all active:scale-98 text-left rounded-2xl ${
-                                      isCurrentEp 
-                                        ? 'bg-cyan-500/10 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.2)]' 
-                                        : 'bg-zinc-950/60 hover:bg-zinc-900/80 border-white/5 hover:border-cyan-500/30'
-                                    }`}
-                                  >
-                                    <div className="aspect-video w-full rounded-lg overflow-hidden relative bg-black/50">
-                                      <img 
-                                        src={episodeCovers[ep.id] || ep.defaultThumb} 
-                                        alt="" 
-                                        referrerPolicy="no-referrer" 
-                                        className="w-full h-full object-cover group-hover/ep:scale-105 transition-transform duration-300" 
-                                      />
-                                      <div className="absolute inset-0 bg-black/45 group-hover/ep:bg-black/15 transition-colors flex items-center justify-center">
-                                        <Play className={`w-8 h-8 text-white transition-all bg-cyan-500/80 rounded-full p-2 ${isCurrentEp ? 'opacity-100 scale-110 shadow-[0_0_10px_rgba(6,182,212,0.6)]' : 'opacity-0 group-hover/ep:opacity-100'}`} />
+                                      }}
+                                      className={`group/ep border p-3 flex flex-col space-y-2 cursor-pointer transition-all active:scale-98 text-left rounded-2xl ${
+                                        isCurrentEp
+                                          ? "bg-cyan-500/10 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.2)]"
+                                          : "bg-zinc-950/60 hover:bg-zinc-900/80 border-white/5 hover:border-cyan-500/30"
+                                      }`}
+                                    >
+                                      <div className="aspect-video w-full rounded-lg overflow-hidden relative bg-black/50">
+                                        <img
+                                          src={
+                                            episodeCovers[ep.id] ||
+                                            ep.defaultThumb
+                                          }
+                                          alt=""
+                                          referrerPolicy="no-referrer"
+                                          className="w-full h-full object-cover group-hover/ep:scale-105 transition-transform duration-300"
+                                        />
+                                        <div className="absolute inset-0 bg-black/45 group-hover/ep:bg-black/15 transition-colors flex items-center justify-center">
+                                          <Play
+                                            className={`w-8 h-8 text-white transition-all bg-cyan-500/80 rounded-full p-2 ${isCurrentEp ? "opacity-100 scale-110 shadow-[0_0_10px_rgba(6,182,212,0.6)]" : "opacity-0 group-hover/ep:opacity-100"}`}
+                                          />
+                                        </div>
+                                        <span className="absolute bottom-1 right-1 bg-black/80 px-1.5 py-0.5 rounded text-[9px] font-mono text-zinc-400">
+                                          {ep.duration}
+                                        </span>
                                       </div>
-                                      <span className="absolute bottom-1 right-1 bg-black/80 px-1.5 py-0.5 rounded text-[9px] font-mono text-zinc-400">{ep.duration}</span>
+                                      <div className="space-y-0.5">
+                                        <h4
+                                          className={`text-[11px] font-bold group-hover/ep:text-cyan-400 transition-colors leading-tight truncate ${isCurrentEp ? "text-cyan-400" : "text-white"}`}
+                                        >
+                                          {ep.title}
+                                        </h4>
+                                        <p className="text-[9px] text-zinc-500 line-clamp-2 leading-relaxed">
+                                          {ep.desc}
+                                        </p>
+                                      </div>
                                     </div>
-                                    <div className="space-y-0.5">
-                                      <h4 className={`text-[11px] font-bold group-hover/ep:text-cyan-400 transition-colors leading-tight truncate ${isCurrentEp ? 'text-cyan-400' : 'text-white'}`}>{ep.title}</h4>
-                                      <p className="text-[9px] text-zinc-500 line-clamp-2 leading-relaxed">{ep.desc}</p>
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                                  );
+                                },
+                              )}
                             </div>
                           </div>
                         )}
@@ -5338,10 +6609,15 @@ export const MediaModule: React.FC = () => {
                           </h3>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                             {mappedMovies
-                              .filter(m => m.id !== selectedMovie?.id && (m.type === selectedMovie?.type || m.category === selectedMovie?.category))
+                              .filter(
+                                (m) =>
+                                  m.id !== selectedMovie?.id &&
+                                  (m.type === selectedMovie?.type ||
+                                    m.category === selectedMovie?.category),
+                              )
                               .slice(0, 4)
                               .map((m) => (
-                                <div 
+                                <div
                                   key={m.id}
                                   onClick={() => {
                                     triggerHaptic(20);
@@ -5350,19 +6626,29 @@ export const MediaModule: React.FC = () => {
                                   className="group/rel flex flex-col space-y-2 cursor-pointer bg-zinc-950/40 border border-white/5 hover:border-cyan-500/20 p-2.5 rounded-2xl transition-all hover:scale-[1.02] text-left"
                                 >
                                   <div className="aspect-[2/3] w-full rounded-xl overflow-hidden relative bg-black/50">
-                                    <img src={m.posterUrl} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover/rel:scale-105 transition-transform duration-300" />
-                                    <div className="absolute top-2 right-2 bg-black/80 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold text-cyan-400 uppercase tracking-widest leading-none shrink-0">{m.type}</div>
+                                    <img
+                                      src={m.posterUrl}
+                                      alt=""
+                                      referrerPolicy="no-referrer"
+                                      className="w-full h-full object-cover group-hover/rel:scale-105 transition-transform duration-300"
+                                    />
+                                    <div className="absolute top-2 right-2 bg-black/80 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold text-cyan-400 uppercase tracking-widest leading-none shrink-0">
+                                      {m.type}
+                                    </div>
                                   </div>
                                   <div className="px-1 space-y-0.5">
-                                    <h4 className="text-[11px] font-bold text-white group-hover/rel:text-cyan-400 transition-colors truncate">{m.title}</h4>
+                                    <h4 className="text-[11px] font-bold text-white group-hover/rel:text-cyan-400 transition-colors truncate">
+                                      {m.title}
+                                    </h4>
                                     <div className="flex items-center justify-between text-[9px] text-zinc-500 font-mono font-bold leading-none select-none">
                                       <span>{m.year}</span>
-                                      <span className="text-cyan-400 font-bold">★ {m.rating || 8.0}</span>
+                                      <span className="text-cyan-400 font-bold">
+                                        ★ {m.rating || 8.0}
+                                      </span>
                                     </div>
                                   </div>
                                 </div>
-                              ))
-                            }
+                              ))}
                           </div>
                         </div>
 
@@ -5379,9 +6665,7 @@ export const MediaModule: React.FC = () => {
                             <span>VOLTAR À PÁGINA INICIAL DO CINEMA</span>
                           </button>
                         </div>
-
                       </div>
-
                     </div>
                   )}
                 </motion.div>
@@ -5394,7 +6678,7 @@ export const MediaModule: React.FC = () => {
       {/* =========================================================================
           GLOBAL SPECIFIC SUB-MODALS DRAWER
           ========================================================================= */}
-      
+
       {/* 1. ADMIN MENU FOR CLIPS (LONG PRESS / CONTEXT MENU SPEC PAGE 4) */}
       <AnimatePresence>
         {adminMenuClip && (
@@ -5416,20 +6700,43 @@ export const MediaModule: React.FC = () => {
               </div>
 
               <p className="text-[10px] text-zinc-400 leading-normal">
-                Modifique o sinal do status do link exposto indexado. O robô em segundo plano e a query SQL removerão ou classificarão este card de acordo.
+                Modifique o sinal do status do link exposto indexado. O robô em
+                segundo plano e a query SQL removerão ou classificarão este card
+                de acordo.
               </p>
 
               <div className="flex flex-col gap-2 pt-2 text-xs">
                 {[
-                  { id: 'online', label: 'Verde: Online / Ativo', style: 'border-emerald-500/20 text-emerald-400 focus:bg-emerald-500/10' },
-                  { id: 'monitored', label: 'Amarelo: Monitorado', style: 'border-amber-500/20 text-amber-400 focus:bg-amber-500/10' },
-                  { id: 'offline', label: 'Vermelho: Offline / Removido', style: 'border-rose-500/20 text-rose-400 focus:bg-rose-500/10' }
+                  {
+                    id: "online",
+                    label: "Verde: Online / Ativo",
+                    style:
+                      "border-emerald-500/20 text-emerald-400 focus:bg-emerald-500/10",
+                  },
+                  {
+                    id: "monitored",
+                    label: "Amarelo: Monitorado",
+                    style:
+                      "border-amber-500/20 text-amber-400 focus:bg-amber-500/10",
+                  },
+                  {
+                    id: "offline",
+                    label: "Vermelho: Offline / Removido",
+                    style:
+                      "border-rose-500/20 text-rose-400 focus:bg-rose-500/10",
+                  },
                 ].map((st) => (
                   <button
                     key={st.id}
                     onClick={() => {
                       triggerHaptic(20);
-                      setClipsList(prev => prev.map(c => c.id === adminMenuClip.id ? { ...c, status: st.id as any } : c));
+                      setClipsList((prev) =>
+                        prev.map((c) =>
+                          c.id === adminMenuClip.id
+                            ? { ...c, status: st.id as any }
+                            : c,
+                        ),
+                      );
                       setAdminMenuClip(null);
                     }}
                     className={`w-full py-2.5 rounded-xl border bg-black/40 hover:brightness-110 cursor-pointer text-left px-4 font-mono text-[10px] uppercase font-bold transition-all ${st.style}`}
@@ -5463,10 +6770,16 @@ export const MediaModule: React.FC = () => {
               className="w-full max-w-sm rounded-[32px] bg-[#090a10] border border-cyan-500/30 p-8 space-y-6 text-center shadow-2xl"
             >
               <div className="space-y-2">
-                <span className="text-[9px] font-mono text-cyan-400 uppercase tracking-[0.2em] font-black block">Anti-Idle System Check</span>
-                <h4 className="text-sm font-black text-white uppercase tracking-wider">Ainda está assistindo?</h4>
+                <span className="text-[9px] font-mono text-cyan-400 uppercase tracking-[0.2em] font-black block">
+                  Anti-Idle System Check
+                </span>
+                <h4 className="text-sm font-black text-white uppercase tracking-wider">
+                  Ainda está assistindo?
+                </h4>
                 <p className="text-[10px] text-zinc-400 leading-normal max-w-xs mx-auto">
-                  Para economizar a alocação de largura de banda e não sobrecarregar as fontes de HLS expiradas, confirme sua visualização ativa.
+                  Para economizar a alocação de largura de banda e não
+                  sobrecarregar as fontes de HLS expiradas, confirme sua
+                  visualização ativa.
                 </p>
               </div>
 
@@ -5497,7 +6810,6 @@ export const MediaModule: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
-
     </div>
   );
 };
