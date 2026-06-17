@@ -1,4 +1,4 @@
-import server from "../dist/server.cjs";
+import server from "../server";
 
 export default async function (req: any, res: any) {
   // If the server exports a default async function, await it.
