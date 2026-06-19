@@ -1201,11 +1201,8 @@ export const MediaModule: React.FC = () => {
       });
       clearTimeout(timeoutId);
       const data = await res.json();
-      if (data.items && data.items.length > 0) {
-        setIndexedDbCatalog(data.items);
-      } else {
-        setIndexedDbCatalog([]);
-      }
+      const catalogData = data.active_titles || [];
+      setIndexedDbCatalog(catalogData);
     } catch (err) {
       clearTimeout(timeoutId);
       console.error("Falha ao sincronizar catálogo do INVIS:", err);
@@ -1971,12 +1968,11 @@ export const MediaModule: React.FC = () => {
           return true;
         }
 
-        const audioLangs = m.audioLanguages || dbMatch.audio_languages || [];
-        const hasPt = audioLangs
-          .map((l: string) => String(l).toLowerCase())
-          .some((l: string) => l.includes("pt"));
-
-        return hasPt;
+        const audioLangs = (dbMatch.audio_languages || dbMatch.tracks_data?.audio_languages || m.audioLanguages || [])
+          .map((l: any) => String(l).toLowerCase());
+        const hasPtBr = audioLangs.some((l: string) => l.includes('pt'));
+        
+        return hasPtBr;
       }
 
       return true;

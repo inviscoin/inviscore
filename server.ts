@@ -1780,70 +1780,31 @@ async function startServer() {
 
   // Endpoint de Sincronização Estrita Corrigido com Timeout de Alta Resiliência (3s)
   app.get("/api/media/catalog/active", async (req, res) => {
-    let rawData: any[] = [];
     try {
-      if (!supabase) throw new Error("Supabase não inicializado");
-
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Supabase Timeout (3000ms)")), 3000),
-      );
-
-      const queryPromise = supabase
+      const { data, error } = await supabase
         .from("media_catalog")
-        .select(
-          "title_id, media_type, audio_languages:tracks_data->audio_languages, is_active",
-        )
-        .eq("is_active", true);
+        .select("title_id, media_type, tracks_data")
+        .eq("is_active", true)
+        .limit(1000);
 
-      const result = (await Promise.race([
-        queryPromise,
-        timeoutPromise,
-      ])) as any;
+      if (error) {
+        console.error("[CATALOG ERROR]", error.message);
+        return res.status(200).json({ success: true, active_titles: [], error: error.message });
+      }
 
-      if (result.error) throw result.error;
-      rawData = result.data || [];
-      console.log(
-        "[SINCRO] Catalogo retornado do Supabase com sucesso:",
-        rawData.length,
-      );
-    } catch (e: any) {
-      console.warn(
-        "[Media Catalog Active API Error] Timeout ou erro atingido:",
-        e.message,
-      );
-      return res.status(200).json({ items: [], error: "DB_TIMEOUT" });
-    }
-
-    const unifiedMap = new Map<string, any>();
-    rawData.forEach((item) => {
-      const numId = String(item.title_id).replace(/\D/g, "").trim();
-      unifiedMap.set(`${item.media_type}_${numId}`, {
+      const active_titles = (data || []).map(item => ({
         title_id: item.title_id,
         media_type: item.media_type,
-        audio_languages: item.audio_languages,
-        is_active: item.is_active,
-      });
-    });
+        id: `tmdb-${item.title_id}`,
+        audio_languages: item.tracks_data?.audio_languages || ["pt-BR"],
+        tracks_data: item.tracks_data
+      }));
 
-    memoryCatalog.forEach((value, key) => {
-      unifiedMap.set(key, {
-        title_id: value.title_id,
-        media_type: value.media_type,
-        audio_languages: value.tracks_data?.audio_languages,
-        is_active: true,
-      });
-    });
-
-    const activeTitles = Array.from(unifiedMap.values()).map((item) => {
-      const numericCleanPart = String(item.title_id).replace(/\D/g, "").trim();
-      return {
-        title_id: "tmdb-" + numericCleanPart,
-        media_type: item.media_type,
-        audio_languages: item.audio_languages || ["pt-BR"],
-      };
-    });
-
-    return res.json({ items: activeTitles });
+      return res.status(200).json({ success: true, active_titles });
+    } catch (e: any) {
+      console.error("[CATALOG FATAL]", e.message);
+      return res.status(200).json({ success: true, active_titles: [] });
+    }
   });
 
   // ==================== DEEP-SCAN CRAWLER AUTOMÁTICO (INVIS SYSTEM) ====================
