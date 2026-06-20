@@ -1,3 +1,4 @@
+// Proxy via Edge Functions
 const EDGE = 'https://boguvusudhusqvwhgywu.supabase.co/functions/v1';
 
 export default async function handler(req: any, res: any) {
