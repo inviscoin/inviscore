@@ -1945,33 +1945,38 @@ export const MediaModule: React.FC = () => {
         return true;
       }
 
-      if (catalogLoaded && indexedDbCatalog.length === 0) {
+      if (indexedDbCatalog.length === 0) {
         return true;
       }
 
+      const numId = String(m.id).replace(/\D/g, "");
       const dbMatch = indexedDbCatalog.find(
-        (dbItem) =>
-          String(dbItem.title_id).replace(/\D/g, "") ===
-          String(m.id).replace(/\D/g, ""),
+        (dbItem) => String(dbItem.title_id).replace(/\D/g, "") === numId,
       );
 
       if (!dbMatch) {
+        // Oculta tudo que não está no banco (exceto resultados de busca TMDB para o usuário ver existências, a badge LEGENDADO cuida da info)
         if (searchQuery.trim() !== "") {
-          return true; // Exibe resultados de busca retornados da API do TMDB
+          return true;
         }
         return false;
       }
 
       if (currentUser?.ddi === "+55") {
+        const audioLangs = (
+          dbMatch.audio_languages ||
+          dbMatch.tracks_data?.audio_languages ||
+          m.audioLanguages ||
+          []
+        ).map((l: any) => String(l).toLowerCase());
+        const hasPtBr = audioLangs.some((l: string) => l.includes("pt"));
+
         const hasQuery = searchQuery.trim() !== "";
         if (hasQuery) {
-          return true;
+          return true; // Na busca: mostrar com badge LEGENDADO se !hasPtBr (badge é renderizada na view)
         }
 
-        const audioLangs = (dbMatch.audio_languages || dbMatch.tracks_data?.audio_languages || m.audioLanguages || [])
-          .map((l: any) => String(l).toLowerCase());
-        const hasPtBr = audioLangs.some((l: string) => l.includes('pt'));
-        
+        // Na vitrine: ocultar se não tem pt-br
         return hasPtBr;
       }
 

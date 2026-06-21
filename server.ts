@@ -1633,27 +1633,8 @@ async function startServer() {
   app.get("/api/media/:type/:id", async (req, res) => {
     try {
       console.log("[DEBUG] Tentando buscar mídias para DDI:", req.query.ddi);
-      const { type, id } = req.params;
-
-      // Normalizador de tipo: se for 'filme' -> 'movie', se for 'serie' -> 'tv'
-      let normalizedType = type;
-      if (type === "filme") {
-        normalizedType = "movie";
-      } else if (type === "serie") {
-        normalizedType = "tv";
-      }
-
-      const cleanId = String(id).replace(/\D/g, "");
-      const userDdi = String(req.query.ddi || "+55"); // Captura o DDI enviado pelo front
-
-      const season = req.query.s ? parseInt(String(req.query.s)) : null;
-      const episode = req.query.e ? parseInt(String(req.query.e)) : null;
-
-      // NORMALIZAÇÃO DE DICIONÁRIO FRONT -> DB
-      const isMovie =
-        normalizedType === "movie" || normalizedType === "trailer";
-      const catalogType = isMovie ? "movie" : "tv"; // Para media_catalog
-      const sourcesType = isMovie ? "movie" : "serie"; // Para invis_media_sources
+      const numericId = String(req.params.id).replace(/\D/g, "");
+      const mediaType = req.params.type === "series" ? "tv" : req.params.type;
 
       if (!supabase) {
         return res
@@ -1661,117 +1642,33 @@ async function startServer() {
           .json({ error: "Supabase client não configurado no servidor" });
       }
 
-      let mediaSource = null;
+      const { data } = await supabase
+        .from("media_catalog")
+        .select("title_id, media_type, stream_url, tracks_data")
+        .eq("title_id", numericId)
+        .in("media_type", [mediaType, "tv", "movie", "trailer"])
+        .single();
 
-      // 1. Busca em media_catalog direto no banco aplicando cleanId
-      if (!mediaSource) {
-        try {
-          const { data, error } = await supabase
-            .from("media_catalog")
-            .select("*")
-            .eq("title_id", cleanId)
-            .eq("media_type", catalogType)
-            .maybeSingle();
+      const streamUrl =
+        data?.stream_url || `https://vidsrc.me/embed/${mediaType}/${numericId}`;
 
-          if (!error && data && data.stream_url) {
-            mediaSource = {
-              stream_url: data.stream_url,
-              audio_languages: data.tracks_data?.audio_languages || [
-                "pt-BR",
-                "en-US",
-              ],
-              resolution: "1080p Ultra HD",
-              subtitles: data.tracks_data?.subtitles || [],
-              tracks_data: data.tracks_data,
-            };
-          }
-        } catch (e: any) {
-          console.warn(
-            "[Media Database] Erro tabela media_catalog:",
-            e.message,
-          );
-        }
-      }
+      const isMp4 = streamUrl.includes(".mp4");
+      const isIframe =
+        streamUrl.includes("vidsrc") ||
+        streamUrl.includes("embed.su") ||
+        streamUrl.includes("superflix");
 
-      // 3. Busca em invis_media_sources aplicando cleanId
-      if (!mediaSource) {
-        try {
-          let query = supabase
-            .from("invis_media_sources")
-            .select("*")
-            .eq("media_id", cleanId)
-            .eq("media_type", sourcesType);
-
-          if (!isMovie) {
-            if (season !== null) query = query.eq("season", season);
-            if (episode !== null) query = query.eq("episode", episode);
-          }
-
-          const { data, error } = await query.maybeSingle();
-          if (!error && data && data.stream_url) {
-            mediaSource = {
-              stream_url: data.stream_url,
-              audio_languages: data.audio_languages || ["pt-BR", "en-US"],
-              resolution: data.resolution || "1080p Ultra HD",
-              subtitles: data.subtitles || [],
-              tracks_data: {
-                audio_languages: data.audio_languages,
-                subtitles: data.subtitles,
-              },
-            };
-          }
-        } catch (e: any) {
-          console.warn(
-            "[Media Database] Erro tabela invis_media_sources:",
-            e.message,
-          );
-        }
-      }
-
-      if (!mediaSource || !mediaSource.stream_url) {
-        return res
-          .status(404)
-          .json({ success: false, error: "SINAL INDISPONÍVEL" });
-      }
-
-      // Determina a trilha prioritária antes de enviar ao Player [5]
-      const userLangPreference = getDefaultLanguageByDdi(userDdi); // Ex: 'PT-BR', 'ES', 'EN'
-      const audioLangs = mediaSource.audio_languages || [];
-      const priorityAudio = audioLangs.find((l: string) =>
-        l.toUpperCase().includes(userLangPreference.toUpperCase()),
-      );
-
-      const isMp4 = mediaSource.stream_url.includes(".mp4");
-      return res.json({
+      return res.status(200).json({
         success: true,
         status: "active",
-        stream_url: mediaSource.stream_url,
-        source_type: isMp4 ? "mp4" : "video",
-        resolution: mediaSource.resolution || "1080p (FHD)",
-        tracks_data: mediaSource.tracks_data || {
-          audio_languages: audioLangs,
-          subtitles: mediaSource.subtitles || [],
-        },
-        recommended_audio: priorityAudio || "en-US",
-        audios: audioLangs.map((lang: string, idx: number) => ({
-          id: lang.toLowerCase().includes("pt") ? "pt-BR" : "en-US",
-          label: lang.toLowerCase().includes("pt")
-            ? "Português (Brasil) - Dublado"
-            : `English - Original (${lang.toUpperCase()})`,
-          isDefault: priorityAudio
-            ? lang.toUpperCase().includes(priorityAudio.toUpperCase()) ||
-              priorityAudio.toUpperCase().includes(lang.toUpperCase())
-            : idx === 0,
-        })),
-        subtitles: [
-          { id: "pt-BR", label: "Português (Brasil)" },
-          { id: "en-US", label: "English Sub" },
-          { id: "OFF", label: "Desligado" },
-        ],
+        stream_url: streamUrl,
+        source_type: isIframe ? "iframe" : isMp4 ? "mp4" : "video",
+        resolution: "1080p (FHD)",
+        tracks_data: data?.tracks_data || { audio_languages: ["pt-BR"] },
       });
     } catch (err: any) {
       console.error("[INVIS SERVER ERROR]:", err.message);
-      return res.status(500).json({
+      return res.status(200).json({
         success: false,
         error: "Falha interna no motor de roteamento de mídia",
       });
@@ -1789,15 +1686,17 @@ async function startServer() {
 
       if (error) {
         console.error("[CATALOG ERROR]", error.message);
-        return res.status(200).json({ success: true, active_titles: [], error: error.message });
+        return res
+          .status(200)
+          .json({ success: true, active_titles: [], error: error.message });
       }
 
-      const active_titles = (data || []).map(item => ({
+      const active_titles = (data || []).map((item) => ({
         title_id: item.title_id,
         media_type: item.media_type,
         id: `tmdb-${item.title_id}`,
         audio_languages: item.tracks_data?.audio_languages || ["pt-BR"],
-        tracks_data: item.tracks_data
+        tracks_data: item.tracks_data,
       }));
 
       return res.status(200).json({ success: true, active_titles });
