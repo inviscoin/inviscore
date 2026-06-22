@@ -1,4 +1,6 @@
 // Proxy via Edge Functions
+import server from "../server";
+
 const EDGE = 'https://boguvusudhusqvwhgywu.supabase.co/functions/v1';
 
 export default async function handler(req: any, res: any) {
@@ -25,8 +27,8 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json(await r.json());
     }
 
-    // Qualquer outra rota /api/*
-    return res.status(404).json({ success: false, error: 'Not found' });
+    // Se for rota de proxy ou baseada em server.ts, delega
+    return server(req, res);
 
   } catch (e: any) {
     return res.status(200).json({ success: true, active_titles: [], error: e.message });

@@ -1653,18 +1653,31 @@ async function startServer() {
         data?.stream_url || `https://vidsrc.me/embed/${mediaType}/${numericId}`;
 
       const isMp4 = streamUrl.includes(".mp4");
-      const isIframe =
-        streamUrl.includes("vidsrc") ||
-        streamUrl.includes("embed.su") ||
-        streamUrl.includes("superflix");
+      const isIframe = streamUrl.includes("vidsrc") || streamUrl.includes("embed.su") || streamUrl.includes("superflix");
+      const isYoutube = streamUrl.includes("youtube.com") || streamUrl.includes("youtu.be");
+      const isArchive = streamUrl.includes("archive.org");
+
+      let finalStreamUrl = streamUrl;
+      let finalSourceType = isIframe ? "iframe" : (isMp4 ? "mp4" : "video");
+
+      if (isYoutube) {
+        finalSourceType = "youtube";
+        const ytMatch = streamUrl.match(/(?:v=|youtu\.be\/|embed\/)([^&]+)/);
+        if (ytMatch && ytMatch[1]) {
+           finalStreamUrl = `https://www.youtube.com/embed/${ytMatch[1]}?enablejsapi=1&autoplay=1&controls=0&rel=0`;
+        }
+      } else if (isArchive) {
+        finalStreamUrl = `/api/proxy/media?url=${encodeURIComponent(streamUrl)}`;
+        finalSourceType = isMp4 ? "mp4" : "video";
+      }
 
       return res.status(200).json({
         success: true,
         status: "active",
-        stream_url: streamUrl,
-        source_type: isIframe ? "iframe" : isMp4 ? "mp4" : "video",
+        stream_url: finalStreamUrl,
+        source_type: finalSourceType,
         resolution: "1080p (FHD)",
-        tracks_data: data?.tracks_data || { audio_languages: ["pt-BR"] },
+        tracks_data: data?.tracks_data || { audio_languages: ["pt-BR"], subtitles: [] }
       });
     } catch (err: any) {
       console.error("[INVIS SERVER ERROR]:", err.message);
@@ -2289,6 +2302,69 @@ async function startServer() {
     } catch (e: any) {
       console.error("Error generating LiveKit token:", e);
       res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Proxy de Mídia / Proxy de Legendas
+  app.get("/api/proxy/media", async (req, res) => {
+    let { url, referer, origin } = req.query;
+    if (!url || typeof url !== "string") {
+      return res.status(400).send("Missing url query param");
+    }
+
+    try {
+      url = decodeURIComponent(url);
+      const parsedUrl = new URL(url);
+      const headersToPass: Record<string, string> = {
+        'User-Agent': 'Mozilla/5.0',
+        'Referer': typeof referer === 'string' ? referer : parsedUrl.origin,
+        'Origin': typeof origin === 'string' ? origin : parsedUrl.origin
+      };
+
+      if (req.headers.range) {
+        headersToPass['Range'] = req.headers.range;
+      }
+
+      const proxyReq = await fetch(url, { method: req.method, headers: headersToPass });
+
+      const headersToForward = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'access-control-allow-origin'];
+      proxyReq.headers.forEach((value, key) => {
+        if (headersToForward.includes(key.toLowerCase())) {
+          res.setHeader(key, value);
+        }
+      });
+      res.setHeader('Access-Control-Allow-Origin', '*');
+
+      // Se for pedida legenda e vier res.text SRT, converte pra VTT (básico)
+      if (req.query.type === 'subtitle') {
+         let text = await proxyReq.text();
+         if (!text.startsWith('WEBVTT')) {
+             // Basic SRT to VTT
+             text = "WEBVTT\n\n" + text.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2");
+         }
+         res.setHeader("Content-Type", "text/vtt;charset=utf-8");
+         return res.status(200).send(text);
+      }
+
+      res.status(proxyReq.status);
+
+      if (proxyReq.body) {
+        const reader = proxyReq.body.getReader();
+        const pump = async () => {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            res.write(value);
+          }
+          res.end();
+        };
+        pump().catch(console.error);
+      } else {
+        res.end();
+      }
+    } catch (err: any) {
+      console.error("[Media Proxy] Error:", err.message);
+      res.status(500).send("Proxy error");
     }
   });
 

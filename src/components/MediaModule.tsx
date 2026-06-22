@@ -2537,6 +2537,31 @@ export const MediaModule: React.FC = () => {
       setDuration(video.duration);
       video.volume = movieVolume / 100;
 
+      // Auto Audio Track selection based on DDI (Native Safari / MP4)
+      let audioTracks = (video as any).audioTracks;
+      if (audioTracks && audioTracks.length > 1) {
+        let selectedIndex = 0;
+        const ddi = currentUser?.ddi?.trim() || "";
+        
+        for (let i = 0; i < audioTracks.length; i++) {
+          const t = audioTracks[i];
+          const lang = t.language?.toLowerCase() || '';
+          const name = t.label?.toLowerCase() || '';
+          
+          if (ddi === "+55" && (lang.includes("pt") || name.includes("pt") || name.includes("por") || name.includes("dub"))) {
+            selectedIndex = i;
+            break;
+          } else if (ddi !== "+55" && (lang.includes("en") || name.includes("en"))) {
+            selectedIndex = i;
+          }
+        }
+        
+        for (let i = 0; i < audioTracks.length; i++) {
+          audioTracks[i].enabled = (i === selectedIndex);
+        }
+        console.log(`[PLAYER NATIVO] Auto-seleção de áudio via DDI (${ddi}): ativada faixa ${selectedIndex}`);
+      }
+
       // Load exact progress from local storage
       if (selectedMovie) {
         const progressObj = JSON.parse(
@@ -5983,7 +6008,7 @@ export const MediaModule: React.FC = () => {
                           id="youtube-player-block"
                           className="w-full aspect-video bg-black relative rounded-2xl overflow-hidden border border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.3)] group/player"
                         >
-                          {bouncerStreamData?.source_type === "iframe" ? (
+                          {bouncerStreamData?.source_type === "iframe" || bouncerStreamData?.source_type === "youtube" ? (
                             <iframe
                               src={(bouncerStreamData.stream_url || "").replace(
                                 /tmdb-/g,
@@ -6020,7 +6045,19 @@ export const MediaModule: React.FC = () => {
                               playsInline={true}
                               preload="auto"
                               muted={movieVolume === 0}
-                            />
+                              crossOrigin="anonymous"
+                            >
+                              {/* Legendas Dinâmicas API Externa */}
+                              {bouncerStreamData?.tracks_data?.subtitle_url && movieSubtitle !== "OFF" && (
+                                <track
+                                  kind="subtitles"
+                                  src={`/api/proxy/media?url=${encodeURIComponent(bouncerStreamData.tracks_data.subtitle_url)}&type=subtitle`}
+                                  srcLang="pt-BR"
+                                  label="Português"
+                                  default
+                                />
+                              )}
+                            </video>
                           )}
 
                           {/* Top Center: Alert HUD Notification for player parameter changes */}
