@@ -71,12 +71,12 @@ export const SupabaseService = {
     if (!error) return;
     
     const errMsg = error.message || '';
-    const isInvalidKey = errMsg.includes('Invalid API key') || errMsg.includes('apiKey') || error.status === 401 || error.code === 'PGRST301' || errMsg.includes('fetch failed') || errMsg.includes('Failed to fetch');
+    const isInvalidKey = errMsg.includes('Invalid API key') || errMsg.includes('apiKey') || error.status === 401 || error.code === 'PGRST301';
     
     if (isInvalidKey) {
       if (!isApiKeyInvalid) {
         isApiKeyInvalid = true;
-        console.warn(`[INVIS Sync Offline] Supabase detectou chave/URL inválida ao ${contextDescription}. Sincronização remota temporariamente desativada (Modo Offline Local emulado).`);
+        console.warn(`[INVIS Sync Offline] Supabase detectou chave de API inválida ao ${contextDescription}. Sincronização remota temporariamente desativada (Modo Offline Local emulado).`);
       }
       return;
     }
@@ -147,7 +147,7 @@ export const SupabaseService = {
           .or(orConditions.join(','));
 
         if (error) {
-          SupabaseService.handleError(error, 'buscar duplicidade de perfil no Supabase');
+          console.warn("Erro ao buscar duplicidade no Supabase:", error);
           return { exists: false };
         }
 
@@ -197,8 +197,7 @@ export const SupabaseService = {
       let finalUser = null;
 
       // Check if user is already authenticated via OAuth but just missing a profile
-      const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
-      if (sessionErr) this.handleError(sessionErr, 'verificar sessão local');
+      const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData?.session?.user && sessionData.session.user.email === email) {
          finalUser = sessionData.session.user;
          
@@ -214,17 +213,7 @@ export const SupabaseService = {
              data: profileData
            }
          });
-         
-         if (error) {
-           this.handleError(error, 'realizar cadastro');
-           if (!isSupabaseConfigured()) {
-             // Fallback has been triggered by handleError
-             const tempId = 'usr_' + Math.random().toString(36).substring(2, 9);
-             return { data: { user: { id: tempId, email, ...profileData } }, error: null };
-           }
-           return { data: null, error };
-         }
-         
+         if (error) return { data: null, error };
          finalUser = data.user;
       }
 
@@ -296,7 +285,6 @@ export const SupabaseService = {
       });
 
       if (error) {
-        this.handleError(error, 'realizar login');
         // Robust fallback to local credentials if Supabase auth fails (e.g., email unconfirmed, temporary Postgres offline)
         const list = getLocalProfiles();
         const cleanPhone = identifier.trim().replace(/\D/g, '');

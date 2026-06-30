@@ -76,6 +76,7 @@ export interface Movie {
   likes?: number;
   trendDays?: number;
   actors?: string[];
+  director?: string;
   production?: string;
   streamUrl?: string;
   audioLanguages?: string[];

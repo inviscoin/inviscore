@@ -408,13 +408,10 @@ async function startServer() {
         .select("id, title_id, media_type, tracks_data, stream_url");
 
       if (selectError) {
-        const errMsg = selectError.message || '';
-        if (!errMsg.includes("fetch failed") && !errMsg.includes("Failed to fetch")) {
-          console.warn(
-            "[INVIS NORMALIZER ERROR] Falha ao ler catálogo para normalização:",
-            selectError.message,
-          );
-        }
+        console.warn(
+          "[INVIS NORMALIZER ERROR] Falha ao ler catálogo para normalização:",
+          selectError.message,
+        );
         return;
       }
 
@@ -477,10 +474,7 @@ async function startServer() {
         `[INVIS NORMALIZER] Normalização remota finalizada. ${normalizedCount} itens normatizados.`,
       );
     } catch (err: any) {
-      const errMsg = err.message || '';
-      if (!errMsg.includes("fetch failed") && !errMsg.includes("Failed to fetch")) {
-        console.warn("[INVIS NORMALIZER ERROR] Erro inesperado:", err.message);
-      }
+      console.warn("[INVIS NORMALIZER ERROR] Erro inesperado:", err.message);
     }
   }
 
@@ -730,43 +724,6 @@ async function startServer() {
   };
 
   // Simulate Health Check for VOD links (crawler matchmaking) periodically - All checks mapped physically to media_catalog in Supabase.
-
-  // --- MÓDULO: SISTEMA INTERNO (INVISCORE BRIDGE SSO) ---
-  // Rota que simula um microsserviço consumindo a sessão principal do hub
-  // Isso unifica o conceito de SSO sem precisar de um monorepo real
-  app.get("/api/sistema-interno/profile", requireAuth, async (req, res) => {
-    try {
-      const user = (req as any).user;
-      if (!user || !user.id) {
-        return res.status(401).json({ success: false, error: "SSO Inválido: Sessão não propagada pelo Bridge." });
-      }
-
-      // Consome o banco de dados centralizado do Inviscore para buscar dados adicionais
-      // Simulando a query do DrizzleORM solicitada, mas usando o Supabase nativo do projeto
-      const { data: userProfile, error } = await supabase
-        .from("invis_users") // Tabela simulada de usuários estendidos
-        .select("*")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      return res.status(200).json({
-        success: true,
-        bridge_status: "ACTIVE",
-        ecosystem: "INVISCORE_INTERNAL",
-        data: {
-          userId: user.id,
-          email: user.email,
-          roles: user.role || ["user"],
-          profile: userProfile || { 
-            name: user.email.split("@")[0], 
-            virtual_status: "Integrated via INVISCORE SSO" 
-          }
-        }
-      });
-    } catch (error: any) {
-      return res.status(500).json({ success: false, error: error.message });
-    }
-  });
 
   // API Route - TMDB Trending (fetches pages 1 to 4 to ensure up to 50 unique movies/tv shows)
   app.get("/api/tmdb/trending", async (req, res) => {
@@ -1146,14 +1103,20 @@ async function startServer() {
         }
       }
 
-      // 2. Credits (Actors)
+      // 2. Credits (Actors and Director)
       let actors: string[] = ["Informação não disponível"];
+      let director = "Não informado";
       const creditsUrl = `https://api.themoviedb.org/3/${apiType}/${numericId}/credits?api_key=${apiKey}&language=pt-BR`;
       const credits = await safeFetchJson(creditsUrl);
       if (credits) {
         const cast = credits.cast || [];
         if (cast.length > 0) {
           actors = cast.map((c: any) => c.name).slice(0, 5);
+        }
+        const crew = credits.crew || [];
+        const directorData = crew.find((c: any) => c.job === "Director");
+        if (directorData) {
+          director = directorData.name;
         }
       }
 
@@ -1204,7 +1167,8 @@ async function startServer() {
       res.json({
         duration,
         production,
-        actors,
+        director,
+        actors: actors.join(", "),
         videoUrl: videoUrl || "https://www.youtube.com/embed/dQw4w9WgXcQ", // fallback to rickroll if absolutely no trailer
         streamUrl: temporaryVirtualUrl,
       });
@@ -1690,7 +1654,7 @@ async function startServer() {
         .select("title_id, media_type, stream_url, tracks_data")
         .eq("title_id", numericId)
         .in("media_type", [mediaType, "tv", "movie", "trailer"])
-        .single();
+        .maybeSingle();
 
       const streamUrl =
         data?.stream_url || `https://vidsrc.me/embed/${mediaType}/${numericId}`;
@@ -2115,12 +2079,9 @@ async function startServer() {
 
             if (dbError) {
               const safeTitleForLog = title.replace(/error/gi, "e-rror");
-              const errMsg = dbError.message || String(dbError) || '';
-              if (!errMsg.includes("fetch failed") && !errMsg.includes("Failed to fetch")) {
-                console.warn(
-                  `[INVIS CRAWLER BACKUP FALLBACK] Falha no banco para "${safeTitleForLog}": ${dbError.message || dbError}.`,
-                );
-              }
+              console.warn(
+                `[INVIS CRAWLER BACKUP FALLBACK] Falha no banco para "${safeTitleForLog}": ${dbError.message || dbError}.`,
+              );
               saveToLocalCatalog({
                 title_id: tmdbId,
                 media_type: targetType,
