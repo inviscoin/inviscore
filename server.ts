@@ -408,10 +408,13 @@ async function startServer() {
         .select("id, title_id, media_type, tracks_data, stream_url");
 
       if (selectError) {
-        console.warn(
-          "[INVIS NORMALIZER ERROR] Falha ao ler catálogo para normalização:",
-          selectError.message,
-        );
+        const errMsg = selectError.message || '';
+        if (!errMsg.includes("fetch failed") && !errMsg.includes("Failed to fetch")) {
+          console.warn(
+            "[INVIS NORMALIZER ERROR] Falha ao ler catálogo para normalização:",
+            selectError.message,
+          );
+        }
         return;
       }
 
@@ -474,7 +477,10 @@ async function startServer() {
         `[INVIS NORMALIZER] Normalização remota finalizada. ${normalizedCount} itens normatizados.`,
       );
     } catch (err: any) {
-      console.warn("[INVIS NORMALIZER ERROR] Erro inesperado:", err.message);
+      const errMsg = err.message || '';
+      if (!errMsg.includes("fetch failed") && !errMsg.includes("Failed to fetch")) {
+        console.warn("[INVIS NORMALIZER ERROR] Erro inesperado:", err.message);
+      }
     }
   }
 
@@ -2109,9 +2115,12 @@ async function startServer() {
 
             if (dbError) {
               const safeTitleForLog = title.replace(/error/gi, "e-rror");
-              console.warn(
-                `[INVIS CRAWLER BACKUP FALLBACK] Falha no banco para "${safeTitleForLog}": ${dbError.message || dbError}.`,
-              );
+              const errMsg = dbError.message || String(dbError) || '';
+              if (!errMsg.includes("fetch failed") && !errMsg.includes("Failed to fetch")) {
+                console.warn(
+                  `[INVIS CRAWLER BACKUP FALLBACK] Falha no banco para "${safeTitleForLog}": ${dbError.message || dbError}.`,
+                );
+              }
               saveToLocalCatalog({
                 title_id: tmdbId,
                 media_type: targetType,
