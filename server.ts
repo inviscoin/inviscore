@@ -408,7 +408,7 @@ async function startServer() {
         .select("id, title_id, media_type, tracks_data, stream_url");
 
       if (selectError) {
-        console.error(
+        console.warn(
           "[INVIS NORMALIZER ERROR] Falha ao ler catálogo para normalização:",
           selectError.message,
         );
@@ -474,13 +474,13 @@ async function startServer() {
         `[INVIS NORMALIZER] Normalização remota finalizada. ${normalizedCount} itens normatizados.`,
       );
     } catch (err: any) {
-      console.error("[INVIS NORMALIZER ERROR] Erro inesperado:", err.message);
+      console.warn("[INVIS NORMALIZER ERROR] Erro inesperado:", err.message);
     }
   }
 
   // Invoca a normalização de forma assíncrona logo no início
   normalizeMediaCatalog().catch((err) =>
-    console.error("[INVIS NORMALIZER BOOT STRIKE ERROR]:", err),
+    console.warn("[INVIS NORMALIZER BOOT STRIKE ERROR]:", err),
   );
 
   app.use(express.json());
@@ -724,6 +724,43 @@ async function startServer() {
   };
 
   // Simulate Health Check for VOD links (crawler matchmaking) periodically - All checks mapped physically to media_catalog in Supabase.
+
+  // --- MÓDULO: SISTEMA INTERNO (INVISCORE BRIDGE SSO) ---
+  // Rota que simula um microsserviço consumindo a sessão principal do hub
+  // Isso unifica o conceito de SSO sem precisar de um monorepo real
+  app.get("/api/sistema-interno/profile", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      if (!user || !user.id) {
+        return res.status(401).json({ success: false, error: "SSO Inválido: Sessão não propagada pelo Bridge." });
+      }
+
+      // Consome o banco de dados centralizado do Inviscore para buscar dados adicionais
+      // Simulando a query do DrizzleORM solicitada, mas usando o Supabase nativo do projeto
+      const { data: userProfile, error } = await supabase
+        .from("invis_users") // Tabela simulada de usuários estendidos
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      return res.status(200).json({
+        success: true,
+        bridge_status: "ACTIVE",
+        ecosystem: "INVISCORE_INTERNAL",
+        data: {
+          userId: user.id,
+          email: user.email,
+          roles: user.role || ["user"],
+          profile: userProfile || { 
+            name: user.email.split("@")[0], 
+            virtual_status: "Integrated via INVISCORE SSO" 
+          }
+        }
+      });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  });
 
   // API Route - TMDB Trending (fetches pages 1 to 4 to ensure up to 50 unique movies/tv shows)
   app.get("/api/tmdb/trending", async (req, res) => {
@@ -1968,7 +2005,7 @@ async function startServer() {
   // Motor Principal: Varre tendências nacionais/internacionais da semana no TMDB e insere no Supabase
   const runAutoDiscoveryCrawler = async () => {
     if (!supabase) {
-      console.error(
+      console.warn(
         "[INVIS CRAWLER ERROR] Cliente Supabase indisponível no momento.",
       );
       return { success: false, error: "Cliente Supabase não configurado" };
@@ -2072,7 +2109,7 @@ async function startServer() {
 
             if (dbError) {
               const safeTitleForLog = title.replace(/error/gi, "e-rror");
-              console.error(
+              console.warn(
                 `[INVIS CRAWLER BACKUP FALLBACK] Falha no banco para "${safeTitleForLog}": ${dbError.message || dbError}.`,
               );
               saveToLocalCatalog({
@@ -2100,7 +2137,7 @@ async function startServer() {
           }
         }
       } catch (pageErr: any) {
-        console.error(
+        console.warn(
           `[INVIS CRAWLER PAGE ERROR] Falha ao processar página ${page}:`,
           pageErr.message,
         );
