@@ -26,11 +26,11 @@ const supabaseAnonKey = cleanEnvVar(rawKey);
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+const hasEnvVars = !!((import.meta as any).env.VITE_SUPABASE_URL || (import.meta as any).env.NEXT_PUBLIC_SUPABASE_URL);
+
 export const isSupabaseConfigured = () => {
   if (isApiKeyInvalid) return false;
-  // Fallback credentials embedded above are active and verified. 
-  // It returns true unless a query actively triggers isApiKeyInvalid = true.
-  return true;
+  return hasEnvVars;
 };
 
 // Local Mock database for offline/local fallback
