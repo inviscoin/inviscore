@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useInvis, DICTIONARY } from '../context/InvisContext';
 import { useTranslation } from '../hooks/useTranslation';
-import { LogOut, Globe, TrendingUp, Wallet, Menu, X, Shield, Cpu, RefreshCw, Zap, Award, Sparkles, Store, ShieldCheck, Moon } from 'lucide-react';
+import { LogOut, Globe, TrendingUp, Wallet, Menu, X, Shield, Cpu, RefreshCw, Zap, Award, Sparkles, Store, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SettingsModal } from './SettingsModal';
 import { SupabaseService } from '../lib/supabase';
@@ -122,21 +122,6 @@ export const HeaderTop: React.FC<HeaderTopProps> = ({ onOpenWallet, onOpenShop, 
             <span className="w-1.5 h-1.5 rounded-full bg-[#00FF80] animate-pulse" />
             <span className="text-[8px] font-mono tracking-wide text-neutral-400 uppercase hidden sm:inline">{systemStatus}</span>
           </div>
-
-          {/* Focus Mode Activator */}
-          <button 
-            id="hdr_focus_mode_btn"
-            onClick={() => {
-               if (currentUser) {
-                  setCurrentUser({ ...currentUser, focusModeActive: !currentUser.focusModeActive });
-               }
-               if (navigator.vibrate) navigator.vibrate(20);
-            }}
-            className={`p-1.5 sm:p-2 rounded-full border transition-all cursor-pointer flex items-center justify-center ${currentUser?.focusModeActive ? 'border-yellow-400/50 bg-yellow-400/20 text-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.3)]' : 'border-neutral-800 bg-neutral-900/30 hover:border-yellow-400/50 text-neutral-400'}`}
-            title="Modo Foco (Escurecer Tela)"
-          >
-            <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          </button>
 
           {/* AI Search Activator */}
           <button 

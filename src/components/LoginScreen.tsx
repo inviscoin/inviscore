@@ -10,8 +10,6 @@ import { SupabaseService, isSupabaseConfigured, supabase } from '../lib/supabase
 import { useGoogleLogin } from '@react-oauth/google';
 import { getLocalProfiles } from '../lib/supabase';
 
-import { startAuthentication } from '@simplewebauthn/browser';
-
 export const LoginScreen: React.FC = () => {
   const { 
     setStage, language, setLangDrawerOpen,
@@ -27,76 +25,6 @@ export const LoginScreen: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const { currentTexts } = useTranslation();
-
-  const handleWebAuthnLogin = async () => {
-    if (!email) {
-      setModalObj({ title: "E-mail Necessário", message: "Insira seu e-mail para usar o login biométrico.", type: "error" });
-      return;
-    }
-    setAuthStatusText("Inicializando Biometria...");
-    setShowScanner(true);
-    try {
-      // Mock flow with our Express backend
-      const optsResp = await fetch('/api/webauthn/generate-options', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      const options = await optsResp.json();
-      
-      // In a real flow with simplewebauthn:
-      let asseResp;
-      try {
-        asseResp = await startAuthentication(options);
-      } catch (authErr: any) {
-        // se cancelar ou falhar a biometria do browser:
-        throw new Error("Biometria cancelada ou dispositivo não compatível. " + authErr.message);
-      }
-      
-      const verifyResp = await fetch('/api/webauthn/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, response: asseResp })
-      });
-      const verifyResult = await verifyResp.json();
-      
-      if (verifyResult.verified) {
-         // Bypass login with biometric confirmation
-         const list = getLocalProfiles();
-         let found = list.find((p: any) => p.email?.toLowerCase().trim() === email.toLowerCase().trim());
-         if (!found) {
-            found = {
-              id: 'bio-' + Date.now(),
-              email: email,
-              fullName: email.split('@')[0],
-              tier: 'FREE'
-            };
-         }
-         setCurrentUser({
-            id: found.id,
-            fullName: found.full_name || found.fullName || found.email?.split('@')[0] || "Membro Biométrico",
-            nickname: found.nickname || found.email?.split('@')[0] || "BioUser",
-            email: found.email,
-            phone: found.phone || '+5511999999999',
-            ddi: found.ddi || '+55',
-            birthDate: found.birth_date || found.birthDate || '1995-10-31',
-            age: found.age || 30,
-            tier: found.tier || 'FREE',
-            ageGroup: (found.age || 30) < 18 ? 'Kids' : 'Adult',
-            isActive: true,
-            termsAccepted: true,
-            biometricsActive: true
-         });
-         setShowScanner(false);
-         setStage('dashboard');
-      } else {
-        throw new Error("Falha na validação biométrica");
-      }
-    } catch (err: any) {
-      setShowScanner(false);
-      setModalObj({ title: "Falha na Biometria", message: err.message || "Não foi possível autenticar.", type: "error" });
-    }
-  };
 
   useEffect(() => {
     const handleOauthNotFound = () => {
@@ -153,7 +81,7 @@ export const LoginScreen: React.FC = () => {
       // InvisContext onAuthStateChange will handle redirection otherwise
     } catch (err: any) {
       setShowScanner(false);
-      setModalObj({ title: "Falha na Autenticação", message: err.message || currentTexts.login_err_invalid || "E-mail ou senha incorretos.", type: "error" });
+      setModalObj({ title: "Falha na Autenticação", message: currentTexts.login_err_invalid || "E-mail ou senha incorretos.", type: "error" });
     }
   };
 
@@ -355,20 +283,6 @@ export const LoginScreen: React.FC = () => {
               </p>
 
               <div className="grid grid-cols-1 gap-2 w-full">
-                <button
-                  type="button"
-                  onClick={handleWebAuthnLogin}
-                  className="relative w-full flex items-center justify-center gap-3 rounded-xl border border-white/5 bg-black/30 hover:bg-[#00c8ff]/10 transition-all cursor-pointer py-3 outline-none group"
-                  style={{ WebkitTapHighlightColor: 'transparent' }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-cyan-400">
-                    <path d="M12 2a10 10 0 0 0-10 10c0 5.52 4.48 10 10 10s10-4.48 10-10A10 10 0 0 0 12 2z"></path>
-                    <path d="M12 6v6l4 2"></path>
-                    <path d="M10 9a2 2 0 1 0 0 4 2 2 0 1 0 0-4z"></path>
-                  </svg>
-                  <span className="text-sm font-sans font-medium text-neutral-300 group-hover:text-white">Login Biométrico (WebAuthn)</span>
-                </button>
-
                 <button
                   type="button"
                   onClick={() => loginWithGoogle()}

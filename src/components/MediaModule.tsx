@@ -1724,7 +1724,6 @@ export const MediaModule: React.FC = () => {
         const mergedMovie = {
           ...movie,
           actors: details.actors,
-          director: details.director,
           production: details.production,
           totalDuration: details.duration,
           videoUrl: details.videoUrl || movie.videoUrl,
@@ -1938,7 +1937,44 @@ export const MediaModule: React.FC = () => {
 
   const memoizedCategories = React.useMemo(() => {
     const filterByDbExistenceAndDdi = (m: Movie) => {
-      // Allow all movies to be displayed to make the hub look rich and fully featured like nuvix
+      if (
+        m.id.startsWith("c") ||
+        m.id.startsWith("s") ||
+        m.id.startsWith("p")
+      ) {
+        return true;
+      }
+
+      if (catalogLoaded && indexedDbCatalog.length === 0) {
+        return true;
+      }
+
+      const dbMatch = indexedDbCatalog.find(
+        (dbItem) =>
+          String(dbItem.title_id).replace(/\D/g, "") ===
+          String(m.id).replace(/\D/g, ""),
+      );
+
+      if (!dbMatch) {
+        if (searchQuery.trim() !== "") {
+          return true; // Exibe resultados de busca retornados da API do TMDB
+        }
+        return false;
+      }
+
+      if (currentUser?.ddi === "+55") {
+        const hasQuery = searchQuery.trim() !== "";
+        if (hasQuery) {
+          return true;
+        }
+
+        const audioLangs = (dbMatch.audio_languages || dbMatch.tracks_data?.audio_languages || m.audioLanguages || [])
+          .map((l: any) => String(l).toLowerCase());
+        const hasPtBr = audioLangs.some((l: string) => l.includes('pt'));
+        
+        return hasPtBr;
+      }
+
       return true;
     };
 
@@ -2495,31 +2531,6 @@ export const MediaModule: React.FC = () => {
     if (video) {
       setDuration(video.duration);
       video.volume = movieVolume / 100;
-
-      // Auto Audio Track selection based on DDI (Native Safari / MP4)
-      let audioTracks = (video as any).audioTracks;
-      if (audioTracks && audioTracks.length > 1) {
-        let selectedIndex = 0;
-        const ddi = currentUser?.ddi?.trim() || "";
-        
-        for (let i = 0; i < audioTracks.length; i++) {
-          const t = audioTracks[i];
-          const lang = t.language?.toLowerCase() || '';
-          const name = t.label?.toLowerCase() || '';
-          
-          if (ddi === "+55" && (lang.includes("pt") || name.includes("pt") || name.includes("por") || name.includes("dub"))) {
-            selectedIndex = i;
-            break;
-          } else if (ddi !== "+55" && (lang.includes("en") || name.includes("en"))) {
-            selectedIndex = i;
-          }
-        }
-        
-        for (let i = 0; i < audioTracks.length; i++) {
-          audioTracks[i].enabled = (i === selectedIndex);
-        }
-        console.log(`[PLAYER NATIVO] Auto-seleção de áudio via DDI (${ddi}): ativada faixa ${selectedIndex}`);
-      }
 
       // Load exact progress from local storage
       if (selectedMovie) {
@@ -5853,9 +5864,6 @@ export const MediaModule: React.FC = () => {
                               <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5">
                                 Produtor: {selectedMovie.production || "N/A"}
                               </span>
-                              <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5">
-                                Diretor: {selectedMovie.director || "N/A"}
-                              </span>
                             </div>
 
                             <div className="space-y-1.5 pb-2 pl-1">
@@ -5970,7 +5978,7 @@ export const MediaModule: React.FC = () => {
                           id="youtube-player-block"
                           className="w-full aspect-video bg-black relative rounded-2xl overflow-hidden border border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.3)] group/player"
                         >
-                          {bouncerStreamData?.source_type === "iframe" || bouncerStreamData?.source_type === "youtube" ? (
+                          {bouncerStreamData?.source_type === "iframe" ? (
                             <iframe
                               src={(bouncerStreamData.stream_url || "").replace(
                                 /tmdb-/g,
@@ -6007,19 +6015,7 @@ export const MediaModule: React.FC = () => {
                               playsInline={true}
                               preload="auto"
                               muted={movieVolume === 0}
-                              crossOrigin="anonymous"
-                            >
-                              {/* Legendas Dinâmicas API Externa */}
-                              {bouncerStreamData?.tracks_data?.subtitle_url && movieSubtitle !== "OFF" && (
-                                <track
-                                  kind="subtitles"
-                                  src={`/api/proxy/media?url=${encodeURIComponent(bouncerStreamData.tracks_data.subtitle_url)}&type=subtitle`}
-                                  srcLang="pt-BR"
-                                  label="Português"
-                                  default
-                                />
-                              )}
-                            </video>
+                            />
                           )}
 
                           {/* Top Center: Alert HUD Notification for player parameter changes */}

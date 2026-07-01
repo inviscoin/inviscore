@@ -18,7 +18,6 @@ export interface UserProfile {
   ipAcceptance?: string;
   timestampAcceptance?: string;
   biometricsActive: boolean;
-  focusModeActive?: boolean;
 }
 
 export interface WalletState {
@@ -77,7 +76,6 @@ export interface Movie {
   likes?: number;
   trendDays?: number;
   actors?: string[];
-  director?: string;
   production?: string;
   streamUrl?: string;
   audioLanguages?: string[];

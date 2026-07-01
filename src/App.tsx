@@ -5,7 +5,6 @@ import { LockScreen } from './components/LockScreen';
 import { LoginScreen } from './components/LoginScreen';
 import { RegisterScreen } from './components/RegisterScreen';
 import { SupportPasswordScreen } from './components/SupportPasswordScreen';
-import { UpdatePasswordScreen } from './components/UpdatePasswordScreen';
 import { OnboardingFlow } from './components/OnboardingFlow';
 import { DashboardMaster } from './components/DashboardMaster';
 import { HeaderTop } from './components/HeaderTop';
@@ -125,8 +124,6 @@ function AppContent() {
         return <LoginScreen key="login" />;
       case 'support_password':
         return <SupportPasswordScreen key="support_password" />;
-      case 'update_password':
-        return <UpdatePasswordScreen key="update_password" />;
       case 'register':
         return <RegisterScreen key="register" />;
       case 'onboarding_age':

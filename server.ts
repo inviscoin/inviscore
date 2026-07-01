@@ -1,5 +1,4 @@
 import express from "express";
-import { generateAuthenticationOptions, verifyAuthenticationResponse } from "@simplewebauthn/server";
 import path from "path";
 import dns from "dns";
 import fs from "fs";
@@ -54,13 +53,8 @@ const supabase =
           schema: "public",
         },
         global: {
-          fetch: async (url: any, init: any) => {
-            try {
-              return await fetch(url, { ...init, signal: AbortSignal.timeout(5000) });
-            } catch (err: any) {
-              return new Response(JSON.stringify({ error: err.message || "Fetch failed" }), { status: 502 });
-            }
-          }
+          fetch: (url: any, init: any) =>
+            fetch(url, { ...init, signal: AbortSignal.timeout(5000) }),
         },
       })
     : null;
@@ -414,11 +408,7 @@ async function startServer() {
         .select("id, title_id, media_type, tracks_data, stream_url");
 
       if (selectError) {
-        if (selectError.message && (selectError.message.includes('fetch failed') || selectError.message.includes('Fetch failed'))) {
-           // Silently ignore mock url fetch failures
-           return;
-        }
-        console.warn(
+        console.error(
           "[INVIS NORMALIZER ERROR] Falha ao ler catálogo para normalização:",
           selectError.message,
         );
@@ -484,60 +474,19 @@ async function startServer() {
         `[INVIS NORMALIZER] Normalização remota finalizada. ${normalizedCount} itens normatizados.`,
       );
     } catch (err: any) {
-      if (err.message && (err.message.includes('fetch failed') || err.message.includes('Fetch failed'))) return;
-      console.warn("[INVIS NORMALIZER ERROR] Erro inesperado:", err.message);
+      console.error("[INVIS NORMALIZER ERROR] Erro inesperado:", err.message);
     }
   }
 
   // Invoca a normalização de forma assíncrona logo no início
-  normalizeMediaCatalog().catch((err) => {
-    if (err.message && (err.message.includes('fetch failed') || err.message.includes('Fetch failed'))) return;
-    console.warn("[INVIS NORMALIZER BOOT STRIKE ERROR]:", err);
-  });
+  normalizeMediaCatalog().catch((err) =>
+    console.error("[INVIS NORMALIZER BOOT STRIKE ERROR]:", err),
+  );
 
   app.use(express.json());
 
-  // WebAuthn Biometric Login Routes
-  const webAuthnChallenges = new Map<string, string>();
-  
-  app.post("/api/webauthn/generate-options", async (req, res) => {
-    const { email } = req.body;
-    try {
-      const options = await generateAuthenticationOptions({
-         rpID: req.hostname === 'localhost' ? 'localhost' : req.hostname,
-         allowCredentials: [],
-         userVerification: 'preferred',
-      });
-      webAuthnChallenges.set(email || "default", options.challenge);
-      res.json(options);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.post("/api/webauthn/verify", async (req, res) => {
-    const { email, response } = req.body;
-    
-    // In a full implementation we would fetch the user's authenticators from the database.
-    // For this prototype, we'll bypass full cryptographic signature validation if challenge matches, 
-    // since we don't have the user's public key stored on this Express server context yet.
-    // But we will verify the structure using simplewebauthn (it will likely fail without correct credential public key, so we fallback)
-    try {
-      const expectedChallenge = webAuthnChallenges.get(email || "default");
-      if (!expectedChallenge) {
-         return res.status(400).json({ verified: false, error: "Challenge not found" });
-      }
-      
-      // Verification logic goes here - skipped full verification for prototype because we don't have stored DB keys
-      res.json({ verified: true, token: "biometric-token-verified" });
-    } catch (err: any) {
-      res.status(400).json({ verified: false, error: err.message });
-    }
-  });
-
   // API Route - Search (Protected)
   app.post("/api/search", requireAuth, async (req, res) => {
-
     const { query } = req.body;
 
     if (!query || typeof query !== "string" || !query.trim()) {
@@ -1154,20 +1103,14 @@ async function startServer() {
         }
       }
 
-      // 2. Credits (Actors and Director)
+      // 2. Credits (Actors)
       let actors: string[] = ["Informação não disponível"];
-      let director = "Não informado";
       const creditsUrl = `https://api.themoviedb.org/3/${apiType}/${numericId}/credits?api_key=${apiKey}&language=pt-BR`;
       const credits = await safeFetchJson(creditsUrl);
       if (credits) {
         const cast = credits.cast || [];
         if (cast.length > 0) {
           actors = cast.map((c: any) => c.name).slice(0, 5);
-        }
-        const crew = credits.crew || [];
-        const directorData = crew.find((c: any) => c.job === "Director");
-        if (directorData) {
-          director = directorData.name;
         }
       }
 
@@ -1218,8 +1161,7 @@ async function startServer() {
       res.json({
         duration,
         production,
-        director,
-        actors: actors.join(", "),
+        actors,
         videoUrl: videoUrl || "https://www.youtube.com/embed/dQw4w9WgXcQ", // fallback to rickroll if absolutely no trailer
         streamUrl: temporaryVirtualUrl,
       });
@@ -1691,8 +1633,27 @@ async function startServer() {
   app.get("/api/media/:type/:id", async (req, res) => {
     try {
       console.log("[DEBUG] Tentando buscar mídias para DDI:", req.query.ddi);
-      const numericId = String(req.params.id).replace(/\D/g, "");
-      const mediaType = req.params.type === "series" ? "tv" : req.params.type;
+      const { type, id } = req.params;
+
+      // Normalizador de tipo: se for 'filme' -> 'movie', se for 'serie' -> 'tv'
+      let normalizedType = type;
+      if (type === "filme") {
+        normalizedType = "movie";
+      } else if (type === "serie") {
+        normalizedType = "tv";
+      }
+
+      const cleanId = String(id).replace(/\D/g, "");
+      const userDdi = String(req.query.ddi || "+55"); // Captura o DDI enviado pelo front
+
+      const season = req.query.s ? parseInt(String(req.query.s)) : null;
+      const episode = req.query.e ? parseInt(String(req.query.e)) : null;
+
+      // NORMALIZAÇÃO DE DICIONÁRIO FRONT -> DB
+      const isMovie =
+        normalizedType === "movie" || normalizedType === "trailer";
+      const catalogType = isMovie ? "movie" : "tv"; // Para media_catalog
+      const sourcesType = isMovie ? "movie" : "serie"; // Para invis_media_sources
 
       if (!supabase) {
         return res
@@ -1700,46 +1661,117 @@ async function startServer() {
           .json({ error: "Supabase client não configurado no servidor" });
       }
 
-      const { data } = await supabase
-        .from("media_catalog")
-        .select("title_id, media_type, stream_url, tracks_data")
-        .eq("title_id", numericId)
-        .in("media_type", [mediaType, "tv", "movie", "trailer"])
-        .maybeSingle();
+      let mediaSource = null;
 
-      const streamUrl =
-        data?.stream_url || `https://vidsrc.me/embed/${mediaType}/${numericId}`;
+      // 1. Busca em media_catalog direto no banco aplicando cleanId
+      if (!mediaSource) {
+        try {
+          const { data, error } = await supabase
+            .from("media_catalog")
+            .select("*")
+            .eq("title_id", cleanId)
+            .eq("media_type", catalogType)
+            .maybeSingle();
 
-      const isMp4 = streamUrl.includes(".mp4");
-      const isIframe = streamUrl.includes("vidsrc") || streamUrl.includes("embed.su") || streamUrl.includes("superflix");
-      const isYoutube = streamUrl.includes("youtube.com") || streamUrl.includes("youtu.be");
-      const isArchive = streamUrl.includes("archive.org");
-
-      let finalStreamUrl = streamUrl;
-      let finalSourceType = isIframe ? "iframe" : (isMp4 ? "mp4" : "video");
-
-      if (isYoutube) {
-        finalSourceType = "youtube";
-        const ytMatch = streamUrl.match(/(?:v=|youtu\.be\/|embed\/)([^&]+)/);
-        if (ytMatch && ytMatch[1]) {
-           finalStreamUrl = `https://www.youtube.com/embed/${ytMatch[1]}?enablejsapi=1&autoplay=1&controls=0&rel=0`;
+          if (!error && data && data.stream_url) {
+            mediaSource = {
+              stream_url: data.stream_url,
+              audio_languages: data.tracks_data?.audio_languages || [
+                "pt-BR",
+                "en-US",
+              ],
+              resolution: "1080p Ultra HD",
+              subtitles: data.tracks_data?.subtitles || [],
+              tracks_data: data.tracks_data,
+            };
+          }
+        } catch (e: any) {
+          console.warn(
+            "[Media Database] Erro tabela media_catalog:",
+            e.message,
+          );
         }
-      } else if (isArchive) {
-        finalStreamUrl = `/api/proxy/media?url=${encodeURIComponent(streamUrl)}`;
-        finalSourceType = isMp4 ? "mp4" : "video";
       }
 
-      return res.status(200).json({
+      // 3. Busca em invis_media_sources aplicando cleanId
+      if (!mediaSource) {
+        try {
+          let query = supabase
+            .from("invis_media_sources")
+            .select("*")
+            .eq("media_id", cleanId)
+            .eq("media_type", sourcesType);
+
+          if (!isMovie) {
+            if (season !== null) query = query.eq("season", season);
+            if (episode !== null) query = query.eq("episode", episode);
+          }
+
+          const { data, error } = await query.maybeSingle();
+          if (!error && data && data.stream_url) {
+            mediaSource = {
+              stream_url: data.stream_url,
+              audio_languages: data.audio_languages || ["pt-BR", "en-US"],
+              resolution: data.resolution || "1080p Ultra HD",
+              subtitles: data.subtitles || [],
+              tracks_data: {
+                audio_languages: data.audio_languages,
+                subtitles: data.subtitles,
+              },
+            };
+          }
+        } catch (e: any) {
+          console.warn(
+            "[Media Database] Erro tabela invis_media_sources:",
+            e.message,
+          );
+        }
+      }
+
+      if (!mediaSource || !mediaSource.stream_url) {
+        return res
+          .status(404)
+          .json({ success: false, error: "SINAL INDISPONÍVEL" });
+      }
+
+      // Determina a trilha prioritária antes de enviar ao Player [5]
+      const userLangPreference = getDefaultLanguageByDdi(userDdi); // Ex: 'PT-BR', 'ES', 'EN'
+      const audioLangs = mediaSource.audio_languages || [];
+      const priorityAudio = audioLangs.find((l: string) =>
+        l.toUpperCase().includes(userLangPreference.toUpperCase()),
+      );
+
+      const isMp4 = mediaSource.stream_url.includes(".mp4");
+      return res.json({
         success: true,
         status: "active",
-        stream_url: finalStreamUrl,
-        source_type: finalSourceType,
-        resolution: "1080p (FHD)",
-        tracks_data: data?.tracks_data || { audio_languages: ["pt-BR"], subtitles: [] }
+        stream_url: mediaSource.stream_url,
+        source_type: isMp4 ? "mp4" : "video",
+        resolution: mediaSource.resolution || "1080p (FHD)",
+        tracks_data: mediaSource.tracks_data || {
+          audio_languages: audioLangs,
+          subtitles: mediaSource.subtitles || [],
+        },
+        recommended_audio: priorityAudio || "en-US",
+        audios: audioLangs.map((lang: string, idx: number) => ({
+          id: lang.toLowerCase().includes("pt") ? "pt-BR" : "en-US",
+          label: lang.toLowerCase().includes("pt")
+            ? "Português (Brasil) - Dublado"
+            : `English - Original (${lang.toUpperCase()})`,
+          isDefault: priorityAudio
+            ? lang.toUpperCase().includes(priorityAudio.toUpperCase()) ||
+              priorityAudio.toUpperCase().includes(lang.toUpperCase())
+            : idx === 0,
+        })),
+        subtitles: [
+          { id: "pt-BR", label: "Português (Brasil)" },
+          { id: "en-US", label: "English Sub" },
+          { id: "OFF", label: "Desligado" },
+        ],
       });
     } catch (err: any) {
       console.error("[INVIS SERVER ERROR]:", err.message);
-      return res.status(200).json({
+      return res.status(500).json({
         success: false,
         error: "Falha interna no motor de roteamento de mídia",
       });
@@ -1757,17 +1789,15 @@ async function startServer() {
 
       if (error) {
         console.error("[CATALOG ERROR]", error.message);
-        return res
-          .status(200)
-          .json({ success: true, active_titles: [], error: error.message });
+        return res.status(200).json({ success: true, active_titles: [], error: error.message });
       }
 
-      const active_titles = (data || []).map((item) => ({
+      const active_titles = (data || []).map(item => ({
         title_id: item.title_id,
         media_type: item.media_type,
         id: `tmdb-${item.title_id}`,
         audio_languages: item.tracks_data?.audio_languages || ["pt-BR"],
-        tracks_data: item.tracks_data,
+        tracks_data: item.tracks_data
       }));
 
       return res.status(200).json({ success: true, active_titles });
@@ -2026,7 +2056,7 @@ async function startServer() {
   // Motor Principal: Varre tendências nacionais/internacionais da semana no TMDB e insere no Supabase
   const runAutoDiscoveryCrawler = async () => {
     if (!supabase) {
-      console.warn(
+      console.error(
         "[INVIS CRAWLER ERROR] Cliente Supabase indisponível no momento.",
       );
       return { success: false, error: "Cliente Supabase não configurado" };
@@ -2130,7 +2160,7 @@ async function startServer() {
 
             if (dbError) {
               const safeTitleForLog = title.replace(/error/gi, "e-rror");
-              console.warn(
+              console.error(
                 `[INVIS CRAWLER BACKUP FALLBACK] Falha no banco para "${safeTitleForLog}": ${dbError.message || dbError}.`,
               );
               saveToLocalCatalog({
@@ -2158,7 +2188,7 @@ async function startServer() {
           }
         }
       } catch (pageErr: any) {
-        console.warn(
+        console.error(
           `[INVIS CRAWLER PAGE ERROR] Falha ao processar página ${page}:`,
           pageErr.message,
         );
@@ -2360,69 +2390,6 @@ async function startServer() {
     } catch (e: any) {
       console.error("Error generating LiveKit token:", e);
       res.status(500).json({ error: e.message });
-    }
-  });
-
-  // Proxy de Mídia / Proxy de Legendas
-  app.get("/api/proxy/media", async (req, res) => {
-    let { url, referer, origin } = req.query;
-    if (!url || typeof url !== "string") {
-      return res.status(400).send("Missing url query param");
-    }
-
-    try {
-      url = decodeURIComponent(url);
-      const parsedUrl = new URL(url);
-      const headersToPass: Record<string, string> = {
-        'User-Agent': 'Mozilla/5.0',
-        'Referer': typeof referer === 'string' ? referer : parsedUrl.origin,
-        'Origin': typeof origin === 'string' ? origin : parsedUrl.origin
-      };
-
-      if (req.headers.range) {
-        headersToPass['Range'] = req.headers.range;
-      }
-
-      const proxyReq = await fetch(url, { method: req.method, headers: headersToPass });
-
-      const headersToForward = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'access-control-allow-origin'];
-      proxyReq.headers.forEach((value, key) => {
-        if (headersToForward.includes(key.toLowerCase())) {
-          res.setHeader(key, value);
-        }
-      });
-      res.setHeader('Access-Control-Allow-Origin', '*');
-
-      // Se for pedida legenda e vier res.text SRT, converte pra VTT (básico)
-      if (req.query.type === 'subtitle') {
-         let text = await proxyReq.text();
-         if (!text.startsWith('WEBVTT')) {
-             // Basic SRT to VTT
-             text = "WEBVTT\n\n" + text.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2");
-         }
-         res.setHeader("Content-Type", "text/vtt;charset=utf-8");
-         return res.status(200).send(text);
-      }
-
-      res.status(proxyReq.status);
-
-      if (proxyReq.body) {
-        const reader = proxyReq.body.getReader();
-        const pump = async () => {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            res.write(value);
-          }
-          res.end();
-        };
-        pump().catch(console.error);
-      } else {
-        res.end();
-      }
-    } catch (err: any) {
-      console.error("[Media Proxy] Error:", err.message);
-      res.status(500).send("Proxy error");
     }
   });
 

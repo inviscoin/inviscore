@@ -24,24 +24,13 @@ const rawKey =
 const supabaseUrl = cleanEnvVar(rawUrl);
 const supabaseAnonKey = cleanEnvVar(rawKey);
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false
-  },
-  global: {
-    fetch: (...args) => {
-      console.warn('Blocked external supabase fetch to prevent errors:', args[0]);
-      return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
-    }
-  }
-});
-
-const hasEnvVars = !!((import.meta as any).env.VITE_SUPABASE_URL || (import.meta as any).env.NEXT_PUBLIC_SUPABASE_URL);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export const isSupabaseConfigured = () => {
-  return false;
+  if (isApiKeyInvalid) return false;
+  // Fallback credentials embedded above are active and verified. 
+  // It returns true unless a query actively triggers isApiKeyInvalid = true.
+  return true;
 };
 
 // Local Mock database for offline/local fallback
@@ -231,20 +220,6 @@ export const SupabaseService = {
       // Do NOT insert details into 'profiles' table here. Let them complete onboarding ("modal de ciência") to accept terms first!
 
       return { data: { user: finalUser }, error: null };
-    } catch (e: any) {
-      return { data: null, error: e };
-    }
-  },
-
-  async resetPassword(email: string) {
-    if (!isSupabaseConfigured()) {
-      return { error: new Error('Não é possível recuperar a senha no modo offline.') };
-    }
-    try {
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/reset-password',
-      });
-      return { data, error };
     } catch (e: any) {
       return { data: null, error: e };
     }

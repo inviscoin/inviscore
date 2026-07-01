@@ -1,17 +1,6 @@
-const http = require('http');
+const https = require('https');
 
-http.get('http://localhost:3000/api/tmdb/trending', (resp) => {
-  let data = '';
-  resp.on('data', (chunk) => { data += chunk; });
-  resp.on('end', () => {
-    try {
-      const json = JSON.parse(data);
-      console.log('Result length:', json.length);
-      console.log('First item:', json[0]);
-    } catch (e) {
-      console.log('Response string:', data.substring(0, 500));
-    }
-  });
-}).on("error", (err) => {
-  console.log("Error: " + err.message);
-});
+https.request('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', { method: 'HEAD' }, (res) => {
+  console.log('Status:', res.statusCode);
+  console.log('Headers:', res.headers);
+}).end();
