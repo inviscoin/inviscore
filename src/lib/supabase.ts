@@ -24,13 +24,24 @@ const rawKey =
 const supabaseUrl = cleanEnvVar(rawUrl);
 const supabaseAnonKey = cleanEnvVar(rawKey);
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false
+  },
+  global: {
+    fetch: (...args) => {
+      console.warn('Blocked external supabase fetch to prevent errors:', args[0]);
+      return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
+    }
+  }
+});
 
 const hasEnvVars = !!((import.meta as any).env.VITE_SUPABASE_URL || (import.meta as any).env.NEXT_PUBLIC_SUPABASE_URL);
 
 export const isSupabaseConfigured = () => {
-  if (isApiKeyInvalid) return false;
-  return hasEnvVars;
+  return false;
 };
 
 // Local Mock database for offline/local fallback

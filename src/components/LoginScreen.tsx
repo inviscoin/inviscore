@@ -81,7 +81,7 @@ export const LoginScreen: React.FC = () => {
       // InvisContext onAuthStateChange will handle redirection otherwise
     } catch (err: any) {
       setShowScanner(false);
-      setModalObj({ title: "Falha na Autenticação", message: currentTexts.login_err_invalid || "E-mail ou senha incorretos.", type: "error" });
+      setModalObj({ title: "Falha na Autenticação", message: err.message || currentTexts.login_err_invalid || "E-mail ou senha incorretos.", type: "error" });
     }
   };
 
