@@ -54,8 +54,13 @@ const supabase =
           schema: "public",
         },
         global: {
-          fetch: (url: any, init: any) =>
-            fetch(url, { ...init, signal: AbortSignal.timeout(5000) }),
+          fetch: async (url: any, init: any) => {
+            try {
+              return await fetch(url, { ...init, signal: AbortSignal.timeout(5000) });
+            } catch (err: any) {
+              return new Response(JSON.stringify({ error: err.message || "Fetch failed" }), { status: 502 });
+            }
+          }
         },
       })
     : null;
@@ -409,6 +414,10 @@ async function startServer() {
         .select("id, title_id, media_type, tracks_data, stream_url");
 
       if (selectError) {
+        if (selectError.message && (selectError.message.includes('fetch failed') || selectError.message.includes('Fetch failed'))) {
+           // Silently ignore mock url fetch failures
+           return;
+        }
         console.warn(
           "[INVIS NORMALIZER ERROR] Falha ao ler catálogo para normalização:",
           selectError.message,
@@ -475,14 +484,16 @@ async function startServer() {
         `[INVIS NORMALIZER] Normalização remota finalizada. ${normalizedCount} itens normatizados.`,
       );
     } catch (err: any) {
+      if (err.message && (err.message.includes('fetch failed') || err.message.includes('Fetch failed'))) return;
       console.warn("[INVIS NORMALIZER ERROR] Erro inesperado:", err.message);
     }
   }
 
   // Invoca a normalização de forma assíncrona logo no início
-  normalizeMediaCatalog().catch((err) =>
-    console.warn("[INVIS NORMALIZER BOOT STRIKE ERROR]:", err),
-  );
+  normalizeMediaCatalog().catch((err) => {
+    if (err.message && (err.message.includes('fetch failed') || err.message.includes('Fetch failed'))) return;
+    console.warn("[INVIS NORMALIZER BOOT STRIKE ERROR]:", err);
+  });
 
   app.use(express.json());
 
