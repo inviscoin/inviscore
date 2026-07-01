@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { AuthWrapper } from './AuthWrapper';
 import { InvisModal } from './InvisModal';
 import { ArrowLeft } from 'lucide-react';
+import { SupabaseService, isSupabaseConfigured } from '../lib/supabase';
 
 export const SupportPasswordScreen: React.FC = () => {
   const { setStage } = useInvis();
@@ -11,6 +12,7 @@ export const SupportPasswordScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState<{title: string, msg: string, type: 'error' | 'info' | 'success'} | null>(null);
 
   const handleRecover = () => {
@@ -21,12 +23,32 @@ export const SupportPasswordScreen: React.FC = () => {
     setStep(2);
   };
 
-  const finalSubmit = () => {
+  const finalSubmit = async () => {
     if (!firstName.trim()) {
       setModal({ title: 'NOME INVÁLIDO', msg: 'Digite seu primeiro nome.', type: 'error' });
       return;
     }
-    setMessage("Sua senha chegará em seu e-mail em até 12 horas.");
+    
+    setLoading(true);
+    
+    if (!isSupabaseConfigured()) {
+       setLoading(false);
+       setMessage("Sua solicitação de senha foi registrada offline.");
+       setTimeout(() => {
+         setStage('login');
+       }, 5000);
+       return;
+    }
+
+    const { error } = await SupabaseService.resetPassword(email);
+    setLoading(false);
+    
+    if (error) {
+       setModal({ title: 'ERRO', msg: error.message || 'Falha ao enviar e-mail de recuperação.', type: 'error' });
+       return;
+    }
+
+    setMessage("E-mail de recuperação de senha enviado com sucesso!");
     setTimeout(() => {
       setStage('login');
     }, 5000);
@@ -86,10 +108,11 @@ export const SupportPasswordScreen: React.FC = () => {
                   />
                   <button 
                     onClick={finalSubmit}
-                    className="w-full p-[18px] bg-red-500 text-white font-black text-sm uppercase rounded-xl border-none shadow-[0_0_15px_rgba(239,68,68,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all outline-none"
+                    disabled={loading}
+                    className="w-full p-[18px] bg-red-500 text-white font-black text-sm uppercase rounded-xl border-none shadow-[0_0_15px_rgba(239,68,68,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ WebkitTapHighlightColor: 'transparent' }}
                   >
-                    SOLICITAR SENHA
+                    {loading ? 'ENVIANDO...' : 'SOLICITAR SENHA'}
                   </button>
                 </motion.div>
               ) : message ? (

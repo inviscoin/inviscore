@@ -18,6 +18,7 @@ export interface UserProfile {
   ipAcceptance?: string;
   timestampAcceptance?: string;
   biometricsActive: boolean;
+  focusModeActive?: boolean;
 }
 
 export interface WalletState {

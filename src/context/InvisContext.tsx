@@ -949,8 +949,8 @@ export const MOCK_MOVIES: Movie[] = [
 ];
 
 interface InvisContextType {
-  currentStage: 'locks' | 'login' | 'register' | 'onboarding_age' | 'onboarding_terms' | 'dashboard' | 'recovery';
-  setStage: (stage: 'locks' | 'login' | 'register' | 'onboarding_age' | 'onboarding_terms' | 'dashboard' | 'recovery') => void;
+  currentStage: 'locks' | 'login' | 'register' | 'support_password' | 'update_password' | 'onboarding_age' | 'onboarding_terms' | 'dashboard' | 'recovery';
+  setStage: (stage: 'locks' | 'login' | 'register' | 'support_password' | 'update_password' | 'onboarding_age' | 'onboarding_terms' | 'dashboard' | 'recovery') => void;
   currentUser: UserProfile | null;
   setCurrentUser: (user: UserProfile | null) => void;
   wallet: WalletState;
@@ -1023,7 +1023,7 @@ interface InvisContextType {
 const InvisContext = createContext<InvisContextType | undefined>(undefined);
 
 export const InvisProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentStage, setStage] = useState<'locks' | 'login' | 'register' | 'onboarding_age' | 'onboarding_terms' | 'dashboard' | 'recovery'>(() => {
+  const [currentStage, setStage] = useState<'locks' | 'login' | 'register' | 'support_password' | 'update_password' | 'onboarding_age' | 'onboarding_terms' | 'dashboard' | 'recovery'>(() => {
     try {
       const savedUser = localStorage.getItem('invis_current_user');
       if (savedUser) {
@@ -1138,7 +1138,9 @@ export const InvisProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
-          if (event === 'SIGNED_IN' && session?.user) {
+          if (event === 'PASSWORD_RECOVERY') {
+            setStage('update_password');
+          } else if (event === 'SIGNED_IN' && session?.user) {
             fetchAndSetUser(session.user);
          } else if (event === 'SIGNED_OUT') {
             setCurrentUser(null);

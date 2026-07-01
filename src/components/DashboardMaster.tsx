@@ -201,8 +201,10 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
 }) => {
   const { 
     activeBlocks, addBlock, minimizeBlock, restoreBlock, closeBlock, togglePin, swapBlocks, 
-    language, wallet, setWallet, systemStatus, triggerChronCleanup 
+    language, wallet, setWallet, systemStatus, triggerChronCleanup, currentUser 
   } = useInvis();
+
+  const isFocusMode = currentUser?.focusModeActive === true;
 
   const { 
     isMediaPipMode, showPipModal, setShowPipModal, triggerMediaResume, isNavVisible,
@@ -517,13 +519,13 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
   const { currentTexts } = useTranslation();
 
   return (
-    <div className="w-full flex-1 relative flex flex-col overflow-hidden bg-radial from-[#050508] to-[#040406]">
+    <div className={`w-full flex-1 relative flex flex-col overflow-hidden ${isFocusMode ? 'bg-black' : 'bg-radial from-[#050508] to-[#040406]'}`}>
       
       {/* Background Matrix shader Overlay grid */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none matrix-line-overlay" />
+      {!isFocusMode && <div className="absolute inset-0 opacity-10 pointer-events-none matrix-line-overlay" />}
 
       {/* SVG Circuit trace rays crossing through center of app */}
-      <CircuitBackground />
+      {!isFocusMode && <CircuitBackground />}
 
       {/* Sleek minimized tasks dock - REMOVED PER REQUEST */}
 
@@ -669,7 +671,13 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
               {visibleBlocks.map((block, idx) => {
                 const isSelected = selectedBlockId === block.id;
 
-                let blockClassNames = "overflow-hidden flex flex-col relative bg-black/40 transition-[flex,opacity] duration-500 ease-in-out ";
+                let blockClassNames = "overflow-hidden flex flex-col relative transition-[flex,opacity,background] duration-500 ease-in-out ";
+                
+                if (isFocusMode) {
+                   blockClassNames += "bg-black/90 ";
+                } else {
+                   blockClassNames += "bg-black/40 ";
+                }
                 
                 // Elegant structural sizing
                 if (visibleBlocks.length === 1) {
@@ -677,7 +685,7 @@ export const DashboardMaster: React.FC<DashboardMasterProps> = ({
                 } else {
                     blockClassNames += isSelected 
                         ? "flex-[3] opacity-100 z-10 shadow-[0_0_50px_rgba(0,0,0,0.5)] " 
-                        : "flex-[1] opacity-50 hover:opacity-80 cursor-pointer shrink-0 ";
+                        : `flex-[1] cursor-pointer shrink-0 ${isFocusMode ? 'opacity-10 hover:opacity-30' : 'opacity-50 hover:opacity-80'} `;
                 }
 
                 return (

@@ -236,6 +236,20 @@ export const SupabaseService = {
     }
   },
 
+  async resetPassword(email: string) {
+    if (!isSupabaseConfigured()) {
+      return { error: new Error('Não é possível recuperar a senha no modo offline.') };
+    }
+    try {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password',
+      });
+      return { data, error };
+    } catch (e: any) {
+      return { data: null, error: e };
+    }
+  },
+
   async signIn(identifier: string, pass: string) {
     if (!isSupabaseConfigured()) {
       console.warn('[INVIS Supabase Service] Using Local SignIn (Offline Mode).');
